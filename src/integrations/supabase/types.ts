@@ -786,6 +786,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_profile_for_existing_user: {
+        Args: {
+          user_id: string
+          user_email: string
+          user_role?: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
       create_user_profile: {
         Args: {
           user_id: string
@@ -803,6 +811,10 @@ export type Database = {
       get_current_user_school_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_metadata_by_email: {
+        Args: { email_address: string }
+        Returns: Json
       }
       is_email_confirmed: {
         Args: { email_address: string }

@@ -30,52 +30,14 @@ export const useAuthOperations = () => {
         console.log("Global sign out failed, continuing with sign in");
       }
       
-      // Check if the user exists but doesn't have a profile first
-      const { data: emailConfirmed } = await supabase.rpc(
+      // Check if the email is confirmed before attempting to sign in
+      const { data: emailConfirmed, error: emailCheckError } = await supabase.rpc(
         'is_email_confirmed',
         { email_address: email }
       );
       
-      // If email is confirmed but login fails, we might be missing a profile
-      if (emailConfirmed) {
-        try {
-          // Try to get user data
-          const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
-          
-          if (userData?.user) {
-            // Check if profile exists
-            const { data: profileExists } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', userData.user.id)
-              .maybeSingle();
-              
-            if (!profileExists) {
-              console.log("User exists but has no profile. Creating default profile.");
-              
-              // Determine role based on email or metadata
-              let role: UserRole = "student";
-              
-              // Check if user metadata has role
-              if (userData.user.user_metadata?.role) {
-                role = userData.user.user_metadata.role as UserRole;
-              }
-              
-              // Create profile
-              await createUserProfile(
-                userData.user.id,
-                email,
-                userData.user.user_metadata?.first_name || email.split('@')[0],
-                userData.user.user_metadata?.last_name || '',
-                role,
-                userData.user.user_metadata?.school_id
-              );
-            }
-          }
-        } catch (e) {
-          console.error("Error checking for existing user:", e);
-          // Continue with normal login flow
-        }
+      if (emailCheckError) {
+        console.error("Error checking email confirmation:", emailCheckError);
       }
       
       // Attempt to sign in
@@ -84,46 +46,22 @@ export const useAuthOperations = () => {
         password,
       });
 
-      // Check for the specific "Email not confirmed" error or "Invalid login credentials"
-      if (error && (error.message.includes("Email not confirmed") || error.message.includes("Invalid login credentials"))) {
+      // Handle specific error cases
+      if (error) {
         console.log("Login error detected:", error.message);
         
-        // Check if this might be a school admin with unconfirmed email
-        try {
-          // First check email confirmation status directly
-          const { data: isConfirmed, error: isConfirmedError } = await supabase.rpc(
-            'is_email_confirmed', 
-            { email_address: email }
-          );
-          
-          console.log("Email confirmation status check:", isConfirmed, isConfirmedError);
-          
-          if (isConfirmedError) {
-            console.error("Error checking email confirmation:", isConfirmedError);
-          }
-          
-          // Check if this email exists in profiles, regardless of confirmation status
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role, email, school_id')
-            .eq('email', email)
-            .maybeSingle();
-          
-          console.log("Profile check result:", profileData, profileError);
-          
-          // If the profile exists and is a school admin
-          if (profileData?.role === 'school_admin') {
-            console.log("Found school admin profile, attempting to auto-confirm email");
-            
-            // Call the stored procedure to confirm email
+        // Special handling for "Email not confirmed" error
+        if (error.message.includes("Email not confirmed")) {
+          // Check if this might be a school admin
+          try {
+            // Try to confirm the email if it's a school admin
             const { data: confirmData, error: confirmError } = await supabase.rpc(
               'manually_confirm_email',
               { email_address: email }
             );
             
-            console.log("Email confirmation result:", confirmData, confirmError);
-            
             if (confirmError) {
+              console.error("Error confirming email:", confirmError);
               toast({
                 title: "Login failed",
                 description: "Unable to confirm email. Please contact support.",
@@ -132,8 +70,8 @@ export const useAuthOperations = () => {
               throw confirmError;
             }
             
+            // If email was confirmed, retry login
             if (confirmData) {
-              // If confirmation succeeds, attempt login again
               console.log("Email confirmed, retrying login");
               const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
                 email,
@@ -142,170 +80,53 @@ export const useAuthOperations = () => {
               
               if (retryError) {
                 console.error("Retry login failed:", retryError);
-                // More specific error for debugging
-                if (retryError.message.includes("Invalid login credentials")) {
-                  toast({
-                    title: "Login failed",
-                    description: "The email was confirmed, but login still failed. This may indicate an incorrect password.",
-                    variant: "destructive",
-                  });
-                } else {
-                  toast({
-                    title: "Login failed",
-                    description: retryError.message || "An unexpected error occurred during login retry",
-                    variant: "destructive",
-                  });
-                }
+                toast({
+                  title: "Login failed",
+                  description: retryError.message || "Invalid login credentials",
+                  variant: "destructive",
+                });
                 throw retryError;
               }
               
               if (retryData?.user) {
-                // Proceed with successful login
-                console.log("Login successful after email confirmation");
-                const userProfile = await fetchUserProfile(retryData.user.id);
-                const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-                
-                if (navigate) {
-                  navigate(roleBasedRoute);
-                } else {
-                  window.location.href = roleBasedRoute;
-                }
-                
-                toast({
-                  title: "Login successful!",
-                  description: "Welcome back!",
-                });
+                // Process successful login after email confirmation
+                await handleSuccessfulLogin(retryData.user.id);
                 return;
               }
-            } else {
-              toast({
-                title: "Login failed",
-                description: "Email confirmation failed. Please contact support.",
-                variant: "destructive",
-              });
             }
-          } else {
-            // If user doesn't exist in profiles or is not a school admin
-            console.log("User not found in profiles or is not a school admin");
-            
-            // Check if the user exists in auth.users by trying to create
-            const { data: manualCheckData, error: manualCheckError } = await supabase.rpc(
-              'manually_confirm_email',
-              { email_address: email }
-            );
-            
-            console.log("Manual confirmation attempt:", manualCheckData, manualCheckError);
-            
-            if (manualCheckData) {
-              // If the user exists and was confirmed, try login again
-              const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-              });
-              
-              if (!retryError && retryData?.user) {
-                console.log("Login successful after manual email confirmation");
-                
-                // Create a profile if needed
-                const userProfile = await fetchUserProfile(retryData.user.id);
-                const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-                
-                if (navigate) {
-                  navigate(roleBasedRoute);
-                } else {
-                  window.location.href = roleBasedRoute;
-                }
-                
-                toast({
-                  title: "Login successful!",
-                  description: "Welcome back!",
-                });
-                return;
-              } else {
-                // If login still fails, we might need to create a profile with RPC
-                try {
-                  // Get user data
-                  const { data: userMetadata } = await supabase.rpc('get_user_metadata_by_email', { email_address: email });
-                  
-                  if (userMetadata) {
-                    const userId = userMetadata.id;
-                    console.log("User found, creating profile for:", userId);
-                    
-                    // Create profile
-                    await supabase.rpc('create_profile_for_existing_user', {
-                      user_id: userId,
-                      user_email: email,
-                      user_role: 'school_admin'
-                    });
-                    
-                    // Try login again after creating profile
-                    const { data: finalRetryData, error: finalRetryError } = await supabase.auth.signInWithPassword({
-                      email,
-                      password,
-                    });
-                    
-                    if (!finalRetryError && finalRetryData?.user) {
-                      const userProfile = await fetchUserProfile(finalRetryData.user.id);
-                      const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-                      
-                      if (navigate) {
-                        navigate(roleBasedRoute);
-                      } else {
-                        window.location.href = roleBasedRoute;
-                      }
-                      
-                      toast({
-                        title: "Login successful!",
-                        description: "Your profile has been created.",
-                      });
-                      return;
-                    }
-                  }
-                } catch (err) {
-                  console.error("Error creating profile:", err);
-                }
-              }
-            }
-            
+          } catch (err: any) {
+            console.error("Error during login recovery process:", err);
             toast({
               title: "Login failed",
-              description: error.message || "Invalid login credentials",
+              description: err.message || "An unexpected error occurred",
               variant: "destructive",
             });
           }
-        } catch (err: any) {
-          console.error("Error during login recovery process:", err);
+        } 
+        // Handle "Invalid login credentials" error
+        else if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Login failed",
-            description: err.message || "An unexpected error occurred",
+            description: "The email or password you entered is incorrect.",
+            variant: "destructive",
+          });
+        } 
+        // Handle other errors
+        else {
+          toast({
+            title: "Login failed",
+            description: error.message,
             variant: "destructive",
           });
         }
-      } else if (error) {
-        // Handle other errors
-        console.error("Login error:", error);
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else if (data?.user) {
-        // Normal successful login path
-        console.log("Login successful, fetching profile");
-        const userProfile = await fetchUserProfile(data.user.id);
-        const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
         
-        console.log("Redirecting to:", roleBasedRoute);
-        if (navigate) {
-          navigate(roleBasedRoute);
-        } else {
-          window.location.href = roleBasedRoute;
-        }
-        
-        toast({
-          title: "Login successful!",
-          description: "Welcome back!",
-        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Handle successful login
+      if (data?.user) {
+        await handleSuccessfulLogin(data.user.id);
       }
     } catch (error: any) {
       console.error("Login process error:", error);
@@ -316,6 +137,93 @@ export const useAuthOperations = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // Helper function for handling successful login
+  const handleSuccessfulLogin = async (userId: string) => {
+    try {
+      console.log("Login successful, fetching profile for:", userId);
+      
+      // Fetch or create user profile
+      let userProfile = await fetchUserProfile(userId);
+      
+      // If profile doesn't exist, create it with safe defaults
+      if (!userProfile) {
+        console.log("No profile found, creating profile for:", userId);
+        
+        // Get user data
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (userData?.user) {
+          // Determine appropriate role based on metadata
+          let role: UserRole = "student"; // Safe default
+          let schoolId = null;
+          
+          // Only use metadata role if it exists and is valid
+          if (userData.user.user_metadata?.role) {
+            // Special case for super admin and school admin
+            if (userData.user.user_metadata.role === "super_admin" || 
+                userData.user.user_metadata.role === "school_admin") {
+              role = userData.user.user_metadata.role as UserRole;
+              
+              // For school_admin, also get school_id
+              if (role === "school_admin" && userData.user.user_metadata.school_id) {
+                schoolId = userData.user.user_metadata.school_id;
+              }
+            }
+          }
+          
+          // Handle the special case for super@edufar.co
+          if (userData.user.email === "super@edufar.co") {
+            role = "super_admin";
+          }
+          
+          // Create the profile using RPC function
+          const { data: profileCreated, error: profileError } = await supabase.rpc(
+            'create_profile_for_existing_user',
+            { 
+              user_id: userId, 
+              user_email: userData.user.email || '', 
+              user_role: role 
+            }
+          );
+          
+          if (profileError) {
+            console.error("Error creating profile via RPC:", profileError);
+            // Fall back to regular createUserProfile function
+            await createUserProfile(
+              userId,
+              userData.user.email || '',
+              userData.user.user_metadata?.first_name || userData.user.email?.split('@')[0] || '',
+              userData.user.user_metadata?.last_name || '',
+              role,
+              schoolId
+            );
+          }
+          
+          // Fetch the newly created profile
+          userProfile = await fetchUserProfile(userId);
+        }
+      }
+      
+      // Redirect based on role
+      const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+      
+      console.log("Redirecting to:", roleBasedRoute);
+      if (navigate) {
+        navigate(roleBasedRoute);
+      } else {
+        window.location.href = roleBasedRoute;
+      }
+      
+      toast({
+        title: "Login successful!",
+        description: "Welcome back!",
+      });
+    } catch (error: any) {
+      console.error("Error in handleSuccessfulLogin:", error);
+      throw error; // Let the calling function handle this
     }
   };
 
@@ -333,6 +241,8 @@ export const useAuthOperations = () => {
           data: {
             first_name: firstName,
             last_name: lastName,
+            // Default role is student - more secure
+            role: "student" 
           },
         },
       });
