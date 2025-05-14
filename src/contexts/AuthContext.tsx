@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Session, User } from "@supabase/supabase-js";
@@ -95,8 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               school_id: null
             };
 
-            // Use RPC call to bypass RLS policies
-            // This is a workaround until you create an admin API or function to handle this
+            // Call the create_user_profile RPC function that was created in the database
             const { error: insertError } = await supabase.rpc('create_user_profile', {
               user_id: userId,
               user_email: defaultProfile.email,
