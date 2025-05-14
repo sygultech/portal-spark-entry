@@ -11,6 +11,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import SignUp from "./pages/SignUp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CreateSuperAdmin from "./pages/CreateSuperAdmin";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,18 @@ const App = () => (
             <Route path="/signup" element={<SignUp />} />
             <Route path="/create-super-admin" element={<CreateSuperAdmin />} />
             <Route path="/admin-creation" element={<CreateSuperAdmin />} />
+            
+            {/* Super Admin Routes */}
+            <Route 
+              path="/super-admin-dashboard" 
+              element={
+                <ProtectedRoute requiredRoles={["super_admin"]}>
+                  <SuperAdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Root Route */}
             <Route 
               path="/" 
               element={
@@ -34,6 +47,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
