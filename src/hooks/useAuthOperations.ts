@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/contexts/types";
 import { toast } from "@/components/ui/use-toast";
 import { cleanupAuthState, fetchUserProfile } from "@/utils/authUtils";
+import { getRoleBasedRoute } from "@/utils/roleUtils";
 
 export const useAuthOperations = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -34,12 +35,14 @@ export const useAuthOperations = () => {
 
       if (data.user) {
         // Fetch user profile after successful sign in
-        // Use setTimeout to prevent potential deadlocks
-        setTimeout(() => {
-          fetchUserProfile(data.user.id);
-        }, 0);
+        const userProfile = await fetchUserProfile(data.user.id);
         
-        navigate("/");
+        // Determine the appropriate route based on user role
+        const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+        
+        // Navigate to the role-specific dashboard
+        navigate(roleBasedRoute);
+        
         toast({
           title: "Login successful!",
           description: "Welcome back!",

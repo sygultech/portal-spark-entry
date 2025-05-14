@@ -2,7 +2,7 @@
 import React, { useEffect } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getRoleBasedRoute } from "@/utils/roleUtils";
+import { getRoleBasedRoute, canAccessRoute } from "@/utils/roleUtils";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -25,7 +25,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const roleRoute = getRoleBasedRoute(profile.role);
         // Only redirect if not already on the role's route
         if (roleRoute !== "/" && location.pathname !== roleRoute) {
-          navigate(roleRoute, { replace: true }); // Use navigate instead of window.location
+          navigate(roleRoute, { replace: true });
         }
       }
     }
