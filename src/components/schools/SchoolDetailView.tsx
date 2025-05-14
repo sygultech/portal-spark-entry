@@ -99,7 +99,8 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
           return null;
         }
         
-        return data as TenantStats | null;
+        // First cast to unknown to avoid TypeScript conversion error
+        return (data as unknown) as TenantStats | null;
       } catch (error) {
         console.error("Error fetching tenant stats:", error);
         return null;
@@ -125,7 +126,8 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
           return null;
         }
         
-        return data as Subscription | null;
+        // First cast to unknown to avoid TypeScript conversion error
+        return (data as unknown) as Subscription | null;
       } catch (error) {
         console.error("Error fetching subscription:", error);
         return null;
