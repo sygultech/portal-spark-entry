@@ -15,9 +15,14 @@ const Login = () => {
       
       <div className="mt-4 text-center">
         <p className="text-xs text-muted-foreground mb-1">Admin Functions</p>
-        <Link to="/admin-creation">
-          <Button variant="outline" size="sm">Create Super Admin</Button>
-        </Link>
+        <div className="flex justify-center gap-2">
+          <Link to="/admin-creation">
+            <Button variant="outline" size="sm">Create Super Admin</Button>
+          </Link>
+          <Link to="/create-super-admin">
+            <Button variant="outline" size="sm">Alternative Setup</Button>
+          </Link>
+        </div>
       </div>
     </AuthLayout>
   );
