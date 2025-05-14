@@ -1,1 +1,5 @@
+
 project_id = "sjzbturfgadikgzokpyo"
+
+[auth]
+required_user_fields = ["first_name", "last_name"]

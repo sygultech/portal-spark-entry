@@ -1,9 +1,10 @@
 
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { createSuperAdmin } from "@/integrations/supabase/client";
+import { createSuperAdmin, supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
@@ -12,6 +13,33 @@ const CreateSuperAdmin = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
+
+  // Check if the database schema is ready
+  useEffect(() => {
+    const checkSetup = async () => {
+      try {
+        // Try to query the user_role enum from the database
+        const { data: enumData, error: enumError } = await supabase
+          .from('pg_enum')
+          .select('*')
+          .eq('enumtypid', 'public.user_role'::regtype);
+
+        if (enumError) {
+          console.error("Error checking schema setup:", enumError);
+          setIsSetupComplete(false);
+          return;
+        }
+
+        setIsSetupComplete(true);
+      } catch (error) {
+        console.error("Schema setup check error:", error);
+        setIsSetupComplete(false);
+      }
+    };
+
+    checkSetup();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +147,16 @@ const CreateSuperAdmin = () => {
             </div>
           </form>
           
+          {!isSetupComplete && (
+            <div className="mt-4 p-3 rounded-md flex items-start gap-2 bg-amber-50 text-amber-800">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-500 mt-0.5" />
+              <div>
+                <p className="font-medium">Database schema not ready</p>
+                <p className="text-sm">The database schema might not be fully set up. Try refreshing the page.</p>
+              </div>
+            </div>
+          )}
+
           {result && (
             <div className={`mt-4 p-3 rounded-md flex items-start gap-2 ${result.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
               {result.success ? (
@@ -136,7 +174,7 @@ const CreateSuperAdmin = () => {
         <CardFooter>
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading} 
+            disabled={isLoading || !isSetupComplete} 
             className="w-full"
           >
             {isLoading ? "Creating..." : "Create Super Admin"}
@@ -148,3 +186,4 @@ const CreateSuperAdmin = () => {
 };
 
 export default CreateSuperAdmin;
+
