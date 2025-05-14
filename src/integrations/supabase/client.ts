@@ -23,25 +23,7 @@ export const createSuperAdmin = async (password: string) => {
   const email = "super@edufar.co";
 
   try {
-    // First check if user already exists by listing users and filtering in code
-    // listUsers doesn't directly support filtering by email in its parameters
-    const { data, error: listError } = await supabase.auth.admin.listUsers();
-
-    if (listError) {
-      console.error("Error checking existing user:", listError);
-      throw listError;
-    }
-    
-    // Check if the super admin email already exists in the users list
-    // Properly type the users array to fix the TypeScript error
-    const existingUser = data?.users && Array.isArray(data.users) && 
-      data.users.find((user: User) => user.email === email);
-      
-    if (existingUser) {
-      return { success: false, message: 'Super admin already exists' };
-    }
-    
-    // Sign up the super admin user
+    // Try to sign up the super admin user directly
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -55,6 +37,10 @@ export const createSuperAdmin = async (password: string) => {
     });
 
     if (authError) {
+      // If the error message indicates the user already exists
+      if (authError.message.includes('already registered')) {
+        return { success: false, message: 'Super admin already exists' };
+      }
       throw authError;
     }
 
