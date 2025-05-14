@@ -1,7 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAcademic } from "@/contexts/AcademicContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSubjects, useSubjectCategories } from "@/hooks/useSubjects";
+import { useCourses } from "@/hooks/useCourses";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -31,118 +34,59 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen } from "lucide-react";
-
-interface Subject {
-  id: string;
-  name: string;
-  course_id: string;
-  is_core: boolean;
-  subject_type: string;
-  grading_type: string;
-  max_marks: number;
-  teacher_id: string | null;
-  academic_year_id: string;
-}
+import { BookOpen, AlertCircle } from "lucide-react";
+import { Subject, SubjectCategory } from "@/types/academic";
 
 const SubjectsManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { currentAcademicYear } = useAcademic();
   
-  // Mock data for courses, teachers, etc.
-  const courses = [
-    { id: "1", name: "Grade 1" },
-    { id: "2", name: "Grade 2" },
-    { id: "3", name: "Grade 3" },
-  ];
+  // Fetch data using our hooks
+  const { categories, isLoading: categoriesLoading, createCategory } = useSubjectCategories();
+  const { subjects, isLoading: subjectsLoading, createSubject, updateSubject, deleteSubject } = 
+    useSubjects(currentAcademicYear?.id);
+  const { courses, isLoading: coursesLoading } = useCourses(currentAcademicYear?.id);
   
-  const academicYears = [
-    { id: "1", name: "2024-2025" },
-    { id: "2", name: "2023-2024" },
-  ];
-  
-  const teachers = [
+  // Teachers would typically come from a separate hook, but we'll mock it for now
+  const [teachers, setTeachers] = useState([
     { id: "1", name: "John Smith" },
     { id: "2", name: "Jane Doe" },
     { id: "3", name: "Robert Brown" },
-  ];
+  ]);
   
-  const subjectTypes = ["Language", "Science", "Mathematics", "Social Studies", "Arts"];
-  const gradingTypes = ["Marks", "Grades", "Hybrid"];
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Omit<Subject, 'id' | 'created_at' | 'updated_at'>>({
     name: "",
-    course_id: "",
+    code: "",
+    description: "",
+    category_id: "",
     is_core: true,
-    subject_type: "",
-    grading_type: "Marks",
+    is_language: false,
     max_marks: 100,
-    teacher_id: "",
-    academic_year_id: academicYears[0].id,
+    pass_marks: 33,
+    school_id: profile?.school_id || "",
+    academic_year_id: currentAcademicYear?.id || "",
   });
-
-  const fetchSubjects = async () => {
-    try {
-      setLoading(true);
-      
-      // Mock data - in a real implementation this would fetch from Supabase
-      const mockSubjects: Subject[] = [
-        {
-          id: "1",
-          name: "Mathematics",
-          course_id: "1",
-          is_core: true,
-          subject_type: "Mathematics",
-          grading_type: "Marks",
-          max_marks: 100,
-          teacher_id: "1",
-          academic_year_id: "1",
-        },
-        {
-          id: "2",
-          name: "English",
-          course_id: "1",
-          is_core: true,
-          subject_type: "Language",
-          grading_type: "Marks",
-          max_marks: 100,
-          teacher_id: "2",
-          academic_year_id: "1",
-        },
-        {
-          id: "3",
-          name: "Science",
-          course_id: "2",
-          is_core: true,
-          subject_type: "Science",
-          grading_type: "Grades",
-          max_marks: 0,
-          teacher_id: "3",
-          academic_year_id: "1",
-        },
-      ];
-      
-      setSubjects(mockSubjects);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching subjects:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch subjects. Please try again.",
-        variant: "destructive",
-      });
-      setLoading(false);
+  
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+  });
+  
+  // Reset form data when academic year changes
+  useEffect(() => {
+    if (currentAcademicYear) {
+      setFormData(prev => ({
+        ...prev,
+        academic_year_id: currentAcademicYear.id,
+      }));
     }
-  };
-
-  // Initial data fetch
-  useState(() => {
-    fetchSubjects();
-  });
-
+  }, [currentAcademicYear]);
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
@@ -150,210 +94,344 @@ const SubjectsManagement = () => {
       [name]: type === "number" ? parseInt(value) || 0 : value,
     }));
   };
-
+  
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
-
+  
   const handleCheckboxChange = (name: string, checked: boolean) => {
     setFormData((prev) => ({
       ...prev,
       [name]: checked,
     }));
   };
-
+  
+  const handleCategoryInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCategoryForm({ name: e.target.value });
+  };
+  
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!profile?.school_id) {
+      toast({
+        title: "Error",
+        description: "School ID not found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await createCategory({
+        name: categoryForm.name,
+        school_id: profile.school_id,
+      });
+      
+      toast({
+        title: "Category Created",
+        description: `${categoryForm.name} category has been created successfully.`
+      });
+      
+      setCategoryForm({ name: "" });
+      setCategoryDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create category",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // In a real implementation, this would save to Supabase
-    const newSubject: Subject = {
-      id: Date.now().toString(),
-      ...formData,
-    };
-
-    setSubjects((prev) => [...prev, newSubject]);
-    setDialogOpen(false);
-    toast({
-      title: "Subject created",
-      description: `${formData.name} has been added successfully.`,
-    });
+    if (!profile?.school_id || !currentAcademicYear) {
+      toast({
+        title: "Error",
+        description: "Missing required data",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    // Reset form
+    try {
+      const subjectData = {
+        ...formData,
+        school_id: profile.school_id,
+        academic_year_id: currentAcademicYear.id,
+      };
+      
+      if (editMode && selectedSubject) {
+        await updateSubject({ 
+          id: selectedSubject.id, 
+          subject: subjectData
+        });
+        
+        toast({
+          title: "Subject Updated",
+          description: `${formData.name} has been updated successfully.`
+        });
+      } else {
+        await createSubject(subjectData);
+        
+        toast({
+          title: "Subject Created",
+          description: `${formData.name} has been added successfully.`
+        });
+      }
+      
+      // Reset form
+      setFormData({
+        name: "",
+        code: "",
+        description: "",
+        category_id: "",
+        is_core: true,
+        is_language: false,
+        max_marks: 100,
+        pass_marks: 33,
+        school_id: profile.school_id,
+        academic_year_id: currentAcademicYear.id,
+      });
+      
+      setEditMode(false);
+      setSelectedSubject(null);
+      setDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save subject",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleEdit = (subject: Subject) => {
+    setSelectedSubject(subject);
+    setFormData({
+      name: subject.name,
+      code: subject.code || "",
+      description: subject.description || "",
+      category_id: subject.category_id || "",
+      is_core: subject.is_core,
+      is_language: subject.is_language,
+      max_marks: subject.max_marks || 100,
+      pass_marks: subject.pass_marks || 33,
+      school_id: subject.school_id,
+      academic_year_id: subject.academic_year_id,
+    });
+    setEditMode(true);
+    setDialogOpen(true);
+  };
+  
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteSubject(id);
+      
+      toast({
+        title: "Subject Deleted",
+        description: "The subject has been deleted successfully."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete subject",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const openAddDialog = () => {
+    setSelectedSubject(null);
     setFormData({
       name: "",
-      course_id: "",
+      code: "",
+      description: "",
+      category_id: "",
       is_core: true,
-      subject_type: "",
-      grading_type: "Marks",
+      is_language: false,
       max_marks: 100,
-      teacher_id: "",
-      academic_year_id: academicYears[0].id,
+      pass_marks: 33,
+      school_id: profile?.school_id || "",
+      academic_year_id: currentAcademicYear?.id || "",
     });
+    setEditMode(false);
+    setDialogOpen(true);
   };
+  
+  const isLoading = subjectsLoading || categoriesLoading || coursesLoading;
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-semibold">Subjects</h3>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Add New Subject</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Subject</DialogTitle>
-              <DialogDescription>
-                Add a new subject to your academic structure.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Subject Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Mathematics"
-                    required
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="course_id">Course</Label>
-                  <Select
-                    value={formData.course_id}
-                    onValueChange={(value) => handleSelectChange("course_id", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="is_core"
-                    checked={formData.is_core}
-                    onCheckedChange={(checked) => handleCheckboxChange("is_core", checked === true)}
-                  />
-                  <Label htmlFor="is_core">Core Subject</Label>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="subject_type">Subject Type</Label>
-                  <Select
-                    value={formData.subject_type}
-                    onValueChange={(value) => handleSelectChange("subject_type", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subject type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjectTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="grading_type">Grading Type</Label>
-                  <Select
-                    value={formData.grading_type}
-                    onValueChange={(value) => handleSelectChange("grading_type", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select grading type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gradingTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {formData.grading_type === "Marks" && (
+        <div className="flex gap-2">
+          <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">Add Category</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Create Subject Category</DialogTitle>
+                <DialogDescription>
+                  Add a new subject category to organize your subjects.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateCategory}>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="max_marks">Maximum Marks</Label>
+                    <Label htmlFor="categoryName">Category Name</Label>
                     <Input
-                      id="max_marks"
-                      name="max_marks"
-                      type="number"
-                      value={formData.max_marks}
-                      onChange={handleInputChange}
-                      min="0"
+                      id="categoryName"
+                      value={categoryForm.name}
+                      onChange={handleCategoryInputChange}
+                      placeholder="e.g. Sciences, Languages, Arts"
                       required
                     />
                   </div>
-                )}
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="teacher_id">Assign Teacher</Label>
-                  <Select
-                    value={formData.teacher_id}
-                    onValueChange={(value) => handleSelectChange("teacher_id", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select teacher" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {teachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="academic_year_id">Academic Year</Label>
-                  <Select
-                    value={formData.academic_year_id}
-                    onValueChange={(value) => handleSelectChange("academic_year_id", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select academic year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {academicYears.map((year) => (
-                        <SelectItem key={year.id} value={year.id}>
-                          {year.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <DialogFooter>
+                  <Button type="submit">Create Category</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openAddDialog}>Add New Subject</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>{editMode ? "Edit Subject" : "Create New Subject"}</DialogTitle>
+                <DialogDescription>
+                  {editMode ? "Modify subject details" : "Add a new subject to your academic structure."}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Subject Name</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Mathematics"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="code">Subject Code (Optional)</Label>
+                    <Input
+                      id="code"
+                      name="code"
+                      value={formData.code || ""}
+                      onChange={handleInputChange}
+                      placeholder="e.g. MATH101"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="category_id">Subject Category</Label>
+                    <Select
+                      value={formData.category_id || ""}
+                      onValueChange={(value) => handleSelectChange("category_id", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Uncategorized</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_core"
+                      checked={formData.is_core}
+                      onCheckedChange={(checked) => handleCheckboxChange("is_core", checked === true)}
+                    />
+                    <Label htmlFor="is_core">Core Subject</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_language"
+                      checked={formData.is_language}
+                      onCheckedChange={(checked) => handleCheckboxChange("is_language", checked === true)}
+                    />
+                    <Label htmlFor="is_language">Language Subject</Label>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="max_marks">Maximum Marks</Label>
+                      <Input
+                        id="max_marks"
+                        name="max_marks"
+                        type="number"
+                        value={formData.max_marks || 100}
+                        onChange={handleInputChange}
+                        min="0"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="pass_marks">Pass Marks</Label>
+                      <Input
+                        id="pass_marks"
+                        name="pass_marks"
+                        type="number"
+                        value={formData.pass_marks || 33}
+                        onChange={handleInputChange}
+                        min="0"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="description">Description (Optional)</Label>
+                    <Input
+                      id="description"
+                      name="description"
+                      value={formData.description || ""}
+                      onChange={handleInputChange}
+                      placeholder="Brief description of the subject"
+                    />
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">Create Subject</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="submit">{editMode ? "Update" : "Create"} Subject</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center p-4">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : !currentAcademicYear ? (
+        <div className="flex flex-col items-center justify-center p-8 text-muted-foreground text-center">
+          <AlertCircle className="h-12 w-12 mb-2" />
+          <h3 className="text-lg font-medium">No Academic Year Selected</h3>
+          <p className="text-sm mt-1">Please select or create an academic year first.</p>
         </div>
       ) : (
         <div className="border rounded-md">
@@ -361,10 +439,9 @@ const SubjectsManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Subject</TableHead>
-                <TableHead>Course</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Grading</TableHead>
-                <TableHead>Teacher</TableHead>
+                <TableHead>Marks</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -376,33 +453,45 @@ const SubjectsManagement = () => {
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4" />
                         {subject.name}
+                        {subject.code && (
+                          <span className="text-xs text-muted-foreground">({subject.code})</span>
+                        )}
                         {subject.is_core && (
                           <Badge variant="secondary" className="ml-2">Core</Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {courses.find(c => c.id === subject.course_id)?.name || "Unknown"}
+                      {subject.category_id ? (
+                        categories.find(c => c.id === subject.category_id)?.name || "Unknown"
+                      ) : (
+                        <span className="text-muted-foreground">Uncategorized</span>
+                      )}
                     </TableCell>
-                    <TableCell>{subject.subject_type}</TableCell>
                     <TableCell>
-                      {subject.grading_type}
-                      {subject.grading_type === "Marks" && ` (${subject.max_marks})`}
+                      {subject.is_language ? "Language" : "Regular"}
                     </TableCell>
                     <TableCell>
-                      {teachers.find(t => t.id === subject.teacher_id)?.name || "Unassigned"}
+                      {subject.max_marks !== null ? (
+                        <>Max: {subject.max_marks}, Pass: {subject.pass_marks}</>
+                      ) : (
+                        "Not Applicable"
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleEdit(subject)}
                         >
                           Edit
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(subject.id)}
                         >
                           Delete
                         </Button>
@@ -412,7 +501,7 @@ const SubjectsManagement = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
                     No subjects found. Create your first subject.
                   </TableCell>
                 </TableRow>

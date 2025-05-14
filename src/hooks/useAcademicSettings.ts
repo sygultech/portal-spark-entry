@@ -1,23 +1,18 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { 
   fetchAcademicSettings,
-  createAcademicSettings,
   updateAcademicSettings,
+  setDefaultAcademicYear,
   fetchAcademicAuditLogs
 } from '@/services/academicSettingsService';
-import type { AcademicSettings } from '@/types/academic';
 
-export function useAcademicSettings() {
+export function useAcademicSettings(schoolId?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
   
-  const schoolId = profile?.school_id;
-  
-  // Fetch academic settings for the current school
+  // Fetch academic settings
   const settingsQuery = useQuery({
     queryKey: ['academicSettings', schoolId],
     queryFn: () => {
@@ -27,53 +22,58 @@ export function useAcademicSettings() {
     enabled: !!schoolId
   });
 
-  // Create academic settings
-  const createSettingsMutation = useMutation({
-    mutationFn: (newSettings: Omit<AcademicSettings, 'id' | 'created_at' | 'updated_at'>) => 
-      createAcademicSettings(newSettings),
+  // Update academic settings
+  const updateSettingsMutation = useMutation({
+    mutationFn: ({ id, settings }: { id: string, settings: any }) => 
+      updateAcademicSettings(id, settings),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicSettings', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['academicSettings'] });
       toast({
-        title: "Settings Created",
-        description: "The academic settings have been created successfully."
+        title: "Settings Updated",
+        description: "Academic settings have been updated successfully."
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create academic settings",
+        description: error.message || "Failed to update settings",
         variant: "destructive"
       });
     }
   });
 
-  // Update academic settings
-  const updateSettingsMutation = useMutation({
-    mutationFn: ({ id, settings }: { id: string, settings: Partial<AcademicSettings> }) => 
-      updateAcademicSettings(id, settings),
+  // Set default academic year
+  const setDefaultYearMutation = useMutation({
+    mutationFn: ({ settingsId, academicYearId }: { settingsId: string, academicYearId: string }) => 
+      setDefaultAcademicYear(settingsId, academicYearId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicSettings', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['academicSettings'] });
       toast({
-        title: "Settings Updated",
-        description: "The academic settings have been updated successfully."
+        title: "Default Year Updated",
+        description: "Default academic year has been set successfully."
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update academic settings",
+        description: error.message || "Failed to set default year",
         variant: "destructive"
       });
     }
   });
 
   // Fetch audit logs
-  const getAuditLogs = (entityType?: string, entityId?: string, limit = 50, offset = 0) => {
+  const getAuditLogs = (filters?: {
+    entityType?: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
     return useQuery({
-      queryKey: ['academicAuditLogs', schoolId, entityType, entityId, limit, offset],
+      queryKey: ['academicAuditLogs', schoolId, filters],
       queryFn: () => {
         if (!schoolId) throw new Error("School ID is required");
-        return fetchAcademicAuditLogs(schoolId, entityType, entityId, limit, offset);
+        return fetchAcademicAuditLogs(schoolId, filters);
       },
       enabled: !!schoolId
     });
@@ -83,10 +83,9 @@ export function useAcademicSettings() {
     settings: settingsQuery.data,
     isLoading: settingsQuery.isLoading,
     error: settingsQuery.error,
-    createSettings: createSettingsMutation.mutate,
     updateSettings: updateSettingsMutation.mutate,
+    setDefaultYear: setDefaultYearMutation.mutate,
     getAuditLogs,
-    isCreating: createSettingsMutation.isPending,
     isUpdating: updateSettingsMutation.isPending
   };
 }
