@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,18 +19,18 @@ const CreateSuperAdmin = () => {
     const checkSetup = async () => {
       try {
         // Try to query the user_role enum from the database
-        const { data: enumData, error: enumError } = await supabase
-          .from('pg_enum')
+        const { data, error } = await supabase
+          .from('pg_type')
           .select('*')
-          .eq('enumtypid', 'public.user_role'::regtype);
+          .eq('typname', 'user_role');
 
-        if (enumError) {
-          console.error("Error checking schema setup:", enumError);
+        if (error) {
+          console.error("Error checking schema setup:", error);
           setIsSetupComplete(false);
           return;
         }
 
-        setIsSetupComplete(true);
+        setIsSetupComplete(data && data.length > 0);
       } catch (error) {
         console.error("Schema setup check error:", error);
         setIsSetupComplete(false);
@@ -186,4 +185,3 @@ const CreateSuperAdmin = () => {
 };
 
 export default CreateSuperAdmin;
-
