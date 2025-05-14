@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useAcademic } from "@/contexts/AcademicContext";
@@ -474,7 +473,7 @@ const AcademicYears = () => {
                       {year.is_archived ? (
                         <Badge variant="secondary">Archived</Badge>
                       ) : year.is_active ? (
-                        <Badge variant="success">Active</Badge>
+                        <Badge variant="default">Active</Badge>
                       ) : (
                         <Badge variant="outline">Inactive</Badge>
                       )}
