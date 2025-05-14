@@ -12,12 +12,11 @@ import RoleNavigation from "@/components/RoleNavigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import SchoolManagement from "@/pages/SchoolManagement";
-import SignIn from "@/pages/SignIn";
-import SignUp from "@/pages/SignUp";
 import Profile from "@/pages/ProfileSettings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
+import SignUp from "@/pages/SignUp";
 
 const AppRoutes = () => {
   return (
@@ -31,15 +30,21 @@ const AppRoutes = () => {
         <Route
           path="/signin"
           element={
-            <AuthLayout>
-              <SignIn />
+            <AuthLayout
+              title="Sign in to your account"
+              subtitle="Welcome back! Please enter your details."
+            >
+              <Login />
             </AuthLayout>
           }
         />
         <Route
           path="/signup"
           element={
-            <AuthLayout>
+            <AuthLayout
+              title="Create an account"
+              subtitle="Enter your information to get started"
+            >
               <SignUp />
             </AuthLayout>
           }
