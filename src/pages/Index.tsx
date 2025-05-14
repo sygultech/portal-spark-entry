@@ -58,7 +58,7 @@ const Index = () => {
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Everything you need in one place</h2>
             <p className="text-muted-foreground">
-              SaasFlow combines powerful features to help your team work smarter, not harder.
+              Edufar combines powerful features to help your team work smarter, not harder.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
