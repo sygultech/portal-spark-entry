@@ -25,6 +25,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/create-super-admin" element={<CreateSuperAdmin />} />
+            <Route path="/admin-creation" element={<CreateSuperAdmin />} />
             <Route 
               path="/" 
               element={
