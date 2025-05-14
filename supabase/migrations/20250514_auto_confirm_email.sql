@@ -20,19 +20,15 @@ BEGIN
   END IF;
   
   -- Check if the email belongs to a school admin
-  -- Either by checking the profiles table
+  -- by checking the profiles table
   SELECT EXISTS (
     SELECT 1 FROM auth.users u
     LEFT JOIN public.profiles p ON u.id = p.id
-    WHERE u.email = target_email AND (
-      p.role = 'school_admin' OR
-      -- Also check if email follows school admin pattern
-      u.email LIKE '%-admin@%'
-    )
+    WHERE u.email = target_email AND p.role = 'school_admin'
   ) INTO is_admin;
   
-  -- We'll auto-confirm for school admins or emails with "-admin@" pattern
-  IF is_admin OR target_email LIKE '%-admin@%' THEN
+  -- We'll auto-confirm for school admins only
+  IF is_admin THEN
     -- Get the user ID
     SELECT id INTO user_id FROM auth.users WHERE email = target_email;
     

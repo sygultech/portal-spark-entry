@@ -80,12 +80,6 @@ export const fetchUserProfile = async (userId: string) => {
             defaultProfile.school_id = userData.user.user_metadata?.school_id || null;
           }
           
-          // Check if email follows a pattern for school admins (e.g., ends with "-admin@")
-          if (defaultProfile.email.includes("-admin@")) {
-            console.log("Email appears to be a school admin email:", defaultProfile.email);
-            defaultProfile.role = "school_admin";
-          }
-
           // Call the create_user_profile RPC function that was created in the database
           const { error: insertError } = await supabase.rpc('create_user_profile', {
             user_id: userId,
