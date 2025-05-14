@@ -23,6 +23,8 @@ export const cleanupAuthState = () => {
 // Function to fetch user profile data
 export const fetchUserProfile = async (userId: string) => {
   try {
+    console.log("Fetching profile for user:", userId);
+    
     // Use maybeSingle() to handle cases where profile might not exist
     const { data, error } = await supabase
       .from("profiles")
@@ -31,6 +33,7 @@ export const fetchUserProfile = async (userId: string) => {
       .maybeSingle();
 
     if (error) {
+      console.error("Error fetching profile:", error);
       throw error;
     }
 
@@ -46,6 +49,7 @@ export const fetchUserProfile = async (userId: string) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
+          console.error("Error getting user data:", userError);
           throw userError;
         }
         
@@ -66,6 +70,13 @@ export const fetchUserProfile = async (userId: string) => {
             console.log("Setting up super admin profile");
             defaultProfile.role = "super_admin";
           }
+          
+          // Special case for school admin - check user metadata
+          if (userData.user.user_metadata?.role === 'school_admin') {
+            console.log("Setting up school admin profile from metadata");
+            defaultProfile.role = "school_admin";
+            defaultProfile.school_id = userData.user.user_metadata?.school_id || null;
+          }
 
           // Call the create_user_profile RPC function that was created in the database
           const { error: insertError } = await supabase.rpc('create_user_profile', {
@@ -78,16 +89,23 @@ export const fetchUserProfile = async (userId: string) => {
 
           if (insertError) {
             console.error("Error creating default profile:", insertError.message);
-            // Try fallback approach for super admin account creation
-            if (defaultProfile.email === "super@edufar.co") {
-              const { error: adminError } = await supabase.auth.updateUser({
-                data: { role: 'super_admin' }
+            // Try fallback approach
+            const { error: directInsertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                email: defaultProfile.email,
+                first_name: defaultProfile.first_name,
+                last_name: defaultProfile.last_name,
+                role: defaultProfile.role,
+                school_id: defaultProfile.school_id
               });
               
-              if (!adminError) {
-                // Force reload to apply changes
-                window.location.reload();
-              }
+            if (directInsertError) {
+              console.error("Fallback profile creation failed:", directInsertError);
+            } else {
+              console.log("Created profile via fallback method");
+              return defaultProfile;
             }
           } else {
             console.log("Created default profile:", defaultProfile);

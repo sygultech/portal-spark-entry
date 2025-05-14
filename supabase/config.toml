@@ -8,3 +8,6 @@ enable_signup = true
 [functions]
 [functions.handle_new_user]
 verify_jwt = true
+
+[functions.auto_confirm_email]
+verify_jwt = true

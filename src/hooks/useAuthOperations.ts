@@ -17,6 +17,8 @@ export const useAuthOperations = () => {
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("Attempting to sign in with:", email);
+      
       // Clean up existing state
       cleanupAuthState();
       
@@ -25,6 +27,7 @@ export const useAuthOperations = () => {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
         // Continue even if this fails
+        console.log("Global sign out failed, continuing with sign in");
       }
       
       // Attempt to sign in
@@ -34,84 +37,114 @@ export const useAuthOperations = () => {
       });
 
       // Check for the specific "Email not confirmed" error
-      if (error && error.message.includes("Email not confirmed")) {
-        console.log("Email not confirmed, attempting to confirm for school admin");
+      if (error && (error.message.includes("Email not confirmed") || error.message.includes("Invalid login credentials"))) {
+        console.log("Login error detected:", error.message);
         
-        // For security reasons, attempt to auto-confirm specific school admin emails
-        // Use a direct database call instead of the admin API which has type issues
+        // Check if this might be a school admin with unconfirmed email
         try {
-          // First check if this is a school admin
-          const profileResult = await supabase
+          // First check if this email exists in profiles
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, email')
             .eq('email', email)
-            .single();
+            .maybeSingle();
           
-          let confirmData = false;
-          let confirmError = null;
+          console.log("Profile check result:", profileData, profileError);
           
-          // If this is a school admin, try to confirm their email
-          if (profileResult.data?.role === 'school_admin') {
+          if (profileData?.role === 'school_admin') {
+            console.log("Found school admin profile, attempting to auto-confirm email");
+            
             // Call the stored procedure to confirm email
-            const confirmResult = await supabase.rpc(
+            const { data: confirmData, error: confirmError } = await supabase.rpc(
               'auto_confirm_email',
               { target_email: email }
             );
-            confirmData = confirmResult.data;
-            confirmError = confirmResult.error;
-          }
-          
-          if (confirmError || !confirmData) {
-            // If confirmation fails, show the standard error
-            toast({
-              title: "Login failed",
-              description: "Email not confirmed. Please check your inbox for a confirmation link.",
-              variant: "destructive",
-            });
-            throw error; // Rethrow the original error
-          } else {
-            // If confirmation succeeds, attempt login again
-            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
             
-            if (retryError) throw retryError;
+            console.log("Email confirmation result:", confirmData, confirmError);
             
-            if (retryData.user) {
-              // Proceed with successful login
-              const userProfile = await fetchUserProfile(retryData.user.id);
-              const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+            if (confirmError) {
+              toast({
+                title: "Login failed",
+                description: "Unable to confirm email. Please contact support.",
+                variant: "destructive",
+              });
+              throw confirmError;
+            }
+            
+            if (confirmData) {
+              // If confirmation succeeds, attempt login again
+              console.log("Email confirmed, retrying login");
+              const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
               
-              if (navigate) {
-                navigate(roleBasedRoute);
-              } else {
-                window.location.href = roleBasedRoute;
+              if (retryError) {
+                console.error("Retry login failed:", retryError);
+                toast({
+                  title: "Login failed",
+                  description: retryError.message || "Invalid login credentials",
+                  variant: "destructive",
+                });
+                throw retryError;
               }
               
+              if (retryData?.user) {
+                // Proceed with successful login
+                console.log("Login successful after email confirmation");
+                const userProfile = await fetchUserProfile(retryData.user.id);
+                const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+                
+                if (navigate) {
+                  navigate(roleBasedRoute);
+                } else {
+                  window.location.href = roleBasedRoute;
+                }
+                
+                toast({
+                  title: "Login successful!",
+                  description: "Welcome back!",
+                });
+                return;
+              }
+            } else {
               toast({
-                title: "Login successful!",
-                description: "Welcome back!",
+                title: "Login failed",
+                description: "Email confirmation failed. Please contact support.",
+                variant: "destructive",
               });
             }
+          } else {
+            // Not a school admin or profile not found
+            toast({
+              title: "Login failed",
+              description: error.message || "Invalid login credentials",
+              variant: "destructive",
+            });
           }
-        } catch (err) {
-          // Handle any errors during the confirmation process
+        } catch (err: any) {
+          console.error("Error during login recovery process:", err);
           toast({
             title: "Login failed",
-            description: "Email not confirmed. Please check your inbox for a confirmation link.",
+            description: err.message || "An unexpected error occurred",
             variant: "destructive",
           });
-          throw error; // Rethrow the original error
         }
       } else if (error) {
         // Handle other errors
-        throw error;
-      } else if (data.user) {
+        console.error("Login error:", error);
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (data?.user) {
         // Normal successful login path
+        console.log("Login successful, fetching profile");
         const userProfile = await fetchUserProfile(data.user.id);
         const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
         
+        console.log("Redirecting to:", roleBasedRoute);
         if (navigate) {
           navigate(roleBasedRoute);
         } else {
@@ -124,9 +157,10 @@ export const useAuthOperations = () => {
         });
       }
     } catch (error: any) {
+      console.error("Login process error:", error);
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
