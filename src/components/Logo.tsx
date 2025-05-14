@@ -4,9 +4,10 @@ import React from "react";
 interface LogoProps {
   size?: "sm" | "md" | "lg";
   variant?: "primary" | "white";
+  className?: string; // Added className prop
 }
 
-const Logo = ({ size = "md", variant = "primary" }: LogoProps) => {
+const Logo = ({ size = "md", variant = "primary", className = "" }: LogoProps) => {
   const sizeClasses = {
     sm: "text-xl",
     md: "text-2xl",
@@ -16,7 +17,7 @@ const Logo = ({ size = "md", variant = "primary" }: LogoProps) => {
   const colorClass = variant === "white" ? "text-white" : "text-primary";
 
   return (
-    <div className={`font-bold ${sizeClasses[size]} ${colorClass} flex items-center`}>
+    <div className={`font-bold ${sizeClasses[size]} ${colorClass} flex items-center ${className}`}>
       <span className="mr-1">
         <svg
           xmlns="http://www.w3.org/2000/svg"

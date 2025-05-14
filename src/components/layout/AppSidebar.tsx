@@ -59,9 +59,9 @@ export const AppSidebarContent = () => {
       <SidebarHeader className="flex h-14 items-center border-b px-4">
         <div className="flex w-full items-center gap-2">
           {state === "expanded" ? (
-            <Logo className="h-8 w-8" />
+            <Logo size="sm" />
           ) : (
-            <Logo className="h-8 w-8" />
+            <Logo size="sm" />
           )}
           {state === "expanded" && (
             <span className="text-lg font-semibold">EduMatrix</span>
