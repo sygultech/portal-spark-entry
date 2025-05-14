@@ -23,16 +23,14 @@ export const createSuperAdmin = async (password: string) => {
 
   try {
     // First check if user already exists
-    const { data: existingUser } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('email', email)
-      .single();
+    const { data: existingUser, error: fetchError } = await supabase.auth.admin
+      .getUserByEmail(email)
+      .catch(() => ({ data: null, error: null }));
 
     if (existingUser) {
       return { success: false, message: 'Super admin already exists' };
     }
-
+    
     // Sign up the super admin user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -41,6 +39,7 @@ export const createSuperAdmin = async (password: string) => {
         data: {
           first_name: 'Super',
           last_name: 'Admin',
+          role: 'super_admin'  // Pass role in metadata
         }
       }
     });
@@ -49,11 +48,15 @@ export const createSuperAdmin = async (password: string) => {
       throw authError;
     }
 
-    // Update the user's role to super_admin
+    // The handle_new_user trigger will create the profile, but we need to update the role
     if (authData.user) {
+      // Direct database update to set the role to super_admin
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ role: 'super_admin', school_id: '00000000-0000-0000-0000-000000000001' })
+        .update({ 
+          role: 'super_admin', 
+          school_id: '00000000-0000-0000-0000-000000000001' 
+        })
         .eq('id', authData.user.id);
 
       if (updateError) {
@@ -66,6 +69,7 @@ export const createSuperAdmin = async (password: string) => {
     return { success: false, message: 'Failed to create super admin' };
     
   } catch (error: any) {
-    return { success: false, message: error.message };
+    console.error('Super admin creation error:', error);
+    return { success: false, message: error.message || 'An unknown error occurred' };
   }
 };

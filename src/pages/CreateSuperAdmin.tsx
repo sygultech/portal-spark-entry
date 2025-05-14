@@ -5,14 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSuperAdmin } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 const CreateSuperAdmin = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState<{ success?: boolean; message?: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setResult(null);
 
     if (password !== confirmPassword) {
       toast({
@@ -23,10 +26,23 @@ const CreateSuperAdmin = () => {
       return;
     }
 
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
+      console.log("Creating super admin...");
       const result = await createSuperAdmin(password);
+      console.log("Result:", result);
+      
+      setResult(result);
       
       if (result.success) {
         toast({
@@ -38,14 +54,19 @@ const CreateSuperAdmin = () => {
       } else {
         toast({
           title: "Error",
-          description: result.message,
+          description: result.message || "Failed to create super admin",
           variant: "destructive",
         });
       }
     } catch (error: any) {
+      console.error("Error in component:", error);
+      setResult({
+        success: false,
+        message: error.message || "An unknown error occurred"
+      });
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -97,6 +118,20 @@ const CreateSuperAdmin = () => {
               </div>
             </div>
           </form>
+          
+          {result && (
+            <div className={`mt-4 p-3 rounded-md flex items-start gap-2 ${result.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {result.success ? (
+                <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-500 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />
+              )}
+              <div>
+                <p className="font-medium">{result.success ? 'Success' : 'Error'}</p>
+                <p className="text-sm">{result.message}</p>
+              </div>
+            </div>
+          )}
         </CardContent>
         <CardFooter>
           <Button 
