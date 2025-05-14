@@ -80,7 +80,7 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
   // Handle form submission
   const handleFormSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      // Create new school
+      // Create new school with the updated schema
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
         .insert({
@@ -113,20 +113,24 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
 
         // Update the newly created user's profile to link it to the school
         setTimeout(async () => {
-          const { data: userData } = await supabase
-            .from("profiles")
-            .select()
-            .eq("email", values.admin_email)
-            .single();
-
-          if (userData) {
-            await supabase
+          try {
+            const { data: userData } = await supabase
               .from("profiles")
-              .update({
-                school_id: schoolData[0].id,
-                role: "school_admin",
-              })
-              .eq("id", userData.id);
+              .select()
+              .eq("email", values.admin_email)
+              .single();
+
+            if (userData) {
+              await supabase
+                .from("profiles")
+                .update({
+                  school_id: schoolData[0].id,
+                  role: "school_admin",
+                })
+                .eq("id", userData.id);
+            }
+          } catch (error) {
+            console.error("Error updating admin profile:", error);
           }
         }, 1000); // Give some time for the auth trigger to create the profile
       }
@@ -151,10 +155,12 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
 
       onSubmit(schoolFormData);
       onClose();
+      form.reset(); // Reset the form after submission
     } catch (error: any) {
+      console.error("School creation error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     }
