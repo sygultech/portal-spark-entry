@@ -9,6 +9,7 @@ import NotFound from '@/pages/NotFound';
 import CreateSuperAdmin from '@/pages/CreateSuperAdmin';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
 import SchoolManagement from '@/pages/SchoolManagement';
+import ProfileSettings from '@/pages/ProfileSettings';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
@@ -49,6 +50,9 @@ export const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Profile Settings Route - accessible by all authenticated users */}
+        <Route path="/profile/settings" element={<ProfileSettings />} />
 
         {/* Default route */}
         <Route path="/" element={<Index />} />
