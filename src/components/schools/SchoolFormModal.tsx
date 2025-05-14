@@ -80,23 +80,46 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
   // Handle form submission
   const handleFormSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      // Create new school with the updated schema
+      console.log("Creating school with data:", { name: values.name });
+      
+      // First, create the school with only the basic fields that are definitely in the schema
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
         .insert({
           name: values.name,
-          domain: values.domain,
-          admin_email: values.admin_email,
-          contact_number: values.contact_number,
-          region: values.region,
-          status: values.status,
         })
         .select();
 
-      if (schoolError) throw schoolError;
+      if (schoolError) {
+        console.error("School creation error details:", schoolError);
+        throw schoolError;
+      }
+
+      if (!schoolData || schoolData.length === 0) {
+        throw new Error("Failed to create school record");
+      }
+
+      // Now update the school with additional fields
+      console.log("School created successfully, now updating with additional fields");
+      const { error: updateError } = await supabase
+        .from("schools")
+        .update({
+          domain: values.domain || null,
+          admin_email: values.admin_email,
+          contact_number: values.contact_number || null,
+          region: values.region || null,
+          status: values.status
+        })
+        .eq("id", schoolData[0].id);
+        
+      if (updateError) {
+        console.error("School update error:", updateError);
+        // Don't throw here, continue with user creation
+      }
 
       // Create school admin user if password is provided
       if (values.admin_password && schoolData && schoolData[0]) {
+        console.log("Creating school admin user");
         const { error: signUpError } = await supabase.auth.signUp({
           email: values.admin_email,
           password: values.admin_password,
@@ -109,11 +132,15 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
           },
         });
 
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          console.error("Admin signup error:", signUpError);
+          throw signUpError;
+        }
 
         // Update the newly created user's profile to link it to the school
         setTimeout(async () => {
           try {
+            console.log("Updating admin profile");
             const { data: userData } = await supabase
               .from("profiles")
               .select()
@@ -128,6 +155,10 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
                   role: "school_admin",
                 })
                 .eq("id", userData.id);
+              
+              console.log("Admin profile updated successfully");
+            } else {
+              console.warn("Admin profile not found");
             }
           } catch (error) {
             console.error("Error updating admin profile:", error);
