@@ -1,21 +1,25 @@
-import React, { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+
+import React from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
+// UI components
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,184 +27,112 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
+// Types
 import type { SchoolFormData } from "@/types/school";
 
-// Define the form validation schema
 const formSchema = z.object({
-  name: z.string().min(2, "School name must be at least 2 characters"),
+  name: z.string().min(3, "School name must be at least 3 characters"),
   domain: z.string().optional(),
-  admin_email: z.string().email("Please enter a valid email"),
-  admin_first_name: z.string().min(1, "First name is required"),
-  admin_last_name: z.string().min(1, "Last name is required"),
-  admin_password: z.string().min(6, "Password must be at least 6 characters").optional(),
-  contact_number: z.string().optional(),
   region: z.string().optional(),
-  status: z.enum(["active", "suspended", "pending"]).default("active"),
+  contact_number: z.string().optional(),
+  admin_email: z.string().email("Invalid email address"),
+  admin_first_name: z.string().min(2, "First name must be at least 2 characters"),
+  admin_last_name: z.string().min(2, "Last name must be at least 2 characters"),
+  admin_password: z.string().min(8, "Password must be at least 8 characters"),
+  status: z.enum(["active", "suspended", "expired", "pending"]).optional(),
 });
 
 interface SchoolFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: SchoolFormData) => void;
+  editData?: SchoolFormData;
 }
 
 const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  editData,
 }) => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Initialize form with default values
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      domain: "",
-      admin_email: "",
-      admin_first_name: "",
-      admin_last_name: "",
+      name: editData?.name || "",
+      domain: editData?.domain || "",
+      region: editData?.region || "",
+      contact_number: editData?.contact_number || "",
+      admin_email: editData?.admin_email || "",
+      admin_first_name: editData?.admin_first_name || "",
+      admin_last_name: editData?.admin_last_name || "",
       admin_password: "",
-      contact_number: "",
-      region: "",
-      status: "active",
+      status: editData?.status || "active",
     },
   });
 
-  // Handle form submission
-  const handleFormSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
-    setError(null);
-    
     try {
-      console.log("Creating school with data:", { name: values.name });
-      
-      // First, create the school with basic fields
+      // 1. Create the school record
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
         .insert({
           name: values.name,
-          domain: values.domain,
+          domain: values.domain || null,
+          region: values.region || null,
+          contact_number: values.contact_number || null,
           admin_email: values.admin_email,
-          contact_number: values.contact_number,
-          region: values.region,
-          status: values.status
+          status: values.status || "active",
         })
-        .select();
+        .select()
+        .single();
 
       if (schoolError) {
-        console.error("School creation error:", schoolError);
         throw schoolError;
       }
 
-      if (!schoolData || schoolData.length === 0) {
-        throw new Error("Failed to create school record");
-      }
-
-      // Create school admin user if password is provided
-      if (values.admin_password && schoolData && schoolData[0]) {
-        try {
-          console.log("Creating school admin user");
-          
-          // First try to see if user already exists
-          const { data: existingUser } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("email", values.admin_email)
-            .maybeSingle();
-            
-          if (existingUser) {
-            // Update existing user to school_admin role and link to school
-            await supabase
-              .from("profiles")
-              .update({
-                role: "school_admin",
-                school_id: schoolData[0].id,
-                first_name: values.admin_first_name,
-                last_name: values.admin_last_name
-              })
-              .eq("email", values.admin_email);
-              
-            toast({
-              title: "School Created",
-              description: `${values.name} has been created. Existing user ${values.admin_email} was linked as admin.`,
-            });
-          } else {
-            // Use the new function to create a pre-confirmed user
-            const { data: userData, error: userError } = await supabase
-              .rpc('create_and_confirm_admin_user', {
-                admin_email: values.admin_email,
-                admin_password: values.admin_password,
-                admin_first_name: values.admin_first_name,
-                admin_last_name: values.admin_last_name,
-                admin_school_id: schoolData[0].id
-              });
-              
-            if (userError) {
-              console.error("Admin creation error:", userError);
-              throw userError;
-            }
-            
-            toast({
-              title: "School Created",
-              description: `${values.name} has been successfully created with admin user.`,
-            });
-          }
-        } catch (adminError: any) {
-          console.error("Admin creation error:", adminError);
-          setError(`School was created, but there was an error creating the admin user: ${adminError.message}`);
-          
-          // Continue despite admin creation error
-          toast({
-            title: "Partial Success",
-            description: `${values.name} was created, but admin user creation failed.`,
-            variant: "destructive",
-          });
+      // 2. Create the admin user using RPC function (this has been updated to reflect our SQL changes)
+      const { data: adminData, error: adminError } = await supabase.rpc(
+        "create_and_confirm_admin_user",
+        {
+          admin_email: values.admin_email,
+          admin_password: values.admin_password,
+          admin_first_name: values.admin_first_name,
+          admin_last_name: values.admin_last_name,
+          admin_school_id: schoolData.id
         }
-      } else {
-        toast({
-          title: "School Created",
-          description: `${values.name} has been successfully created.`,
-        });
+      );
+
+      if (adminError) {
+        // If admin creation fails, delete the school
+        await supabase.from("schools").delete().eq("id", schoolData.id);
+        throw new Error(`Failed to create admin user: ${adminError.message}`);
       }
 
-      // Convert form values to SchoolFormData before passing to onSubmit
-      const schoolFormData: SchoolFormData = {
-        id: schoolData[0].id,
-        name: values.name,
-        domain: values.domain || null,
-        admin_email: values.admin_email,
+      const formattedData = {
+        ...schoolData,
         admin_first_name: values.admin_first_name,
         admin_last_name: values.admin_last_name,
-        admin_password: values.admin_password,
-        contact_number: values.contact_number || null,
-        region: values.region || null,
-        status: values.status
       };
 
-      onSubmit(schoolFormData);
+      onSubmit(formattedData);
       onClose();
-      form.reset(); // Reset the form after submission
-      
-    } catch (error: any) {
-      console.error("School creation error:", error);
-      setError(error.message || "An unknown error occurred");
+
       toast({
-        title: "Error",
-        description: error.message || "An unknown error occurred",
+        title: "School created successfully",
+        description: `School "${values.name}" has been added with admin ${values.admin_email}`,
+      });
+    } catch (error: any) {
+      console.error("Error creating school:", error);
+      toast({
+        title: "Error creating school",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -209,178 +141,189 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Add New School</DialogTitle>
+          <DialogTitle>{editData ? "Edit School" : "Add New School"}</DialogTitle>
           <DialogDescription>
-            Add a new school to the system. This will create a new tenant.
+            {editData
+              ? "Update school details and configuration."
+              : "Create a new school and assign an administrator."}
           </DialogDescription>
         </DialogHeader>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>School Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter school name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="domain"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Domain</FormLabel>
-                  <FormControl>
-                    <Input placeholder="school-name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Separator className="my-4" />
-            <h3 className="text-lg font-medium">Admin Information</h3>
-            
-            <FormField
-              control={form.control}
-              name="admin_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Admin Email *</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="admin@school.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="admin_first_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Admin First Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <h3 className="font-medium">School Information</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>School Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter school name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="domain"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Domain</FormLabel>
+                      <FormControl>
+                        <Input placeholder="school.edu" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        The domain used for school email accounts
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contact_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+1 (555) 123-4567" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Region</FormLabel>
+                      <FormControl>
+                        <Input placeholder="North America" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
-              <FormField
-                control={form.control}
-                name="admin_last_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Admin Last Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-4">
+                <h3 className="font-medium">Administrator Account</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="admin_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Admin Email*</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="email" 
+                          placeholder="admin@school.edu" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="admin_first_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="admin_last_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="admin_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password*</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Minimum 8 characters" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
             
-            <FormField
-              control={form.control}
-              name="admin_password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Admin Password *</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Minimum 6 characters" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Separator className="my-4" />
-            <h3 className="text-lg font-medium">Additional Information</h3>
-            
-            <FormField
-              control={form.control}
-              name="contact_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="+1234567890" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="region"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Region</FormLabel>
-                  <FormControl>
-                    <Input placeholder="North America, Europe, etc." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create School"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>Create School</>
+                )}
               </Button>
             </DialogFooter>
           </form>
