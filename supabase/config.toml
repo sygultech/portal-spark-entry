@@ -3,7 +3,9 @@ project_id = "sjzbturfgadikgzokpyo"
 
 [auth]
 required_user_fields = ["first_name", "last_name"]
+enable_signup = true
 
 [functions]
 [functions.handle_new_user]
 verify_jwt = true
+

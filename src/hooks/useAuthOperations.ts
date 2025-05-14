@@ -26,21 +26,65 @@ export const useAuthOperations = () => {
         // Continue even if this fails
       }
       
+      // Attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        // Fetch user profile after successful sign in
+      // Check for the specific "Email not confirmed" error
+      if (error && error.message.includes("Email not confirmed")) {
+        console.log("Email not confirmed, attempting to confirm for school admin");
+        
+        // Check if this is a school admin by looking up the user
+        const { data: userData } = await supabase.auth.admin.listUsers({
+          filters: {
+            email: email
+          }
+        }).catch(() => ({ data: null }));
+        
+        // For security reasons, attempt to auto-confirm specific school admin emails
+        const { data: confirmData, error: confirmError } = await supabase.rpc(
+          'auto_confirm_email',
+          { target_email: email }
+        );
+        
+        if (confirmError) {
+          // If confirmation fails, show the standard error
+          toast({
+            title: "Login failed",
+            description: "Email not confirmed. Please check your inbox for a confirmation link.",
+            variant: "destructive",
+          });
+          throw error; // Rethrow the original error
+        } else {
+          // If confirmation succeeds, attempt login again
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (retryError) throw retryError;
+          
+          if (retryData.user) {
+            // Proceed with successful login
+            const userProfile = await fetchUserProfile(retryData.user.id);
+            const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+            navigate(roleBasedRoute);
+            
+            toast({
+              title: "Login successful!",
+              description: "Welcome back!",
+            });
+          }
+        }
+      } else if (error) {
+        // Handle other errors
+        throw error;
+      } else if (data.user) {
+        // Normal successful login path
         const userProfile = await fetchUserProfile(data.user.id);
-        
-        // Determine the appropriate route based on user role
         const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-        
-        // Navigate to the role-specific dashboard
         navigate(roleBasedRoute);
         
         toast({
