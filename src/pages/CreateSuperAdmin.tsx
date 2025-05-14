@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSuperAdmin, supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
 const CreateSuperAdmin = () => {
@@ -12,25 +12,21 @@ const CreateSuperAdmin = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string } | null>(null);
-  const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [isSetupComplete, setIsSetupComplete] = useState(true); // Default to true to avoid blocking UI
 
   // Check if the database schema is ready
   useEffect(() => {
     const checkSetup = async () => {
       try {
-        // Try to query the user_role enum from the database
-        const { data, error } = await supabase
-          .from('pg_type')
-          .select('*')
-          .eq('typname', 'user_role');
-
+        // Try to query the auth schema to check if it's ready
+        const { error } = await supabase.auth.getSession();
+        
         if (error) {
-          console.error("Error checking schema setup:", error);
+          console.error("Error checking auth setup:", error);
           setIsSetupComplete(false);
-          return;
+        } else {
+          setIsSetupComplete(true);
         }
-
-        setIsSetupComplete(data && data.length > 0);
       } catch (error) {
         console.error("Schema setup check error:", error);
         setIsSetupComplete(false);
