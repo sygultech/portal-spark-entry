@@ -52,7 +52,7 @@ export const useAuthOperations = () => {
         
         // Special handling for "Email not confirmed" error
         if (error.message.includes("Email not confirmed")) {
-          // Check if this might be a school admin
+          // Try to confirm the email if it's a school admin
           try {
             // Try to confirm the email if it's a school admin
             const { data: confirmData, error: confirmError } = await supabase.rpc(
@@ -179,8 +179,8 @@ export const useAuthOperations = () => {
             role = "super_admin";
           }
           
-          // Create the profile using RPC function
-          const { data: profileCreated, error: profileError } = await supabase.rpc(
+          // Try to create the profile using the new database function
+          const { error: profileError } = await supabase.rpc(
             'create_profile_for_existing_user',
             { 
               user_id: userId, 
