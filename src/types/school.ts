@@ -9,6 +9,18 @@ export interface School {
   created_at: string;
   updated_at: string;
   region?: string;
+  timezone?: string;
+  plan?: string;
+  storage_limit?: number;
+  user_limit?: number;
+  modules?: {
+    library?: boolean;
+    transport?: boolean;
+    finance?: boolean;
+    inventory?: boolean;
+    alumni?: boolean;
+    online_classes?: boolean;
+  };
 }
 
 export interface SchoolFormData {
