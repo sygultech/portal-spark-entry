@@ -36,20 +36,27 @@ export const useAuthOperations = () => {
       if (error && error.message.includes("Email not confirmed")) {
         console.log("Email not confirmed, attempting to confirm for school admin");
         
-        // Check if this is a school admin by looking up the user
-        const { data: userData } = await supabase.auth.admin.listUsers({
-          filters: {
-            email: email
-          }
-        }).catch(() => ({ data: null }));
-        
         // For security reasons, attempt to auto-confirm specific school admin emails
-        const { data: confirmData, error: confirmError } = await supabase.rpc(
-          'auto_confirm_email',
-          { target_email: email }
-        );
+        // Use a direct database call instead of the admin API which has type issues
+        const { data: confirmData, error: confirmError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('email', email)
+          .single()
+          .then(async (profileResult) => {
+            // If this is a school admin, try to confirm their email
+            if (profileResult.data?.role === 'school_admin') {
+              // Call the stored procedure to confirm email
+              return await supabase.rpc(
+                'auto_confirm_email',
+                { target_email: email }
+              );
+            }
+            return { data: false, error: null };
+          })
+          .catch(() => ({ data: false, error: null }));
         
-        if (confirmError) {
+        if (confirmError || !confirmData) {
           // If confirmation fails, show the standard error
           toast({
             title: "Login failed",

@@ -109,6 +109,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_confirm_email: {
+        Args: { target_email: string }
+        Returns: boolean
+      }
       create_and_confirm_admin_user: {
         Args: {
           admin_email: string
