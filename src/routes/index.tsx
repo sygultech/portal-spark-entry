@@ -1,67 +1,159 @@
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import AppLayout from "@/layouts/AppLayout";
+import AuthLayout from "@/layouts/AuthLayout";
+import Account from "@/pages/Account";
+import AdminDashboard from "@/pages/AdminDashboard";
+import Home from "@/pages/Home";
+import Pricing from "@/pages/Pricing";
+import Profile from "@/pages/Profile";
+import ResetPassword from "@/pages/ResetPassword";
+import SchoolDashboard from "@/pages/SchoolDashboard";
+import SignIn from "@/pages/SignIn";
+import SignUp from "@/pages/SignUp";
+import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
+import SchoolManagement from "@/pages/SchoolManagement";
 
-import { Route, Routes } from 'react-router-dom';
-import { Outlet } from 'react-router-dom';
-
-import Login from '@/pages/Login';
-import SignUp from '@/pages/SignUp';
-import Index from '@/pages/Index';
-import NotFound from '@/pages/NotFound';
-import CreateSuperAdmin from '@/pages/CreateSuperAdmin';
-import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
-import SchoolManagement from '@/pages/SchoolManagement';
-import ProfileSettings from '@/pages/ProfileSettings';
-
-import ProtectedRoute from '@/components/ProtectedRoute';
-import AppLayout from '@/components/layout/AppLayout';
-
-export const AppRoutes = () => {
+const Routes = () => {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<SignUp />} />
-      <Route path="/create-super-admin" element={<CreateSuperAdmin />} />
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/pricing" element={<Pricing />} />
 
-      {/* Protected routes with AppLayout */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <Outlet />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      >
+        {/* Auth Routes */}
+        <Route
+          path="/signin"
+          element={
+            <AuthLayout>
+              <SignIn />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <AuthLayout>
+              <SignUp />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <AuthLayout>
+              <ResetPassword />
+            </AuthLayout>
+          }
+        />
+
+        {/* Protected Routes - General */}
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Account />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Profile />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AppLayout>
+                <AdminDashboard />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* School Admin Routes */}
+        <Route
+          path="/school-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["school_admin"]}>
+              <AppLayout>
+                <SchoolDashboard />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Super Admin Routes */}
-        <Route
-          path="/super-admin-dashboard"
+        <Route 
+          path="/super-admin-dashboard" 
           element={
-            <ProtectedRoute requiredRoles={["super_admin"]}>
-              <SuperAdminDashboard />
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <AppLayout>
+                <SuperAdminDashboard />
+              </AppLayout>
             </ProtectedRoute>
-          }
+          } 
         />
-
-        <Route
-          path="/school-management"
+        <Route 
+          path="/school-management" 
           element={
-            <ProtectedRoute requiredRoles={["super_admin"]}>
-              <SchoolManagement />
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <AppLayout>
+                <SchoolManagement />
+              </AppLayout>
             </ProtectedRoute>
-          }
+          } 
         />
-
-        {/* Profile Settings Route - accessible by all authenticated users */}
-        <Route path="/profile/settings" element={<ProfileSettings />} />
-
-        {/* Default route */}
-        <Route path="/" element={<Index />} />
-      </Route>
-
-      {/* Catch-all route */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        
+        {/* Default Route */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
   );
 };
 
-export default AppRoutes;
+const ProtectedRoute = ({
+  children,
+  allowedRoles,
+}: {
+  children?: React.ReactNode;
+  allowedRoles?: string[];
+}) => {
+  const { isAuthenticated, profile, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(profile?.role || "")) {
+    return <Navigate to="/" />;
+  }
+
+  return <>{children}</>;
+};
+
+export default Routes;

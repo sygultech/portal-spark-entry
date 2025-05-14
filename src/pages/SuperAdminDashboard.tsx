@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,10 +18,16 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { useToast } from "@/hooks/use-toast";
+import SchoolFormModal from "@/components/schools/SchoolFormModal";
+import type { SchoolFormData } from "@/types/school";
+import { supabase } from "@/integrations/supabase/client";
 
 const SuperAdminDashboard = () => {
   const { profile, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Redirect if not super_admin
   useEffect(() => {
@@ -29,6 +35,14 @@ const SuperAdminDashboard = () => {
       navigate("/");
     }
   }, [profile, isLoading, navigate]);
+
+  const handleAddSchool = (formData: SchoolFormData) => {
+    toast({
+      title: "School Added",
+      description: `${formData.name} has been added to the system`,
+    });
+    // Refresh data or state if needed
+  };
 
   if (isLoading) {
     return (
@@ -180,9 +194,12 @@ const SuperAdminDashboard = () => {
         </TabsList>
         <TabsContent value="schools">
           <Card>
-            <CardHeader>
-              <CardTitle>Schools Management</CardTitle>
-              <CardDescription>Manage all schools in the system.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Schools Management</CardTitle>
+                <CardDescription>Manage all schools in the system.</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddModalOpen(true)}>Add New School</Button>
             </CardHeader>
             <CardContent>
               <div className="border rounded-md divide-y">
@@ -277,6 +294,13 @@ const SuperAdminDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* School Creation Modal */}
+      <SchoolFormModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onSubmit={handleAddSchool} 
+      />
     </div>
   );
 };
