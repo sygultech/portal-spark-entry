@@ -34,6 +34,7 @@ import {
   Plus, 
   Search,
   Filter,
+  AlertTriangle,
 } from "lucide-react";
 
 // Types
@@ -49,14 +50,25 @@ const SchoolManagement: React.FC = () => {
   const { data: schools, isLoading, error, refetch } = useQuery({
     queryKey: ['schools'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name', { ascending: true });
-      
-      if (error) throw error;
-      return data as School[] || [];
-    }
+      try {
+        const { data, error } = await supabase
+          .from('schools')
+          .select('*')
+          .order('name', { ascending: true });
+        
+        if (error) {
+          console.error("Error fetching schools:", error.message);
+          throw error;
+        }
+        
+        return data as School[] || [];
+      } catch (err) {
+        console.error("Exception in schools query:", err);
+        throw err;
+      }
+    },
+    retry: 1,
+    retryDelay: 1000,
   });
 
   // Filter schools
@@ -140,8 +152,19 @@ const SchoolManagement: React.FC = () => {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-32 text-red-500">
-                      Error loading schools: {(error as Error).message}
+                    <TableCell colSpan={7} className="text-center h-32">
+                      <div className="flex flex-col items-center justify-center text-red-500">
+                        <AlertTriangle size={24} className="mb-2" />
+                        <p>Error loading schools. This might be due to permissions or database issues.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => refetch()}
+                        >
+                          Try Again
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : filteredSchools.length === 0 ? (
