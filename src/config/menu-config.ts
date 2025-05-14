@@ -26,7 +26,7 @@ import {
   Award,
   Baby,
   Receipt,
-  Certificate
+  // Certificate is not available in lucide-react, replacing with Award
 } from "lucide-react";
 
 type MenuItem = {
@@ -90,7 +90,7 @@ export const menuConfig: MenuConfig = {
     { label: "Examinations", path: "/examinations", icon: FileSpreadsheet },
     { label: "Fees", path: "/fees", icon: Receipt },
     { label: "Messaging", path: "/messaging", icon: MessageSquare },
-    { label: "Certificates", path: "/certificates", icon: Certificate },
+    { label: "Certificates", path: "/certificates", icon: Award }, // Changed Certificate to Award
     { label: "Settings", path: "/settings", icon: Settings },
   ],
   
