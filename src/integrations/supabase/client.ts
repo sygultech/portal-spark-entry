@@ -22,12 +22,19 @@ export const createSuperAdmin = async (password: string) => {
   const email = "super@edufar.co";
 
   try {
-    // First check if user already exists
-    const { data: existingUser, error: fetchError } = await supabase.auth.admin
-      .getUserByEmail(email)
-      .catch(() => ({ data: null, error: null }));
+    // First check if user already exists using the auth API
+    const { data: { users }, error: listError } = await supabase.auth.admin
+      .listUsers({ 
+        filter: `email.eq.${email}` 
+      })
+      .catch(() => ({ data: { users: [] }, error: null }));
 
-    if (existingUser) {
+    if (listError) {
+      console.error("Error checking existing user:", listError);
+      throw listError;
+    }
+    
+    if (users && users.length > 0) {
       return { success: false, message: 'Super admin already exists' };
     }
     
