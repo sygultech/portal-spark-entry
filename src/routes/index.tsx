@@ -1,6 +1,5 @@
 
 import {
-  BrowserRouter,
   Routes as RouterRoutes,
   Route,
   Navigate,
@@ -20,74 +19,72 @@ import SignUp from "@/pages/SignUp";
 
 const AppRoutes = () => {
   return (
-    <BrowserRouter>
-      <RouterRoutes>
-        {/* Public Routes */}
-        <Route path="/" element={<Index />} />
-        <Route path="/login" element={<Login />} />
+    <RouterRoutes>
+      {/* Public Routes */}
+      <Route path="/" element={<Index />} />
+      <Route path="/login" element={<Login />} />
 
-        {/* Auth Routes */}
-        <Route
-          path="/signin"
-          element={
-            <AuthLayout
-              title="Sign in to your account"
-              subtitle="Welcome back! Please enter your details."
-            >
-              <Login />
-            </AuthLayout>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <AuthLayout
-              title="Create an account"
-              subtitle="Enter your information to get started"
-            >
-              <SignUp />
-            </AuthLayout>
-          }
-        />
-        
-        {/* Protected Routes - General */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Profile />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
+      {/* Auth Routes */}
+      <Route
+        path="/signin"
+        element={
+          <AuthLayout
+            title="Sign in to your account"
+            subtitle="Welcome back! Please enter your details."
+          >
+            <Login />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <AuthLayout
+            title="Create an account"
+            subtitle="Enter your information to get started"
+          >
+            <SignUp />
+          </AuthLayout>
+        }
+      />
+      
+      {/* Protected Routes - General */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Profile />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Super Admin Routes */}
-        <Route 
-          path="/super-admin-dashboard" 
-          element={
-            <ProtectedRoute requiredRoles={["super_admin"]}>
-              <AppLayout>
-                <SuperAdminDashboard />
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/school-management" 
-          element={
-            <ProtectedRoute requiredRoles={["super_admin"]}>
-              <AppLayout>
-                <SchoolManagement />
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Default Route */}
-        <Route path="*" element={<NotFound />} />
-      </RouterRoutes>
-    </BrowserRouter>
+      {/* Super Admin Routes */}
+      <Route 
+        path="/super-admin-dashboard" 
+        element={
+          <ProtectedRoute requiredRoles={["super_admin"]}>
+            <AppLayout>
+              <SuperAdminDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/school-management" 
+        element={
+          <ProtectedRoute requiredRoles={["super_admin"]}>
+            <AppLayout>
+              <SchoolManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Default Route */}
+      <Route path="*" element={<NotFound />} />
+    </RouterRoutes>
   );
 };
 
