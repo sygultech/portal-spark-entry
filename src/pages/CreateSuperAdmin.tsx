@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSuperAdmin, supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
 const CreateSuperAdmin = () => {
@@ -12,21 +12,41 @@ const CreateSuperAdmin = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string } | null>(null);
-  const [isSetupComplete, setIsSetupComplete] = useState(true); // Default to true to avoid blocking UI
+  const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
+  const { toast } = useToast();
 
   // Check if the database schema is ready
   useEffect(() => {
     const checkSetup = async () => {
       try {
-        // Try to query the auth schema to check if it's ready
-        const { error } = await supabase.auth.getSession();
+        // First, test if we can connect to Supabase
+        const { error: sessionError } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error("Error checking auth setup:", error);
+        if (sessionError) {
+          console.error("Error checking auth setup:", sessionError);
           setIsSetupComplete(false);
-        } else {
-          setIsSetupComplete(true);
+          return;
         }
+        
+        // Try to query the profiles table to check if it exists and has the expected schema
+        const { error: profilesError } = await supabase.from('profiles').select('role').limit(1);
+        
+        if (profilesError) {
+          console.error("Error checking profiles table:", profilesError);
+          setIsSetupComplete(false);
+          return;
+        }
+
+        // Check if schools table exists
+        const { error: schoolsError } = await supabase.from('schools').select('id').limit(1);
+        
+        if (schoolsError) {
+          console.error("Error checking schools table:", schoolsError);
+          setIsSetupComplete(false);
+          return;
+        }
+        
+        setIsSetupComplete(true);
       } catch (error) {
         console.error("Schema setup check error:", error);
         setIsSetupComplete(false);
@@ -142,12 +162,21 @@ const CreateSuperAdmin = () => {
             </div>
           </form>
           
-          {!isSetupComplete && (
+          {isSetupComplete === false && (
             <div className="mt-4 p-3 rounded-md flex items-start gap-2 bg-amber-50 text-amber-800">
               <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-500 mt-0.5" />
               <div>
                 <p className="font-medium">Database schema not ready</p>
-                <p className="text-sm">The database schema might not be fully set up. Try refreshing the page.</p>
+                <p className="text-sm">The database schema might not be fully set up. Please check your Supabase console and ensure that all tables and types are created.</p>
+              </div>
+            </div>
+          )}
+
+          {isSetupComplete === null && (
+            <div className="mt-4 p-3 rounded-md flex items-center gap-2 bg-blue-50 text-blue-800">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+              <div>
+                <p className="text-sm">Checking database setup...</p>
               </div>
             </div>
           )}
@@ -169,7 +198,7 @@ const CreateSuperAdmin = () => {
         <CardFooter>
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading || !isSetupComplete} 
+            disabled={isLoading || isSetupComplete === false || isSetupComplete === null} 
             className="w-full"
           >
             {isLoading ? "Creating..." : "Create Super Admin"}

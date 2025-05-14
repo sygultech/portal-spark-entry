@@ -23,24 +23,36 @@ export const createSuperAdmin = async (password: string) => {
   const email = "super@edufar.co";
 
   try {
-    // First, check if the user already exists using signIn to avoid permissions issues
+    // First, check if the user already exists by trying to sign in
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    // If sign in succeeds, user exists already
+    // If sign in succeeds, user exists already with valid credentials
     if (signInData?.user) {
+      console.log('Super admin already exists and credentials are valid');
       return { success: true, message: 'Super admin already exists and credentials are valid' };
     }
 
-    // If sign in fails for a reason other than "Invalid login credentials", handle that error
+    // If error is not "Invalid login credentials", it's another issue
     if (signInError && !signInError.message.includes('Invalid login credentials')) {
       console.error('Error checking existing user:', signInError);
       throw signInError;
     }
 
-    // At this point, we know the user doesn't exist or has invalid credentials
+    // At this point, we either know the user doesn't exist, or their password is wrong
+    // Check if the user exists but password is wrong by trying to get their profile
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingProfile) {
+      return { success: false, message: 'Super admin exists but the password is incorrect' };
+    }
+
     // Try to create the super admin user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -55,9 +67,7 @@ export const createSuperAdmin = async (password: string) => {
     });
 
     if (authError) {
-      if (authError.message.includes('already registered')) {
-        return { success: false, message: 'Super admin exists but the password is incorrect' };
-      }
+      console.error('Auth error during signup:', authError);
       throw authError;
     }
 
