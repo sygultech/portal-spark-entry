@@ -52,6 +52,31 @@ interface SchoolDetailViewProps {
   school: School;
 }
 
+// Define interfaces for our new data types
+interface TenantStats {
+  id: string;
+  school_id: string;
+  students_count: number;
+  teachers_count: number;
+  parents_count: number;
+  storage_used: number;
+  last_active_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Subscription {
+  id: string;
+  school_id: string;
+  plan_name: string;
+  start_date: string;
+  expiry_date: string | null;
+  payment_method: string | null;
+  auto_renew: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
   isOpen,
   onClose,
@@ -61,14 +86,15 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
   const { data: tenantStats, isLoading: isStatsLoading } = useQuery({
     queryKey: ['tenant-stats', school.id],
     queryFn: async () => {
+      // Use any to bypass TypeScript error for now since tenant_stats is not in the generated types
       const { data, error } = await supabase
-        .from('tenant_stats')
+        .from('tenant_stats' as any)
         .select('*')
         .eq('school_id', school.id)
         .maybeSingle();
       
       if (error) throw error;
-      return data;
+      return data as TenantStats | null;
     },
     enabled: isOpen && !!school.id,
   });
@@ -77,14 +103,15 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
   const { data: subscription, isLoading: isSubscriptionLoading } = useQuery({
     queryKey: ['subscription', school.id],
     queryFn: async () => {
+      // Use any to bypass TypeScript error for now since subscriptions is not in the generated types
       const { data, error } = await supabase
-        .from('subscriptions')
+        .from('subscriptions' as any)
         .select('*')
         .eq('school_id', school.id)
         .maybeSingle();
       
       if (error) throw error;
-      return data;
+      return data as Subscription | null;
     },
     enabled: isOpen && !!school.id,
   });
