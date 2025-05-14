@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Profile } from "@/contexts/types";
+import { Profile, UserRole } from "@/contexts/types";
 import { toast } from "@/components/ui/use-toast";
-import { cleanupAuthState, fetchUserProfile } from "@/utils/authUtils";
+import { cleanupAuthState, fetchUserProfile, createUserProfile } from "@/utils/authUtils";
 import { getRoleBasedRoute } from "@/utils/roleUtils";
 
 export const useAuthOperations = () => {
@@ -28,6 +28,54 @@ export const useAuthOperations = () => {
       } catch (err) {
         // Continue even if this fails
         console.log("Global sign out failed, continuing with sign in");
+      }
+      
+      // Check if the user exists but doesn't have a profile first
+      const { data: emailConfirmed } = await supabase.rpc(
+        'is_email_confirmed',
+        { email_address: email }
+      );
+      
+      // If email is confirmed but login fails, we might be missing a profile
+      if (emailConfirmed) {
+        try {
+          // Try to get user data
+          const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
+          
+          if (userData?.user) {
+            // Check if profile exists
+            const { data: profileExists } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', userData.user.id)
+              .maybeSingle();
+              
+            if (!profileExists) {
+              console.log("User exists but has no profile. Creating default profile.");
+              
+              // Determine role based on email or metadata
+              let role: UserRole = "student";
+              
+              // Check if user metadata has role
+              if (userData.user.user_metadata?.role) {
+                role = userData.user.user_metadata.role as UserRole;
+              }
+              
+              // Create profile
+              await createUserProfile(
+                userData.user.id,
+                email,
+                userData.user.user_metadata?.first_name || email.split('@')[0],
+                userData.user.user_metadata?.last_name || '',
+                role,
+                userData.user.user_metadata?.school_id
+              );
+            }
+          }
+        } catch (e) {
+          console.error("Error checking for existing user:", e);
+          // Continue with normal login flow
+        }
       }
       
       // Attempt to sign in
@@ -173,6 +221,49 @@ export const useAuthOperations = () => {
                   description: "Welcome back!",
                 });
                 return;
+              } else {
+                // If login still fails, we might need to create a profile with RPC
+                try {
+                  // Get user data
+                  const { data: userMetadata } = await supabase.rpc('get_user_metadata_by_email', { email_address: email });
+                  
+                  if (userMetadata) {
+                    const userId = userMetadata.id;
+                    console.log("User found, creating profile for:", userId);
+                    
+                    // Create profile
+                    await supabase.rpc('create_profile_for_existing_user', {
+                      user_id: userId,
+                      user_email: email,
+                      user_role: 'school_admin'
+                    });
+                    
+                    // Try login again after creating profile
+                    const { data: finalRetryData, error: finalRetryError } = await supabase.auth.signInWithPassword({
+                      email,
+                      password,
+                    });
+                    
+                    if (!finalRetryError && finalRetryData?.user) {
+                      const userProfile = await fetchUserProfile(finalRetryData.user.id);
+                      const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+                      
+                      if (navigate) {
+                        navigate(roleBasedRoute);
+                      } else {
+                        window.location.href = roleBasedRoute;
+                      }
+                      
+                      toast({
+                        title: "Login successful!",
+                        description: "Your profile has been created.",
+                      });
+                      return;
+                    }
+                  }
+                } catch (err) {
+                  console.error("Error creating profile:", err);
+                }
               }
             }
             
