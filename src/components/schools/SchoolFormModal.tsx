@@ -33,6 +33,7 @@ import { Loader2 } from "lucide-react";
 
 // Types
 import type { SchoolFormData } from "@/types/school";
+import type { Json } from "@/integrations/supabase/types";
 
 const formSchema = z.object({
   name: z.string().min(3, "School name must be at least 3 characters"),
@@ -72,7 +73,7 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
       admin_first_name: editData?.admin_first_name || "",
       admin_last_name: editData?.admin_last_name || "",
       admin_password: "",
-      status: editData?.status || "active",
+      status: editData?.status as "active" | "suspended" | "expired" | "pending" || "active",
     },
   });
 
@@ -97,7 +98,7 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
         throw schoolError;
       }
 
-      // 2. Create the admin user using RPC function (this has been updated to reflect our SQL changes)
+      // 2. Create the admin user using RPC function
       const { data: adminData, error: adminError } = await supabase.rpc(
         "create_and_confirm_admin_user",
         {
@@ -115,10 +116,17 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
         throw new Error(`Failed to create admin user: ${adminError.message}`);
       }
 
-      const formattedData = {
-        ...schoolData,
+      // Build a properly typed SchoolFormData object
+      const formattedData: SchoolFormData = {
+        id: schoolData.id,
+        name: schoolData.name,
+        domain: schoolData.domain,
+        admin_email: schoolData.admin_email || values.admin_email,
         admin_first_name: values.admin_first_name,
         admin_last_name: values.admin_last_name,
+        contact_number: schoolData.contact_number,
+        region: schoolData.region,
+        status: schoolData.status as "active" | "suspended" | "expired" | "pending"
       };
 
       onSubmit(formattedData);
