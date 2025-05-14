@@ -10,6 +10,7 @@ import AuthLayout from "@/components/AuthLayout";
 import RoleNavigation from "@/components/RoleNavigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
+import SchoolAdminDashboard from "@/pages/SchoolAdminDashboard";
 import SchoolManagement from "@/pages/SchoolManagement";
 import Profile from "@/pages/ProfileSettings";
 import Login from "@/pages/Login";
@@ -77,6 +78,18 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["super_admin"]}>
             <AppLayout>
               <SchoolManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* School Admin Routes */}
+      <Route 
+        path="/school-admin" 
+        element={
+          <ProtectedRoute requiredRoles={["school_admin"]}>
+            <AppLayout>
+              <SchoolAdminDashboard />
             </AppLayout>
           </ProtectedRoute>
         } 

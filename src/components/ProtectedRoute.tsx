@@ -25,6 +25,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const roleRoute = getRoleBasedRoute(profile.role);
         // Only redirect if not already on the role's route
         if (roleRoute !== "/" && location.pathname !== roleRoute) {
+          console.log(`Redirecting user with role ${profile.role} to ${roleRoute}`);
           navigate(roleRoute, { replace: true });
         }
       }
@@ -45,6 +46,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If specific roles are required and user doesn't have one of them
   if (requiredRoles.length > 0 && profile && !requiredRoles.includes(profile.role)) {
+    console.log(`User with role ${profile.role} attempted to access a route for ${requiredRoles.join(', ')}`);
     // Redirect to their appropriate role-based dashboard
     return <Navigate to={getRoleBasedRoute(profile.role)} replace />;
   }
