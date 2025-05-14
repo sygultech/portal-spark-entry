@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRoleBasedRoute } from "@/utils/roleUtils";
 
@@ -15,6 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Effect to handle role-based redirection
   useEffect(() => {
@@ -24,11 +25,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const roleRoute = getRoleBasedRoute(profile.role);
         // Only redirect if not already on the role's route
         if (roleRoute !== "/" && location.pathname !== roleRoute) {
-          window.location.href = roleRoute;
+          navigate(roleRoute, { replace: true }); // Use navigate instead of window.location
         }
       }
     }
-  }, [user, profile, isLoading, location.pathname]);
+  }, [user, profile, isLoading, location.pathname, navigate]);
 
   if (isLoading) {
     return (

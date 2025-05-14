@@ -35,6 +35,7 @@ export const fetchUserProfile = async (userId: string) => {
     }
 
     if (data) {
+      console.log("Profile loaded successfully:", data);
       return data as Profile;
     } else {
       // Handle case where profile doesn't exist
@@ -60,6 +61,12 @@ export const fetchUserProfile = async (userId: string) => {
             school_id: null
           };
 
+          // Special case for super admin
+          if (defaultProfile.email === "super@edufar.co") {
+            console.log("Setting up super admin profile");
+            defaultProfile.role = "super_admin";
+          }
+
           // Call the create_user_profile RPC function that was created in the database
           const { error: insertError } = await supabase.rpc('create_user_profile', {
             user_id: userId,
@@ -83,6 +90,7 @@ export const fetchUserProfile = async (userId: string) => {
               }
             }
           } else {
+            console.log("Created default profile:", defaultProfile);
             return defaultProfile;
           }
         }
