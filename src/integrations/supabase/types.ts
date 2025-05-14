@@ -804,8 +804,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      is_email_confirmed: {
+        Args: { email_address: string }
+        Returns: boolean
+      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      manually_confirm_email: {
+        Args: { email_address: string }
         Returns: boolean
       }
     }

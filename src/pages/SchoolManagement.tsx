@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -35,16 +35,26 @@ import {
   Search,
   Filter,
   AlertTriangle,
+  Check,
+  X,
+  Mail,
 } from "lucide-react";
 
 // Types
 import type { School } from "@/types/school";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Extend school type with email confirmation status
+interface ExtendedSchool extends School {
+  isEmailConfirmed?: boolean;
+}
 
 const SchoolManagement: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch schools data with React Query
   const { data: schools, isLoading, error, refetch } = useQuery({
@@ -61,7 +71,31 @@ const SchoolManagement: React.FC = () => {
           throw error;
         }
         
-        return data as School[] || [];
+        // Get the list of schools and then check email confirmation status for each admin
+        const schoolsWithConfirmation: ExtendedSchool[] = [];
+        
+        for (const school of (data as School[] || [])) {
+          if (school.admin_email) {
+            const { data: confirmationData, error: confirmationError } = await supabase
+              .rpc('is_email_confirmed', { email_address: school.admin_email });
+            
+            if (confirmationError) {
+              console.error("Error checking email confirmation:", confirmationError);
+            }
+            
+            schoolsWithConfirmation.push({
+              ...school,
+              isEmailConfirmed: confirmationData || false
+            });
+          } else {
+            schoolsWithConfirmation.push({
+              ...school,
+              isEmailConfirmed: false
+            });
+          }
+        }
+        
+        return schoolsWithConfirmation;
       } catch (err) {
         console.error("Exception in schools query:", err);
         throw err;
@@ -70,6 +104,61 @@ const SchoolManagement: React.FC = () => {
     retry: 1,
     retryDelay: 1000,
   });
+
+  // Mutation for confirming admin email
+  const confirmEmail = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await supabase.rpc('manually_confirm_email', { 
+        email_address: email 
+      });
+      
+      if (error) {
+        console.error("Error confirming email:", error);
+        throw error;
+      }
+      
+      return data;
+    },
+    onSuccess: (data, email) => {
+      if (data) {
+        toast({
+          title: "Email Confirmed",
+          description: `The admin email ${email} has been confirmed successfully.`,
+        });
+        
+        // Refetch schools data to update UI
+        queryClient.invalidateQueries({ queryKey: ['schools'] });
+      } else {
+        toast({
+          title: "Confirmation Failed",
+          description: `Could not confirm the admin email ${email}.`,
+          variant: "destructive"
+        });
+      }
+    },
+    onError: (error, email) => {
+      console.error("Error confirming email:", error);
+      toast({
+        title: "Confirmation Error",
+        description: `Failed to confirm admin email ${email}. ${error}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Handle confirmation action
+  const handleConfirmEmail = (email: string) => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "No admin email found for this school",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    confirmEmail.mutate(email);
+  };
 
   // Filter schools
   const filteredSchools = schools
@@ -134,6 +223,7 @@ const SchoolManagement: React.FC = () => {
                 <TableRow>
                   <TableHead>School Name</TableHead>
                   <TableHead>Admin Email</TableHead>
+                  <TableHead>Email Confirmed</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Region</TableHead>
                   <TableHead>Status</TableHead>
@@ -144,7 +234,7 @@ const SchoolManagement: React.FC = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-32">
+                    <TableCell colSpan={8} className="text-center h-32">
                       <div className="flex justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                       </div>
@@ -152,7 +242,7 @@ const SchoolManagement: React.FC = () => {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-32">
+                    <TableCell colSpan={8} className="text-center h-32">
                       <div className="flex flex-col items-center justify-center text-red-500">
                         <AlertTriangle size={24} className="mb-2" />
                         <p>Error loading schools. This might be due to permissions or database issues.</p>
@@ -169,7 +259,7 @@ const SchoolManagement: React.FC = () => {
                   </TableRow>
                 ) : filteredSchools.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-32">
+                    <TableCell colSpan={8} className="text-center h-32">
                       No schools found. Add a new school to get started.
                     </TableCell>
                   </TableRow>
@@ -178,6 +268,45 @@ const SchoolManagement: React.FC = () => {
                     <TableRow key={school.id}>
                       <TableCell className="font-medium">{school.name}</TableCell>
                       <TableCell>{school.admin_email || "Not set"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {school.admin_email ? (
+                            <>
+                              {school.isEmailConfirmed ? (
+                                <Badge variant="success" className="flex items-center gap-1">
+                                  <Check size={14} /> Confirmed
+                                </Badge>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="destructive" className="flex items-center gap-1">
+                                    <X size={14} /> Not Confirmed
+                                  </Badge>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          size="sm" 
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0"
+                                          onClick={() => handleConfirmEmail(school.admin_email!)}
+                                          disabled={confirmEmail.isPending}
+                                        >
+                                          <Mail size={16} className="text-blue-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Confirm email manually</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <Badge variant="outline">No Admin Email</Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{school.contact_number || "N/A"}</TableCell>
                       <TableCell>{school.region || "N/A"}</TableCell>
                       <TableCell>
