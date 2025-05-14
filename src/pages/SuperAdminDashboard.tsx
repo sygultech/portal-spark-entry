@@ -13,7 +13,8 @@ import {
   Settings, 
   BarChart3, 
   BookOpen, 
-  GraduationCap
+  GraduationCap,
+  Building
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -114,6 +115,62 @@ const SuperAdminDashboard = () => {
         </Card>
       </div>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Manage your platform from here</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <Card className="border border-dashed">
+            <CardHeader className="p-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building className="h-5 w-5" /> Tenant Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
+              Manage schools, admins, and subscription plans
+            </CardContent>
+            <CardFooter className="p-4 pt-0">
+              <Button variant="outline" className="w-full" onClick={() => navigate('/school-management')}>
+                Manage Schools
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card className="border border-dashed">
+            <CardHeader className="p-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-5 w-5" /> User Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
+              Manage users, roles, and permissions
+            </CardContent>
+            <CardFooter className="p-4 pt-0">
+              <Button variant="outline" className="w-full">
+                Manage Users
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card className="border border-dashed">
+            <CardHeader className="p-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="h-5 w-5" /> System Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
+              Configure system-wide settings
+            </CardContent>
+            <CardFooter className="p-4 pt-0">
+              <Button variant="outline" className="w-full">
+                Settings
+              </Button>
+            </CardFooter>
+          </Card>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="schools">
         <TabsList className="mb-4">
           <TabsTrigger value="schools">Schools</TabsTrigger>
@@ -144,7 +201,7 @@ const SuperAdminDashboard = () => {
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline">Previous</Button>
-              <Button>Add New School</Button>
+              <Button onClick={() => navigate('/school-management')}>Manage All Schools</Button>
               <Button variant="outline">Next</Button>
             </CardFooter>
           </Card>
