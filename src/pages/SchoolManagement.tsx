@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -172,9 +173,10 @@ const SchoolManagement: React.FC = () => {
     const newStatus = school.status === "active" ? "suspended" : "active";
     
     try {
+      // Cast to any to bypass TypeScript error since schema doesn't include all fields yet
       const { error } = await supabase
         .from('schools')
-        .update({ status: newStatus })
+        .update({ status: newStatus } as any)
         .eq('id', school.id);
       
       if (error) throw error;

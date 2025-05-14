@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,14 +87,18 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
     queryKey: ['tenant-stats', school.id],
     queryFn: async () => {
       try {
-        // Use any to bypass TypeScript error for now since tenant_stats is not in the generated types
+        // Cast to any to avoid type errors since the table doesn't exist in generated types
         const { data, error } = await supabase
           .from('tenant_stats' as any)
           .select('*')
           .eq('school_id', school.id)
           .maybeSingle();
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching tenant stats:", error);
+          return null;
+        }
+        
         return data as TenantStats | null;
       } catch (error) {
         console.error("Error fetching tenant stats:", error);
@@ -108,14 +113,18 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
     queryKey: ['subscription', school.id],
     queryFn: async () => {
       try {
-        // Use any to bypass TypeScript error for now since subscriptions is not in the generated types
+        // Cast to any to avoid type errors since the table doesn't exist in generated types
         const { data, error } = await supabase
           .from('subscriptions' as any)
           .select('*')
           .eq('school_id', school.id)
           .maybeSingle();
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching subscription:", error);
+          return null;
+        }
+        
         return data as Subscription | null;
       } catch (error) {
         console.error("Error fetching subscription:", error);
