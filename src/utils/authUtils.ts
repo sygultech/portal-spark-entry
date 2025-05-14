@@ -125,20 +125,27 @@ export const createUserProfile = async (
   schoolId?: string
 ) => {
   try {
+    // Profile data object
+    const profileData = {
+      id: userId,
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      school_id: schoolId || null
+    };
+    
+    console.log("Creating profile with data:", profileData);
+    
     // Try to create a new profile
     const { error: insertError } = await supabase
       .from('profiles')
-      .insert({
-        id: userId,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        role,
-        school_id: schoolId || null
-      });
+      .insert(profileData);
     
     // If profile already exists, update it
     if (insertError) {
+      console.log("Insert error, attempting update:", insertError.message);
+      
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
