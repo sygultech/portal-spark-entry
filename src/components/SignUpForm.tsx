@@ -1,28 +1,60 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const LoginForm = () => {
+const SignUpForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, isLoading } = useAuth();
-  const navigate = useNavigate();
+  const { signUp, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    await signIn(email, password);
+    await signUp(email, password, firstName, lastName);
   };
 
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                id="firstName"
+                placeholder="First name"
+                type="text"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="pl-10"
+                disabled={isLoading}
+              />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                id="lastName"
+                placeholder="Last name"
+                type="text"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="pl-10"
+                disabled={isLoading}
+              />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            </div>
+          </div>
+        </div>
         <div className="space-y-2">
           <div className="relative">
             <Input
@@ -45,7 +77,7 @@ const LoginForm = () => {
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -71,17 +103,9 @@ const LoginForm = () => {
               </span>
             </Button>
           </div>
-          <div className="text-right">
-            <Link
-              to="/forgot-password"
-              className="text-sm underline hover:text-primary"
-            >
-              Forgot password?
-            </Link>
-          </div>
         </div>
         <Button disabled={isLoading} className="w-full" type="submit">
-          {isLoading ? "Logging in..." : "Login"}
+          {isLoading ? "Signing up..." : "Sign up"}
         </Button>
       </form>
 
@@ -131,9 +155,9 @@ const LoginForm = () => {
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link to="/signup" className="underline hover:text-primary">
-            Sign up
+          Already have an account?{" "}
+          <Link to="/login" className="underline hover:text-primary">
+            Login
           </Link>
         </p>
       </div>
@@ -141,4 +165,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default SignUpForm;
