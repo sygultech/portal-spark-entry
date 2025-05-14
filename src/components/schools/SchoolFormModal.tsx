@@ -129,7 +129,9 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
               .from("profiles")
               .update({
                 role: "school_admin",
-                school_id: schoolData[0].id
+                school_id: schoolData[0].id,
+                first_name: values.admin_first_name,
+                last_name: values.admin_last_name
               })
               .eq("email", values.admin_email);
               
@@ -138,8 +140,8 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
               description: `${values.name} has been created. Existing user ${values.admin_email} was linked as admin.`,
             });
           } else {
-            // Create new user
-            const { error: signUpError } = await supabase.auth.signUp({
+            // Create new user with Auth API
+            const { data: authData, error: signUpError } = await supabase.auth.signUp({
               email: values.admin_email,
               password: values.admin_password,
               options: {
@@ -157,31 +159,40 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
               throw signUpError;
             }
 
-            // Wait a moment for the auth trigger to create the profile
-            setTimeout(async () => {
+            // Explicitly create profile without waiting for trigger
+            if (authData && authData.user) {
               try {
-                console.log("Updating admin profile");
-                const { data: userData } = await supabase
+                const { error: profileError } = await supabase
                   .from("profiles")
-                  .select()
-                  .eq("email", values.admin_email)
-                  .single();
+                  .insert({
+                    id: authData.user.id,
+                    email: values.admin_email,
+                    first_name: values.admin_first_name,
+                    last_name: values.admin_last_name,
+                    role: "school_admin",
+                    school_id: schoolData[0].id
+                  });
 
-                if (userData) {
-                  await supabase
+                if (profileError) {
+                  // If insert fails (likely because profile already exists), try update
+                  const { error: updateError } = await supabase
                     .from("profiles")
                     .update({
-                      school_id: schoolData[0].id,
                       role: "school_admin",
+                      school_id: schoolData[0].id,
+                      first_name: values.admin_first_name,
+                      last_name: values.admin_last_name
                     })
-                    .eq("id", userData.id);
+                    .eq("id", authData.user.id);
                   
-                  console.log("Admin profile updated successfully");
+                  if (updateError) {
+                    console.error("Error updating admin profile:", updateError);
+                  }
                 }
-              } catch (error) {
-                console.error("Error updating admin profile:", error);
+              } catch (profileError) {
+                console.error("Error setting up admin profile:", profileError);
               }
-            }, 1000);
+            }
             
             toast({
               title: "School Created",
@@ -210,13 +221,13 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
       const schoolFormData: SchoolFormData = {
         id: schoolData[0].id,
         name: values.name,
-        domain: values.domain,
+        domain: values.domain || null,
         admin_email: values.admin_email,
         admin_first_name: values.admin_first_name,
         admin_last_name: values.admin_last_name,
         admin_password: values.admin_password,
-        contact_number: values.contact_number,
-        region: values.region,
+        contact_number: values.contact_number || null,
+        region: values.region || null,
         status: values.status
       };
 

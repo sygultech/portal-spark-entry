@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/contexts/types";
 
@@ -104,5 +103,60 @@ export const fetchUserProfile = async (userId: string) => {
   } catch (error: any) {
     console.error("Error fetching user profile:", error.message);
     return null;
+  }
+};
+
+/**
+ * Creates a profile for a new user
+ * @param userId - The ID of the user to create a profile for
+ * @param email - The email address of the user
+ * @param firstName - The first name of the user
+ * @param lastName - The last name of the user
+ * @param role - The role of the user
+ * @param schoolId - The school ID to associate with the user profile
+ */
+export const createUserProfile = async (
+  userId: string, 
+  email: string, 
+  firstName: string, 
+  lastName: string, 
+  role: string,
+  schoolId?: string
+) => {
+  try {
+    // Try to create a new profile
+    const { error: insertError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role,
+        school_id: schoolId || null
+      });
+    
+    // If profile already exists, update it
+    if (insertError) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          role,
+          school_id: schoolId || null
+        })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error('Error updating user profile:', updateError);
+        throw updateError;
+      }
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    return { success: false, error };
   }
 };
