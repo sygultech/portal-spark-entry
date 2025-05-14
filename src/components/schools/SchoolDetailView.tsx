@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,15 +85,20 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
   const { data: tenantStats, isLoading: isStatsLoading } = useQuery({
     queryKey: ['tenant-stats', school.id],
     queryFn: async () => {
-      // Use any to bypass TypeScript error for now since tenant_stats is not in the generated types
-      const { data, error } = await supabase
-        .from('tenant_stats' as any)
-        .select('*')
-        .eq('school_id', school.id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as TenantStats | null;
+      try {
+        // Use any to bypass TypeScript error for now since tenant_stats is not in the generated types
+        const { data, error } = await supabase
+          .from('tenant_stats' as any)
+          .select('*')
+          .eq('school_id', school.id)
+          .maybeSingle();
+        
+        if (error) throw error;
+        return data as TenantStats | null;
+      } catch (error) {
+        console.error("Error fetching tenant stats:", error);
+        return null;
+      }
     },
     enabled: isOpen && !!school.id,
   });
@@ -103,15 +107,20 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
   const { data: subscription, isLoading: isSubscriptionLoading } = useQuery({
     queryKey: ['subscription', school.id],
     queryFn: async () => {
-      // Use any to bypass TypeScript error for now since subscriptions is not in the generated types
-      const { data, error } = await supabase
-        .from('subscriptions' as any)
-        .select('*')
-        .eq('school_id', school.id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as Subscription | null;
+      try {
+        // Use any to bypass TypeScript error for now since subscriptions is not in the generated types
+        const { data, error } = await supabase
+          .from('subscriptions' as any)
+          .select('*')
+          .eq('school_id', school.id)
+          .maybeSingle();
+        
+        if (error) throw error;
+        return data as Subscription | null;
+      } catch (error) {
+        console.error("Error fetching subscription:", error);
+        return null;
+      }
     },
     enabled: isOpen && !!school.id,
   });

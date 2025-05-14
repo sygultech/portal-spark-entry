@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,7 +94,7 @@ const SchoolManagement: React.FC = () => {
         .order('name', { ascending: sortDirection === 'asc' });
       
       if (error) throw error;
-      return data || [];
+      return data as School[] || [];
     }
   });
 
@@ -197,7 +196,7 @@ const SchoolManagement: React.FC = () => {
     }
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status?: string) => {
     switch (status) {
       case "active":
         return (
@@ -355,7 +354,7 @@ const SchoolManagement: React.FC = () => {
                           {school.plan || "Free"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{renderStatusBadge(school.status || "active")}</TableCell>
+                      <TableCell>{renderStatusBadge(school.status)}</TableCell>
                       <TableCell>{format(new Date(school.created_at), "MMM d, yyyy")}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
