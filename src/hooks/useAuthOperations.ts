@@ -38,52 +38,65 @@ export const useAuthOperations = () => {
         
         // For security reasons, attempt to auto-confirm specific school admin emails
         // Use a direct database call instead of the admin API which has type issues
-        const { data: confirmData, error: confirmError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('email', email)
-          .single()
-          .then(async (profileResult) => {
-            // If this is a school admin, try to confirm their email
-            if (profileResult.data?.role === 'school_admin') {
-              // Call the stored procedure to confirm email
-              return await supabase.rpc(
-                'auto_confirm_email',
-                { target_email: email }
-              );
+        try {
+          // First check if this is a school admin
+          const profileResult = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('email', email)
+            .single();
+          
+          let confirmData = false;
+          let confirmError = null;
+          
+          // If this is a school admin, try to confirm their email
+          if (profileResult.data?.role === 'school_admin') {
+            // Call the stored procedure to confirm email
+            const confirmResult = await supabase.rpc(
+              'auto_confirm_email',
+              { target_email: email }
+            );
+            confirmData = confirmResult.data;
+            confirmError = confirmResult.error;
+          }
+          
+          if (confirmError || !confirmData) {
+            // If confirmation fails, show the standard error
+            toast({
+              title: "Login failed",
+              description: "Email not confirmed. Please check your inbox for a confirmation link.",
+              variant: "destructive",
+            });
+            throw error; // Rethrow the original error
+          } else {
+            // If confirmation succeeds, attempt login again
+            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            
+            if (retryError) throw retryError;
+            
+            if (retryData.user) {
+              // Proceed with successful login
+              const userProfile = await fetchUserProfile(retryData.user.id);
+              const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+              navigate(roleBasedRoute);
+              
+              toast({
+                title: "Login successful!",
+                description: "Welcome back!",
+              });
             }
-            return { data: false, error: null };
-          })
-          .catch(() => ({ data: false, error: null }));
-        
-        if (confirmError || !confirmData) {
-          // If confirmation fails, show the standard error
+          }
+        } catch (err) {
+          // Handle any errors during the confirmation process
           toast({
             title: "Login failed",
             description: "Email not confirmed. Please check your inbox for a confirmation link.",
             variant: "destructive",
           });
           throw error; // Rethrow the original error
-        } else {
-          // If confirmation succeeds, attempt login again
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (retryError) throw retryError;
-          
-          if (retryData.user) {
-            // Proceed with successful login
-            const userProfile = await fetchUserProfile(retryData.user.id);
-            const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-            navigate(roleBasedRoute);
-            
-            toast({
-              title: "Login successful!",
-              description: "Welcome back!",
-            });
-          }
         }
       } else if (error) {
         // Handle other errors
