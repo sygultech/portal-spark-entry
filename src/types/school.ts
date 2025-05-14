@@ -24,6 +24,7 @@ export interface School {
 }
 
 export interface SchoolFormData {
+  id?: string; // Added the id property as optional
   name: string;
   domain?: string;
   admin_email: string;
