@@ -8,16 +8,31 @@ AS $$
 DECLARE
   is_admin BOOLEAN;
   user_id UUID;
+  user_exists BOOLEAN;
 BEGIN
+  -- First check if the user exists
+  SELECT EXISTS (
+    SELECT 1 FROM auth.users WHERE email = target_email
+  ) INTO user_exists;
+  
+  IF NOT user_exists THEN
+    RETURN FALSE;
+  END IF;
+  
   -- Check if the email belongs to a school admin
+  -- Either by checking the profiles table
   SELECT EXISTS (
     SELECT 1 FROM auth.users u
-    JOIN public.profiles p ON u.id = p.id
-    WHERE u.email = target_email AND p.role = 'school_admin'
+    LEFT JOIN public.profiles p ON u.id = p.id
+    WHERE u.email = target_email AND (
+      p.role = 'school_admin' OR
+      -- Also check if email follows school admin pattern
+      u.email LIKE '%-admin@%'
+    )
   ) INTO is_admin;
   
-  -- Only auto-confirm for school admins 
-  IF is_admin THEN
+  -- We'll auto-confirm for school admins or emails with "-admin@" pattern
+  IF is_admin OR target_email LIKE '%-admin@%' THEN
     -- Get the user ID
     SELECT id INTO user_id FROM auth.users WHERE email = target_email;
     

@@ -54,6 +54,8 @@ export const fetchUserProfile = async (userId: string) => {
         }
         
         if (userData && userData.user) {
+          console.log("User data retrieved:", userData.user);
+          
           // Create a profile with required fields based on database schema
           const defaultProfile = {
             id: userId,
@@ -73,9 +75,15 @@ export const fetchUserProfile = async (userId: string) => {
           
           // Special case for school admin - check user metadata
           if (userData.user.user_metadata?.role === 'school_admin') {
-            console.log("Setting up school admin profile from metadata");
+            console.log("Setting up school admin profile from metadata:", userData.user.user_metadata);
             defaultProfile.role = "school_admin";
             defaultProfile.school_id = userData.user.user_metadata?.school_id || null;
+          }
+          
+          // Check if email follows a pattern for school admins (e.g., ends with "-admin@")
+          if (defaultProfile.email.includes("-admin@")) {
+            console.log("Email appears to be a school admin email:", defaultProfile.email);
+            defaultProfile.role = "school_admin";
           }
 
           // Call the create_user_profile RPC function that was created in the database
@@ -88,7 +96,7 @@ export const fetchUserProfile = async (userId: string) => {
           });
 
           if (insertError) {
-            console.error("Error creating default profile:", insertError.message);
+            console.error("Error creating default profile via RPC:", insertError.message);
             // Try fallback approach
             const { error: directInsertError } = await supabase
               .from('profiles')

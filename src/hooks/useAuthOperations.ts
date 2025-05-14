@@ -36,28 +36,41 @@ export const useAuthOperations = () => {
         password,
       });
 
-      // Check for the specific "Email not confirmed" error
+      // Check for the specific "Email not confirmed" error or "Invalid login credentials"
       if (error && (error.message.includes("Email not confirmed") || error.message.includes("Invalid login credentials"))) {
         console.log("Login error detected:", error.message);
         
         // Check if this might be a school admin with unconfirmed email
         try {
-          // First check if this email exists in profiles
+          // First check email confirmation status directly
+          const { data: isConfirmed, error: isConfirmedError } = await supabase.rpc(
+            'is_email_confirmed', 
+            { email_address: email }
+          );
+          
+          console.log("Email confirmation status check:", isConfirmed, isConfirmedError);
+          
+          if (isConfirmedError) {
+            console.error("Error checking email confirmation:", isConfirmedError);
+          }
+          
+          // Check if this email exists in profiles, regardless of confirmation status
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('role, email')
+            .select('role, email, school_id')
             .eq('email', email)
             .maybeSingle();
           
           console.log("Profile check result:", profileData, profileError);
           
+          // If the profile exists and is a school admin
           if (profileData?.role === 'school_admin') {
             console.log("Found school admin profile, attempting to auto-confirm email");
             
             // Call the stored procedure to confirm email
             const { data: confirmData, error: confirmError } = await supabase.rpc(
-              'auto_confirm_email',
-              { target_email: email }
+              'manually_confirm_email',
+              { email_address: email }
             );
             
             console.log("Email confirmation result:", confirmData, confirmError);
@@ -81,11 +94,20 @@ export const useAuthOperations = () => {
               
               if (retryError) {
                 console.error("Retry login failed:", retryError);
-                toast({
-                  title: "Login failed",
-                  description: retryError.message || "Invalid login credentials",
-                  variant: "destructive",
-                });
+                // More specific error for debugging
+                if (retryError.message.includes("Invalid login credentials")) {
+                  toast({
+                    title: "Login failed",
+                    description: "The email was confirmed, but login still failed. This may indicate an incorrect password.",
+                    variant: "destructive",
+                  });
+                } else {
+                  toast({
+                    title: "Login failed",
+                    description: retryError.message || "An unexpected error occurred during login retry",
+                    variant: "destructive",
+                  });
+                }
                 throw retryError;
               }
               
@@ -115,7 +137,45 @@ export const useAuthOperations = () => {
               });
             }
           } else {
-            // Not a school admin or profile not found
+            // If user doesn't exist in profiles or is not a school admin
+            console.log("User not found in profiles or is not a school admin");
+            
+            // Check if the user exists in auth.users by trying to create
+            const { data: manualCheckData, error: manualCheckError } = await supabase.rpc(
+              'manually_confirm_email',
+              { email_address: email }
+            );
+            
+            console.log("Manual confirmation attempt:", manualCheckData, manualCheckError);
+            
+            if (manualCheckData) {
+              // If the user exists and was confirmed, try login again
+              const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+              
+              if (!retryError && retryData?.user) {
+                console.log("Login successful after manual email confirmation");
+                
+                // Create a profile if needed
+                const userProfile = await fetchUserProfile(retryData.user.id);
+                const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+                
+                if (navigate) {
+                  navigate(roleBasedRoute);
+                } else {
+                  window.location.href = roleBasedRoute;
+                }
+                
+                toast({
+                  title: "Login successful!",
+                  description: "Welcome back!",
+                });
+                return;
+              }
+            }
+            
             toast({
               title: "Login failed",
               description: error.message || "Invalid login credentials",

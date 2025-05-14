@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.auto_confirm_email]
 verify_jwt = true
+
+[functions.manually_confirm_email]
+verify_jwt = true
+
+[functions.is_email_confirmed]
+verify_jwt = true
