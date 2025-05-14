@@ -1,4 +1,13 @@
 
-import { useToast, toast } from "@/hooks/use-toast";
-
-export { useToast, toast };
+// Re-export everything from the hooks/use-toast file
+export { 
+  useToast,
+  toast,
+  ToastProvider,
+  ToastViewport,
+  Toast,
+  ToastTitle,
+  ToastDescription,
+  ToastClose,
+  ToastAction
+} from "@/hooks/use-toast";
