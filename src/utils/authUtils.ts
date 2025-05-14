@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Profile } from "@/contexts/types";
+import { Profile, UserRole } from "@/contexts/types";
 
 // Helper function to clean up auth state
 export const cleanupAuthState = () => {
@@ -120,7 +121,7 @@ export const createUserProfile = async (
   email: string, 
   firstName: string, 
   lastName: string, 
-  role: string,
+  role: UserRole,
   schoolId?: string
 ) => {
   try {
