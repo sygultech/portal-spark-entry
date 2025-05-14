@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -207,8 +208,16 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
 
       // Convert form values to SchoolFormData before passing to onSubmit
       const schoolFormData: SchoolFormData = {
-        ...values,
-        id: schoolData[0].id
+        id: schoolData[0].id,
+        name: values.name,
+        domain: values.domain,
+        admin_email: values.admin_email,
+        admin_first_name: values.admin_first_name,
+        admin_last_name: values.admin_last_name,
+        admin_password: values.admin_password,
+        contact_number: values.contact_number,
+        region: values.region,
+        status: values.status
       };
 
       onSubmit(schoolFormData);
