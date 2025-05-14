@@ -55,22 +55,52 @@ export type Database = {
       }
       schools: {
         Row: {
+          admin_email: string | null
+          contact_number: string | null
           created_at: string
+          domain: string | null
           id: string
+          modules: Json | null
           name: string
+          plan: string | null
+          region: string | null
+          status: string | null
+          storage_limit: number | null
+          timezone: string | null
           updated_at: string
+          user_limit: number | null
         }
         Insert: {
+          admin_email?: string | null
+          contact_number?: string | null
           created_at?: string
+          domain?: string | null
           id?: string
+          modules?: Json | null
           name: string
+          plan?: string | null
+          region?: string | null
+          status?: string | null
+          storage_limit?: number | null
+          timezone?: string | null
           updated_at?: string
+          user_limit?: number | null
         }
         Update: {
+          admin_email?: string | null
+          contact_number?: string | null
           created_at?: string
+          domain?: string | null
           id?: string
+          modules?: Json | null
           name?: string
+          plan?: string | null
+          region?: string | null
+          status?: string | null
+          storage_limit?: number | null
+          timezone?: string | null
           updated_at?: string
+          user_limit?: number | null
         }
         Relationships: []
       }

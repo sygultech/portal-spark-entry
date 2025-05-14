@@ -1,3 +1,4 @@
+
 import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -81,39 +82,26 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
     try {
       console.log("Creating school with data:", { name: values.name });
       
-      // First, create the school with only the basic fields that are definitely in the schema
+      // First, create the school with basic fields
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
         .insert({
           name: values.name,
+          domain: values.domain,
+          admin_email: values.admin_email,
+          contact_number: values.contact_number,
+          region: values.region,
+          status: values.status
         })
         .select();
 
       if (schoolError) {
-        console.error("School creation error details:", schoolError);
+        console.error("School creation error:", schoolError);
         throw schoolError;
       }
 
       if (!schoolData || schoolData.length === 0) {
         throw new Error("Failed to create school record");
-      }
-
-      // Now update the school with additional fields
-      console.log("School created successfully, now updating with additional fields");
-      const { error: updateError } = await supabase
-        .from("schools")
-        .update({
-          domain: values.domain || null,
-          admin_email: values.admin_email,
-          contact_number: values.contact_number || null,
-          region: values.region || null,
-          status: values.status
-        })
-        .eq("id", schoolData[0].id);
-        
-      if (updateError) {
-        console.error("School update error:", updateError);
-        // Don't throw here, continue with user creation
       }
 
       // Create school admin user if password is provided
