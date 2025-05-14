@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Function to fetch user profile data
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Replace single() with maybeSingle() to handle cases where profile might not exist
+      // Use maybeSingle() to handle cases where profile might not exist
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -74,34 +74,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Handle case where profile doesn't exist
         console.log("No profile found for user. Creating default profile.");
-        // Attempt to create a basic profile for the user
-        const { data: userData, error: userError } = await supabase.auth.getUser();
         
-        if (userError) {
-          throw userError;
-        }
-        
-        if (userData && userData.user) {
-          // Create a profile with required fields based on database schema
-          const defaultProfile = {
-            id: userId,
-            email: userData.user.email || '',
-            first_name: userData.user.user_metadata?.first_name || null,
-            last_name: userData.user.user_metadata?.last_name || null,
-            role: "student" as UserRole, // Default role
-            avatar_url: null,
-            school_id: null
-          };
-
-          const { error: insertError } = await supabase
-            .from("profiles")
-            .insert(defaultProfile);
-
-          if (insertError) {
-            console.error("Error creating default profile:", insertError.message);
-          } else {
-            setProfile(defaultProfile);
+        try {
+          // Get the current user data
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+          if (userError) {
+            throw userError;
           }
+          
+          if (userData && userData.user) {
+            // Create a profile with required fields based on database schema
+            const defaultProfile = {
+              id: userId,
+              email: userData.user.email || '',
+              first_name: userData.user.user_metadata?.first_name || null,
+              last_name: userData.user.user_metadata?.last_name || null,
+              role: "student" as UserRole, // Default role
+              avatar_url: null,
+              school_id: null
+            };
+
+            // Use RPC call to bypass RLS policies
+            // This is a workaround until you create an admin API or function to handle this
+            const { error: insertError } = await supabase.rpc('create_user_profile', {
+              user_id: userId,
+              user_email: defaultProfile.email,
+              user_first_name: defaultProfile.first_name,
+              user_last_name: defaultProfile.last_name,
+              user_role: defaultProfile.role
+            });
+
+            if (insertError) {
+              console.error("Error creating default profile:", insertError.message);
+              // Try fallback approach for super admin account creation
+              if (defaultProfile.email === "super@edufar.co") {
+                const { error: adminError } = await supabase.auth.updateUser({
+                  data: { role: 'super_admin' }
+                });
+                
+                if (!adminError) {
+                  // Force reload to apply changes
+                  window.location.reload();
+                }
+              }
+            } else {
+              setProfile(defaultProfile);
+            }
+          }
+        } catch (profileError: any) {
+          console.error("Error in profile creation:", profileError.message);
         }
       }
     } catch (error: any) {
