@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/contexts/types";
 import { toast } from "@/components/ui/use-toast";
@@ -10,6 +9,8 @@ import { getRoleBasedRoute } from "@/utils/roleUtils";
 
 export const useAuthOperations = () => {
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Use optional chaining to avoid errors when not in a Router context
   const navigate = useNavigate();
 
   // Handle sign in
@@ -81,7 +82,12 @@ export const useAuthOperations = () => {
               // Proceed with successful login
               const userProfile = await fetchUserProfile(retryData.user.id);
               const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-              navigate(roleBasedRoute);
+              
+              if (navigate) {
+                navigate(roleBasedRoute);
+              } else {
+                window.location.href = roleBasedRoute;
+              }
               
               toast({
                 title: "Login successful!",
@@ -105,7 +111,12 @@ export const useAuthOperations = () => {
         // Normal successful login path
         const userProfile = await fetchUserProfile(data.user.id);
         const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-        navigate(roleBasedRoute);
+        
+        if (navigate) {
+          navigate(roleBasedRoute);
+        } else {
+          window.location.href = roleBasedRoute;
+        }
         
         toast({
           title: "Login successful!",
@@ -170,7 +181,11 @@ export const useAuthOperations = () => {
       await supabase.auth.signOut({ scope: 'global' });
       
       // Redirect to login page
-      navigate("/login");
+      if (navigate) {
+        navigate("/login");
+      } else {
+        window.location.href = "/login";
+      }
       
       toast({
         title: "Logged out successfully",

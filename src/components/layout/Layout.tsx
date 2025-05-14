@@ -1,9 +1,13 @@
 
 import { Outlet } from "react-router-dom";
-import AppSidebar from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
+import AppSidebar from "./AppSidebar";
 
-const Layout = () => {
+interface LayoutProps {
+  children?: React.ReactNode;
+}
+
+const Layout = ({ children }: LayoutProps) => {
   const { profile } = useAuth();
   
   return (
@@ -11,7 +15,7 @@ const Layout = () => {
       <AppSidebar />
       <main className="flex-1 overflow-auto p-6">
         <div className="container mx-auto">
-          <Outlet />
+          {children || <Outlet />}
         </div>
       </main>
     </div>

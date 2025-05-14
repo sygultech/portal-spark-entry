@@ -10,6 +10,7 @@ import Academic from "@/pages/Academic";
 import SchoolAdmin from "@/pages/SchoolAdmin";
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import { AcademicProvider } from "@/contexts/AcademicContext";
+import AppRoutes from "@/routes";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -17,31 +18,12 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route path="/" element={<AppLayout />}>
-              <Route index element={<Navigate to="/dashboard" />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="super-admin-dashboard" element={<SuperAdminDashboard />} />
-              <Route path="school-admin" element={<SchoolAdmin />} />
-              <Route 
-                path="academic" 
-                element={
-                  <AcademicProvider>
-                    <Academic />
-                  </AcademicProvider>
-                } 
-              />
-              {/* Add other routes here */}
-            </Route>
-          </Routes>
-          
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
           <Toaster />
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
