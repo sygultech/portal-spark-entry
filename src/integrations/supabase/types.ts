@@ -109,6 +109,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_and_confirm_admin_user: {
+        Args: {
+          admin_email: string
+          admin_password: string
+          admin_first_name: string
+          admin_last_name: string
+          admin_school_id: string
+        }
+        Returns: string
+      }
       create_user_profile: {
         Args: {
           user_id: string

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -140,58 +139,19 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
               description: `${values.name} has been created. Existing user ${values.admin_email} was linked as admin.`,
             });
           } else {
-            // Create new user with Auth API
-            const { data: authData, error: signUpError } = await supabase.auth.signUp({
-              email: values.admin_email,
-              password: values.admin_password,
-              options: {
-                data: {
-                  first_name: values.admin_first_name,
-                  last_name: values.admin_last_name,
-                  role: "school_admin",
-                  school_id: schoolData[0].id
-                },
-              },
-            });
-
-            if (signUpError) {
-              console.error("Admin signup error:", signUpError);
-              throw signUpError;
-            }
-
-            // Explicitly create profile without waiting for trigger
-            if (authData && authData.user) {
-              try {
-                const { error: profileError } = await supabase
-                  .from("profiles")
-                  .insert({
-                    id: authData.user.id,
-                    email: values.admin_email,
-                    first_name: values.admin_first_name,
-                    last_name: values.admin_last_name,
-                    role: "school_admin",
-                    school_id: schoolData[0].id
-                  });
-
-                if (profileError) {
-                  // If insert fails (likely because profile already exists), try update
-                  const { error: updateError } = await supabase
-                    .from("profiles")
-                    .update({
-                      role: "school_admin",
-                      school_id: schoolData[0].id,
-                      first_name: values.admin_first_name,
-                      last_name: values.admin_last_name
-                    })
-                    .eq("id", authData.user.id);
-                  
-                  if (updateError) {
-                    console.error("Error updating admin profile:", updateError);
-                  }
-                }
-              } catch (profileError) {
-                console.error("Error setting up admin profile:", profileError);
-              }
+            // Use the new function to create a pre-confirmed user
+            const { data: userData, error: userError } = await supabase
+              .rpc('create_and_confirm_admin_user', {
+                admin_email: values.admin_email,
+                admin_password: values.admin_password,
+                admin_first_name: values.admin_first_name,
+                admin_last_name: values.admin_last_name,
+                admin_school_id: schoolData[0].id
+              });
+              
+            if (userError) {
+              console.error("Admin creation error:", userError);
+              throw userError;
             }
             
             toast({
