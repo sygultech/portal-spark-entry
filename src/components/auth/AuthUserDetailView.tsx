@@ -12,12 +12,19 @@ import { AuthUserDetails, updateAuthUserDetails } from '@/utils/authUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
 
 interface AuthUserDetailViewProps {
   isOpen: boolean;
   onClose: () => void;
   userData: AuthUserDetails | null;
   onRefresh: () => void;
+}
+
+interface UserMetadataField {
+  key: string;
+  value: any;
 }
 
 const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
@@ -28,6 +35,7 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
 }) => {
   const [editedUserData, setEditedUserData] = useState<AuthUserDetails | null>(userData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userMetadataFields, setUserMetadataFields] = useState<UserMetadataField[]>([]);
   const { profile } = useAuth();
   
   // Check if current user is a super admin
@@ -35,6 +43,17 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
   
   React.useEffect(() => {
     setEditedUserData(userData);
+    
+    // Convert user_metadata object to array of fields
+    if (userData?.user_metadata) {
+      const metadataEntries = Object.entries(userData.user_metadata).map(([key, value]) => ({
+        key,
+        value: typeof value === 'object' ? JSON.stringify(value) : value
+      }));
+      setUserMetadataFields(metadataEntries);
+    } else {
+      setUserMetadataFields([]);
+    }
   }, [userData]);
   
   if (!editedUserData) return null;
@@ -57,30 +76,58 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
     });
   };
   
-  const updateUserMetadata = (key: string, value: any) => {
+  const handleMetadataKeyChange = (index: number, newKey: string) => {
+    const updatedFields = [...userMetadataFields];
+    updatedFields[index].key = newKey;
+    setUserMetadataFields(updatedFields);
+    updateUserMetadataFromFields(updatedFields);
+  };
+  
+  const handleMetadataValueChange = (index: number, newValue: string) => {
+    const updatedFields = [...userMetadataFields];
+    updatedFields[index].value = newValue;
+    setUserMetadataFields(updatedFields);
+    updateUserMetadataFromFields(updatedFields);
+  };
+  
+  const addMetadataField = () => {
+    setUserMetadataFields([...userMetadataFields, { key: '', value: '' }]);
+  };
+  
+  const removeMetadataField = (index: number) => {
+    const updatedFields = userMetadataFields.filter((_, i) => i !== index);
+    setUserMetadataFields(updatedFields);
+    updateUserMetadataFromFields(updatedFields);
+  };
+  
+  const updateUserMetadataFromFields = (fields: UserMetadataField[]) => {
     if (!editedUserData) return;
     
-    // Try to parse the value as JSON if it looks like JSON
-    let processedValue = value;
-    if (typeof value === 'string') {
-      try {
-        if (value.trim().startsWith('{') || value.trim().startsWith('[')) {
-          processedValue = JSON.parse(value);
-        }
-      } catch (e) {
-        // If parsing fails, keep the original string
-        processedValue = value;
-      }
-    }
+    // Convert array of fields back to object
+    const metadata: Record<string, any> = {};
     
-    const newMetadata = {
-      ...editedUserData.user_metadata,
-      [key]: processedValue
-    };
+    fields.forEach(field => {
+      if (field.key) {
+        let processedValue = field.value;
+        
+        // Try to parse the value as JSON if it looks like JSON
+        if (typeof processedValue === 'string') {
+          try {
+            if (processedValue.trim().startsWith('{') || processedValue.trim().startsWith('[')) {
+              processedValue = JSON.parse(processedValue);
+            }
+          } catch (e) {
+            // If parsing fails, keep the original string
+          }
+        }
+        
+        metadata[field.key] = processedValue;
+      }
+    });
     
     setEditedUserData({
       ...editedUserData,
-      user_metadata: newMetadata
+      user_metadata: metadata
     });
   };
   
@@ -89,24 +136,8 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
     
     setIsSubmitting(true);
     try {
-      // Properly handle user_metadata to ensure it's an object, not a string
-      let userMetadata = editedUserData.user_metadata;
-      
-      // If user_metadata is somehow a string at this point, try to parse it
-      if (typeof userMetadata === 'string') {
-        try {
-          userMetadata = JSON.parse(userMetadata);
-        } catch (e) {
-          console.error('Failed to parse user_metadata as JSON:', e);
-          toast({
-            title: "Invalid metadata format",
-            description: "User metadata must be in valid JSON format",
-            variant: "destructive",
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      }
+      // Prepare user metadata from the fields
+      const userMetadata = editedUserData.user_metadata;
       
       const updateData = {
         email: editedUserData.email,
@@ -114,7 +145,10 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
         emailConfirmed: editedUserData.email_confirmed,
         phoneConfirmed: editedUserData.phone_confirmed,
         isBanned: editedUserData.is_banned,
-        userMetadata,  // Now we're sure it's an object
+        confirmationToken: editedUserData.confirmation_token,
+        confirmationSentAt: editedUserData.confirmation_sent_at,
+        instanceId: editedUserData.instance_id,
+        userMetadata,  // This is already processed as an object
         appMetadata: editedUserData.app_metadata
       };
       
@@ -199,6 +233,17 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              <div>
+                <Label htmlFor="instance_id">Instance ID</Label>
+                <Input
+                  id="instance_id"
+                  value={editedUserData.instance_id || ''}
+                  onChange={(e) => handleInputChange('instance_id', e.target.value)}
+                  disabled={!isSuperAdmin}
+                  placeholder="No instance ID"
+                />
+              </div>
             </CardContent>
           </Card>
           
@@ -253,25 +298,87 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Confirmation & Token */}
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <h3 className="text-lg font-medium">Confirmation Details</h3>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="confirmation_token">Confirmation Token</Label>
+                  <Input
+                    id="confirmation_token"
+                    value={editedUserData.confirmation_token || ''}
+                    onChange={(e) => handleInputChange('confirmation_token', e.target.value)}
+                    disabled={!isSuperAdmin}
+                    placeholder="No confirmation token"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="confirmation_sent_at">Confirmation Sent At</Label>
+                  <Input
+                    id="confirmation_sent_at"
+                    value={editedUserData.confirmation_sent_at || ''}
+                    onChange={(e) => handleInputChange('confirmation_sent_at', e.target.value)}
+                    disabled={!isSuperAdmin}
+                    placeholder="No confirmation sent date"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Format: YYYY-MM-DD HH:MM:SS+00 (e.g. 2025-05-15 10:30:00+00)
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           {/* User Metadata */}
           <Card>
             <CardContent className="pt-6 space-y-4">
-              <h3 className="text-lg font-medium">User Metadata</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">User Metadata</h3>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addMetadataField}
+                  disabled={!isSuperAdmin}
+                >
+                  Add Field
+                </Button>
+              </div>
               
-              {editedUserData.user_metadata && Object.entries(editedUserData.user_metadata).map(([key, value]) => (
-                <div key={key} className="grid grid-cols-3 gap-2 items-center">
-                  <Label className="font-medium">{key}</Label>
-                  <Input 
-                    className="col-span-2"
-                    value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    onChange={(e) => updateUserMetadata(key, e.target.value)}
+              {userMetadataFields.map((field, index) => (
+                <div key={index} className="grid grid-cols-8 gap-2 items-center">
+                  <Input
+                    className="col-span-3"
+                    placeholder="Key"
+                    value={field.key}
+                    onChange={(e) => handleMetadataKeyChange(index, e.target.value)}
                     disabled={!isSuperAdmin}
                   />
+                  <Input
+                    className="col-span-4"
+                    placeholder="Value"
+                    value={typeof field.value === 'object' ? JSON.stringify(field.value) : String(field.value)}
+                    onChange={(e) => handleMetadataValueChange(index, e.target.value)}
+                    disabled={!isSuperAdmin}
+                  />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => removeMetadataField(index)}
+                    disabled={!isSuperAdmin} 
+                    className="col-span-1"
+                  >
+                    Remove
+                  </Button>
                 </div>
               ))}
               
-              {(!editedUserData.user_metadata || Object.keys(editedUserData.user_metadata).length === 0) && (
+              {userMetadataFields.length === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
                   No user metadata available
                 </div>

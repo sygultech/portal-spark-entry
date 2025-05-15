@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/contexts/types";
 
@@ -201,6 +200,7 @@ export interface AuthUserDetails {
   last_sign_in_at: string | null;
   invited_at?: string | null;
   confirmation_sent_at?: string | null;
+  confirmation_token?: string | null;
   recovery_sent_at?: string | null;
   email_change_sent_at?: string | null;
   email_change?: string | null;
@@ -217,6 +217,7 @@ export interface AuthUserDetails {
   is_anonymous?: boolean;
   confirmed_at?: string | null;
   deleted_at?: string | null;
+  instance_id?: string | null;
 }
 
 // Helper function to safely type check and convert Supabase RPC response
@@ -245,6 +246,9 @@ export const updateAuthUserDetails = async (
     emailConfirmed?: boolean;
     phoneConfirmed?: boolean;
     isBanned?: boolean;
+    confirmationToken?: string | null;
+    confirmationSentAt?: string | null;
+    instanceId?: string | null;
     userMetadata?: Record<string, any>;
     appMetadata?: Record<string, any>;
   }
@@ -265,6 +269,9 @@ export const updateAuthUserDetails = async (
       p_email_confirmed: data.emailConfirmed,
       p_phone_confirmed: data.phoneConfirmed,
       p_banned: data.isBanned,
+      p_confirmation_token: data.confirmationToken,
+      p_confirmation_sent_at: data.confirmationSentAt,
+      p_instance_id: data.instanceId,
       p_user_metadata: userMetadata ? JSON.stringify(userMetadata) : null,
       p_app_metadata: appMetadata ? JSON.stringify(appMetadata) : null
     });
@@ -337,6 +344,7 @@ export const fetchAuthUserDetails = async (userId: string) => {
         last_sign_in_at: rawData.last_sign_in_at,
         invited_at: rawData.invited_at,
         confirmation_sent_at: rawData.confirmation_sent_at,
+        confirmation_token: rawData.confirmation_token,
         recovery_sent_at: rawData.recovery_sent_at,
         email_change_sent_at: rawData.email_change_sent_at,
         email_change: rawData.email_change,
@@ -352,7 +360,8 @@ export const fetchAuthUserDetails = async (userId: string) => {
         is_sso_user: rawData.is_sso_user,
         is_anonymous: rawData.is_anonymous,
         confirmed_at: rawData.confirmed_at,
-        deleted_at: rawData.deleted_at
+        deleted_at: rawData.deleted_at,
+        instance_id: rawData.instance_id
       };
       
       return { success: true, data };
