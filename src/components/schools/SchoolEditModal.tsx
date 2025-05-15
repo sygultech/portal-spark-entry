@@ -99,12 +99,13 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
             throw error;
           }
           
-          if (data && data.user_metadata) {
+          if (data && typeof data === 'object' && 'user_metadata' in data) {
             setAdminData(data);
             
             // Update form with admin data
-            form.setValue('admin_first_name', data.user_metadata.first_name || '');
-            form.setValue('admin_last_name', data.user_metadata.last_name || '');
+            const userMetadata = data.user_metadata as { first_name?: string; last_name?: string };
+            form.setValue('admin_first_name', userMetadata.first_name || '');
+            form.setValue('admin_last_name', userMetadata.last_name || '');
             form.setValue('admin_email', schoolData.admin_email);
           } else {
             setAdminError("Admin user data not found");
@@ -170,11 +171,12 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
           toast({
             title: "Partial Success",
             description: `School updated but admin user update failed: ${adminError.message}`,
-            variant: "warning",
+            variant: "destructive",
           });
           onUpdate({
             ...values,
             id: schoolData.id,
+            name: values.name, // Ensure name is explicitly set as required by SchoolFormData
           });
           onClose();
           return;
