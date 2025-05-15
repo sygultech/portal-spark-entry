@@ -1,160 +1,106 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const requestData = await req.json();
-    const { tableName } = requestData;
+    // Create a Supabase client with the Auth context of the logged in user
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
 
-    if (!tableName) {
-      throw new Error("Table name is required");
+    // Get the current authenticated user
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser()
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
     }
 
-    // Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const { table, schema, operation, data, conditions } = await req.json()
 
-    let sqlQuery = '';
-    
-    // Handle different table creations
-    switch(tableName) {
-      case 'batch_students':
-        sqlQuery = `
-          CREATE TABLE IF NOT EXISTS public.batch_students (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            batch_id UUID REFERENCES batches(id) NOT NULL,
-            student_id UUID REFERENCES profiles(id) NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-            UNIQUE(batch_id, student_id)
-          );
-          
-          -- Add RLS policies
-          ALTER TABLE public.batch_students ENABLE ROW LEVEL SECURITY;
-          
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'batch_students' 
-              AND policyname = 'School admins can view student assignments'
-            ) THEN
-              CREATE POLICY "School admins can view student assignments" 
-              ON public.batch_students FOR SELECT 
-              TO authenticated
-              USING (
-                EXISTS (
-                  SELECT 1 FROM public.batches 
-                  WHERE public.batches.id = public.batch_students.batch_id 
-                  AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-                )
-              );
-            END IF;
-            
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'batch_students' 
-              AND policyname = 'School admins can insert student assignments'
-            ) THEN
-              CREATE POLICY "School admins can insert student assignments" 
-              ON public.batch_students FOR INSERT 
-              TO authenticated
-              WITH CHECK (
-                EXISTS (
-                  SELECT 1 FROM public.batches 
-                  WHERE public.batches.id = public.batch_students.batch_id 
-                  AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-                )
-              );
-            END IF;
-            
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'batch_students' 
-              AND policyname = 'School admins can update student assignments'
-            ) THEN
-              CREATE POLICY "School admins can update student assignments" 
-              ON public.batch_students FOR UPDATE 
-              TO authenticated
-              USING (
-                EXISTS (
-                  SELECT 1 FROM public.batches 
-                  WHERE public.batches.id = public.batch_students.batch_id 
-                  AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-                )
-              );
-            END IF;
-            
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'batch_students' 
-              AND policyname = 'School admins can delete student assignments'
-            ) THEN
-              CREATE POLICY "School admins can delete student assignments" 
-              ON public.batch_students FOR DELETE 
-              TO authenticated
-              USING (
-                EXISTS (
-                  SELECT 1 FROM public.batches 
-                  WHERE public.batches.id = public.batch_students.batch_id 
-                  AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-                )
-              );
-            END IF;
-          END$$;
-        `;
-        break;
+    // Ensure the table exists
+    if (schema) {
+      // Execute schema creation commands
+      const { error } = await supabaseClient.rpc('admin_execute_sql', { sql: schema })
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: `Error creating schema: ${error.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        )
+      }
+    }
+
+    // Handle CRUD operations if specified
+    if (operation === 'insert' && data) {
+      // Handle insert operation
+      const { error } = await supabaseClient.rpc('admin_execute_sql', {
+        sql: `INSERT INTO public.${table} (${Object.keys(data).join(', ')}) 
+              VALUES (${Object.keys(data).map((k, i) => `$${i + 1}`).join(', ')})
+              ON CONFLICT (batch_id, student_id) DO NOTHING
+              RETURNING id`,
+        params: Object.values(data)
+      })
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: `Error inserting data: ${error.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        )
+      }
+    } else if (operation === 'delete' && conditions) {
+      // Handle delete operation
+      let sql = `DELETE FROM public.${table} WHERE `
+      const whereConditions = []
+      const params = []
       
-      default:
-        throw new Error(`Unknown table: ${tableName}`);
-    }
+      let paramIndex = 1
+      for (const [key, value] of Object.entries(conditions)) {
+        whereConditions.push(`${key} = $${paramIndex}`)
+        params.push(value)
+        paramIndex++
+      }
+      
+      sql += whereConditions.join(' AND ')
+      
+      const { error } = await supabaseClient.rpc('admin_execute_sql', {
+        sql,
+        params
+      })
 
-    // Execute the SQL
-    const { error } = await supabaseAdmin.rpc('execute_admin_sql', { sql: sqlQuery });
-
-    if (error) {
-      throw error;
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: `Error deleting data: ${error.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        )
+      }
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: `Table ${tableName} ensured`
-      }),
-      {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-        status: 200,
-      }
-    );
+      JSON.stringify({ success: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    )
   } catch (error) {
-    console.error(`Error ensuring table:`, error);
-    
+    console.error('Error:', error.message)
     return new Response(
-      JSON.stringify({
-        error: error.message || "Failed to ensure table",
-      }),
-      {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-        status: 500,
-      }
-    );
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})

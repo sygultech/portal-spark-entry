@@ -125,14 +125,16 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
       }
     });
     
-    // Now insert the batch assignments
+    // Now insert the batch assignments using a custom function
     for (const assignment of batchAssignments) {
-      const { error } = await supabase
-        .from('batch_students')
-        .upsert(assignment, {
-          onConflict: 'batch_id,student_id',
-          ignoreDuplicates: true
-        });
+      // Use functions.invoke instead of direct table operations
+      const { error } = await supabase.functions.invoke('ensure-tables', {
+        body: {
+          operation: 'insert',
+          table: 'batch_students',
+          data: assignment
+        }
+      });
         
       if (error) {
         console.error('Error assigning student to batch:', error);
@@ -158,11 +160,17 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
 // Remove a student from a batch
 export const removeStudentFromBatch = async (batchId: string, studentId: string) => {
   try {
-    const { error } = await supabase
-      .from('batch_students')
-      .delete()
-      .eq('batch_id', batchId)
-      .eq('student_id', studentId);
+    // Using functions.invoke instead of direct table access for type safety
+    const { error } = await supabase.functions.invoke('ensure-tables', {
+      body: {
+        operation: 'delete',
+        table: 'batch_students',
+        conditions: {
+          batch_id: batchId,
+          student_id: studentId
+        }
+      }
+    });
 
     if (error) {
       console.error('Error removing student from batch:', error);
