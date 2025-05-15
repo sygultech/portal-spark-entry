@@ -189,26 +189,36 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details - Complete rewrite to fix the data format issues
+  // Update auth user details - Fixed to match the expected TypeScript interface
   const updateAuthUserDetails = async (values: any) => {
     if (!adminData?.id) return false;
     
     try {
       console.log("Original values for update:", values);
       
-      // Create a minimalist payload with only the essential fields and proper types
-      const payload: Record<string, any> = {
-        p_user_id: adminData.id // Ensure we're using the complete UUID
+      // Define the payload with the required type structure
+      // This ensures TypeScript validates the structure properly
+      const payload: {
+        p_user_id: string;
+        p_email?: string;
+        p_phone?: string | null;
+        p_metadata?: any; // Using any for metadata as it's complex
+        p_email_confirmed?: boolean;
+        p_phone_confirmed?: boolean;
+        p_banned?: boolean;
+      } = {
+        p_user_id: adminData.id // Always include the required user ID
       };
       
-      // Only add fields that are explicitly defined and with the correct parameter names
+      // Only add optional fields that are explicitly defined
       if (values.email !== undefined) payload.p_email = String(values.email);
       if (values.phone !== undefined) payload.p_phone = values.phone === null ? null : String(values.phone);
       if (values.emailConfirmed !== undefined) payload.p_email_confirmed = Boolean(values.emailConfirmed);
       if (values.phoneConfirmed !== undefined) payload.p_phone_confirmed = Boolean(values.phoneConfirmed);
       if (values.isBanned !== undefined) payload.p_banned = Boolean(values.isBanned);
       
-      // Never include metadata to avoid JSON parsing issues
+      // We intentionally don't set p_metadata to avoid JSON parsing issues
+      
       console.log("Final payload being sent to update_auth_user:", payload);
       
       const { data, error } = await supabase.rpc(
