@@ -137,7 +137,8 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
           }
           
           if (data && typeof data === 'object') {
-            const userData = data as UserMetadata;
+            // Safely cast the data to our expected type with an intermediate unknown cast
+            const userData = data as unknown as UserMetadata;
             setAdminData(userData);
             
             // Update form with admin data
@@ -211,7 +212,14 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       
       // Update local state with new data
       if (data) {
-        setAuthUserDetails(prev => prev ? { ...prev, ...data } : data as unknown as AuthUserDetails);
+        // Use a proper type assertion to handle the returned data
+        const typedData = data as unknown as AuthUserDetails;
+        setAuthUserDetails(prev => {
+          if (prev) {
+            return { ...prev, ...typedData };
+          }
+          return typedData;
+        });
       }
       
       toast({
@@ -716,4 +724,3 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
 };
 
 export default SchoolEditModal;
-
