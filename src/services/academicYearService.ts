@@ -31,9 +31,16 @@ export async function fetchAcademicYear(id: string) {
 }
 
 export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' | 'created_at' | 'updated_at'>) {
+  // Ensure dates are in ISO format
+  const formattedYear = {
+    ...academicYear,
+    start_date: new Date(academicYear.start_date).toISOString().split('T')[0],
+    end_date: new Date(academicYear.end_date).toISOString().split('T')[0],
+  };
+
   const { data, error } = await supabase
     .from('academic_years')
-    .insert(academicYear)
+    .insert(formattedYear)
     .select()
     .single();
 
@@ -42,10 +49,22 @@ export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' |
 }
 
 export async function updateAcademicYear(id: string, academicYear: Partial<AcademicYear>) {
+  // Format dates if they are included in the update
+  const formattedUpdate = { ...academicYear };
+  if (academicYear.start_date) {
+    formattedUpdate.start_date = new Date(academicYear.start_date).toISOString().split('T')[0];
+  }
+  if (academicYear.end_date) {
+    formattedUpdate.end_date = new Date(academicYear.end_date).toISOString().split('T')[0];
+  }
+  
+  // Add updated_at timestamp
+  formattedUpdate.updated_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from('academic_years')
-    .update(academicYear)
-    .eq('id', id)
+    .update(formattedUpdate)
+    .match({ id })
     .select()
     .single();
 
@@ -57,7 +76,7 @@ export async function deleteAcademicYear(id: string) {
   const { error } = await supabase
     .from('academic_years')
     .delete()
-    .eq('id', id);
+    .match({ id });
 
   if (error) throw error;
   return true;
@@ -67,16 +86,16 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
   // First, set all academic years to inactive
   const { error: updateError } = await supabase
     .from('academic_years')
-    .update({ is_active: false })
-    .eq('school_id', schoolId);
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .match({ school_id: schoolId });
 
   if (updateError) throw updateError;
 
   // Then, set the specified one as active
   const { data, error } = await supabase
     .from('academic_years')
-    .update({ is_active: true })
-    .eq('id', id)
+    .update({ is_active: true, updated_at: new Date().toISOString() })
+    .match({ id })
     .select()
     .single();
 
@@ -87,8 +106,8 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
 export async function archiveAcademicYear(id: string) {
   const { data, error } = await supabase
     .from('academic_years')
-    .update({ is_archived: true })
-    .eq('id', id)
+    .update({ is_archived: true, updated_at: new Date().toISOString() })
+    .match({ id })
     .select()
     .single();
 
