@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Session, User } from "@supabase/supabase-js";
@@ -6,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/contexts/types";
 import { toast } from "@/components/ui/use-toast";
 import { cleanupAuthState, fetchUserProfile } from "@/utils/authUtils";
+import { getRoleBasedRoute } from "@/utils/roleUtils";
 
 export const useAuthOperations = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -33,13 +33,11 @@ export const useAuthOperations = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch user profile after successful sign in
-        // Use setTimeout to prevent potential deadlocks
-        setTimeout(() => {
-          fetchUserProfile(data.user.id);
-        }, 0);
+        // Fetch user profile and handle navigation based on role
+        const userProfile = await fetchUserProfile(data.user.id);
+        const redirectPath = getRoleBasedRoute(userProfile?.role);
         
-        navigate("/");
+        navigate(redirectPath);
         toast({
           title: "Login successful!",
           description: "Welcome back!",

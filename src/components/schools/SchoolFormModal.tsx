@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -139,7 +138,7 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
             });
           } else {
             // Create new user
-            const { error: signUpError } = await supabase.auth.signUp({
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
               email: values.admin_email,
               password: values.admin_password,
               options: {
@@ -157,31 +156,40 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
               throw signUpError;
             }
 
-            // Wait a moment for the auth trigger to create the profile
-            setTimeout(async () => {
-              try {
-                console.log("Updating admin profile");
-                const { data: userData } = await supabase
-                  .from("profiles")
-                  .select()
-                  .eq("email", values.admin_email)
-                  .single();
+            // Create profile directly instead of relying on trigger
+            if (signUpData.user) {
+              const { error: profileError } = await supabase
+                .from("profiles")
+                .insert({
+                  id: signUpData.user.id,
+                  email: values.admin_email,
+                  first_name: values.admin_first_name,
+                  last_name: values.admin_last_name,
+                  role: "school_admin",
+                  school_id: schoolData[0].id,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
 
-                if (userData) {
-                  await supabase
-                    .from("profiles")
-                    .update({
-                      school_id: schoolData[0].id,
-                      role: "school_admin",
-                    })
-                    .eq("id", userData.id);
-                  
-                  console.log("Admin profile updated successfully");
+              if (profileError) {
+                console.error("Error creating admin profile:", profileError);
+                // Try to update if insert failed (profile might already exist)
+                const { error: updateError } = await supabase
+                  .from("profiles")
+                  .update({
+                    first_name: values.admin_first_name,
+                    last_name: values.admin_last_name,
+                    role: "school_admin",
+                    school_id: schoolData[0].id,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq("id", signUpData.user.id);
+
+                if (updateError) {
+                  throw updateError;
                 }
-              } catch (error) {
-                console.error("Error updating admin profile:", error);
               }
-            }, 1000);
+            }
             
             toast({
               title: "School Created",
