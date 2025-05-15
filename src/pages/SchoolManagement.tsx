@@ -50,6 +50,14 @@ interface ExtendedSchool extends School {
   isEmailConfirmed?: boolean;
 }
 
+// Interface for user metadata returned from Supabase
+interface UserMetadata {
+  id: string;
+  email: string;
+  created_at: string;
+  user_metadata: Record<string, any>;
+}
+
 const SchoolManagement: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -203,11 +211,17 @@ const SchoolManagement: React.FC = () => {
         throw error;
       }
       
-      if (!data || !data.id) {
+      // Type check and extract the user ID from the metadata
+      if (!data || typeof data !== 'object') {
         throw new Error("User not found with this email");
       }
       
-      return data.id;
+      const userData = data as UserMetadata;
+      if (!userData.id) {
+        throw new Error("User ID not found in metadata");
+      }
+      
+      return userData.id;
     },
     onSuccess: (userId, email) => {
       console.log(`Found user ID ${userId} for email ${email}`);
