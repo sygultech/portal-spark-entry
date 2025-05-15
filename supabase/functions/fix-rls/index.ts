@@ -49,8 +49,8 @@ serve(async (req) => {
       );
     `
 
-    // Execute SQL to fix RLS
-    const { error } = await supabaseClient.rpc('admin_execute_sql', { 
+    // Execute SQL to fix RLS - using the correct function name
+    const { error } = await supabaseClient.rpc('execute_admin_sql', { 
       sql: fixCoursesRLS 
     })
 
