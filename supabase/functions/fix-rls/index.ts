@@ -62,18 +62,18 @@ serve(async (req) => {
       ON public.courses
       USING (
         EXISTS (
-          SELECT 1 FROM public.profiles 
-          WHERE public.profiles.id = auth.uid() 
-          AND public.profiles.school_id = public.courses.school_id
-          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() 
+          AND p.school_id = courses.school_id
+          AND (p.role = 'school_admin' OR p.role = 'super_admin')
         )
       )
       WITH CHECK (
         EXISTS (
-          SELECT 1 FROM public.profiles 
-          WHERE public.profiles.id = auth.uid() 
-          AND public.profiles.school_id = public.courses.school_id
-          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() 
+          AND p.school_id = courses.school_id
+          AND (p.role = 'school_admin' OR p.role = 'super_admin')
         )
       );
       
@@ -86,18 +86,18 @@ serve(async (req) => {
       TO authenticated
       USING (
         EXISTS (
-          SELECT 1 FROM public.profiles 
-          WHERE public.profiles.id = auth.uid() 
-          AND public.profiles.school_id = public.academic_years.school_id
-          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() 
+          AND p.school_id = academic_years.school_id
+          AND (p.role = 'school_admin' OR p.role = 'super_admin')
         )
       )
       WITH CHECK (
         EXISTS (
-          SELECT 1 FROM public.profiles 
-          WHERE public.profiles.id = auth.uid() 
-          AND public.profiles.school_id = public.academic_years.school_id
-          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() 
+          AND p.school_id = academic_years.school_id
+          AND (p.role = 'school_admin' OR p.role = 'super_admin')
         )
       );
     `

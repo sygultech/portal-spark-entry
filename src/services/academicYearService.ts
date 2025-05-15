@@ -46,17 +46,7 @@ export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' |
     const { data, error } = await supabase
       .from('academic_years')
       .insert([formattedYear])
-      .select(`
-        id,
-        name,
-        start_date,
-        end_date,
-        is_active,
-        is_archived,
-        school_id,
-        created_at,
-        updated_at
-      `)
+      .select()
       .single();
 
     if (error) {
@@ -88,17 +78,7 @@ export async function updateAcademicYear(id: string, academicYear: Partial<Acade
     .from('academic_years')
     .update(formattedUpdate)
     .eq('id', id)
-    .select(`
-      id,
-      name,
-      start_date,
-      end_date,
-      is_active,
-      is_archived,
-      school_id,
-      created_at,
-      updated_at
-    `)
+    .select()
     .single();
 
   if (error) throw error;
@@ -137,17 +117,7 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
       })
       .eq('id', id)
       .eq('school_id', schoolId)
-      .select(`
-        id,
-        name,
-        start_date,
-        end_date,
-        is_active,
-        is_archived,
-        school_id,
-        created_at,
-        updated_at
-      `)
+      .select()
       .single();
 
     if (error) throw error;
@@ -163,17 +133,7 @@ export async function archiveAcademicYear(id: string) {
     .from('academic_years')
     .update({ is_archived: true, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select(`
-      id,
-      name,
-      start_date,
-      end_date,
-      is_active,
-      is_archived,
-      school_id,
-      created_at,
-      updated_at
-    `)
+    .select()
     .single();
 
   if (error) throw error;
