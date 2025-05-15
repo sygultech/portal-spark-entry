@@ -173,10 +173,18 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
             description: `School updated but admin user update failed: ${adminError.message}`,
             variant: "destructive",
           });
+          
+          // Ensure we pass all required fields for SchoolFormData
           onUpdate({
-            ...values,
             id: schoolData.id,
-            name: values.name, // Ensure name is explicitly set as required by SchoolFormData
+            name: values.name,
+            admin_email: values.admin_email, // Make sure this is always included
+            admin_first_name: values.admin_first_name,
+            admin_last_name: values.admin_last_name,
+            domain: values.domain,
+            contact_number: values.contact_number,
+            region: values.region,
+            status: values.status
           });
           onClose();
           return;
@@ -187,13 +195,13 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       const formattedData: SchoolFormData = {
         id: schoolData.id,
         name: values.name,
-        domain: values.domain || undefined,
+        domain: values.domain,
         admin_email: values.admin_email,
         admin_first_name: values.admin_first_name,
         admin_last_name: values.admin_last_name,
-        contact_number: values.contact_number || undefined,
-        region: values.region || undefined,
-        status: values.status as "active" | "suspended" | "expired" | "pending" | string
+        contact_number: values.contact_number,
+        region: values.region,
+        status: values.status
       };
 
       onUpdate(formattedData);
