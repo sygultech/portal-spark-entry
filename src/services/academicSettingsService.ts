@@ -1,98 +1,213 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { AcademicSettings } from '@/types/academic';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
-export async function fetchAcademicSettings(schoolId: string) {
-  const { data, error } = await supabase
-    .from('academic_settings')
-    .select('*')
-    .eq('school_id', schoolId)
-    .single();
+export interface AcademicSettings {
+  id: string;
+  school_id: string;
+  default_academic_year_id: string | null;
+  enable_audit_log: boolean;
+  student_self_enroll: boolean;
+  teacher_edit_subjects: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // No settings found, create default settings
-      return createDefaultAcademicSettings(schoolId);
+// Get academic settings for the school
+export const getAcademicSettings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('academic_settings')
+      .select('*')
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+      console.error('Error fetching academic settings:', error);
+      toast({
+        title: 'Error',
+        description: `Could not fetch academic settings: ${error.message}`,
+        variant: 'destructive',
+      });
+      return null;
     }
-    throw error;
+
+    return data;
+  } catch (error: any) {
+    console.error('Exception in getAcademicSettings:', error);
+    toast({
+      title: 'Error',
+      description: `An unexpected error occurred: ${error.message}`,
+      variant: 'destructive',
+    });
+    return null;
   }
-  
-  return data as AcademicSettings;
-}
+};
 
-export async function createDefaultAcademicSettings(schoolId: string) {
-  const { data, error } = await supabase
-    .from('academic_settings')
-    .insert({
-      school_id: schoolId,
-      enable_audit_log: true,
-      student_self_enroll: false,
-      teacher_edit_subjects: true
-    })
-    .select()
-    .single();
+// Create or update academic settings
+export const saveAcademicSettings = async (settings: Partial<AcademicSettings>) => {
+  try {
+    const { profile } = useAuth();
+    
+    if (!profile || !profile.school_id) {
+      toast({
+        title: 'Error',
+        description: 'School information not available',
+        variant: 'destructive',
+      });
+      return null;
+    }
 
-  if (error) throw error;
-  return data as AcademicSettings;
-}
+    const { data: existingData } = await supabase
+      .from('academic_settings')
+      .select('id')
+      .eq('school_id', profile.school_id)
+      .maybeSingle();
 
-export async function updateAcademicSettings(id: string, settings: Partial<AcademicSettings>) {
-  const { data, error } = await supabase
-    .from('academic_settings')
-    .update(settings)
-    .eq('id', id)
-    .select()
-    .single();
+    let result;
+    
+    if (existingData) {
+      // Update existing settings
+      const { data, error } = await supabase
+        .from('academic_settings')
+        .update({
+          ...settings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingData.id)
+        .select();
 
-  if (error) throw error;
-  return data as AcademicSettings;
-}
+      if (error) {
+        console.error('Error updating academic settings:', error);
+        toast({
+          title: 'Error',
+          description: `Could not update settings: ${error.message}`,
+          variant: 'destructive',
+        });
+        return null;
+      }
+      
+      result = data?.[0];
+    } else {
+      // Create new settings
+      const { data, error } = await supabase
+        .from('academic_settings')
+        .insert({
+          ...settings,
+          school_id: profile.school_id
+        })
+        .select();
 
-export async function setDefaultAcademicYear(settingsId: string, academicYearId: string) {
-  const { data, error } = await supabase
-    .from('academic_settings')
-    .update({ default_academic_year_id: academicYearId })
-    .eq('id', settingsId)
-    .select()
-    .single();
+      if (error) {
+        console.error('Error creating academic settings:', error);
+        toast({
+          title: 'Error',
+          description: `Could not create settings: ${error.message}`,
+          variant: 'destructive',
+        });
+        return null;
+      }
+      
+      result = data?.[0];
+    }
 
-  if (error) throw error;
-  return data as AcademicSettings;
-}
-
-export async function fetchAcademicAuditLogs(schoolId: string, filters?: {
-  entityType?: string;
-  userId?: string;
-  startDate?: string;
-  endDate?: string;
-}) {
-  let query = supabase
-    .from('academic_audit_logs')
-    .select(`
-      *,
-      user:user_id (id, first_name, last_name, email)
-    `)
-    .eq('school_id', schoolId)
-    .order('created_at', { ascending: false });
-  
-  if (filters?.entityType) {
-    query = query.eq('entity_type', filters.entityType);
+    toast({
+      title: 'Success',
+      description: 'Academic settings saved successfully',
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('Exception in saveAcademicSettings:', error);
+    toast({
+      title: 'Error',
+      description: `An unexpected error occurred: ${error.message}`,
+      variant: 'destructive',
+    });
+    return null;
   }
-  
-  if (filters?.userId) {
-    query = query.eq('user_id', filters.userId);
-  }
-  
-  if (filters?.startDate) {
-    query = query.gte('created_at', filters.startDate);
-  }
-  
-  if (filters?.endDate) {
-    query = query.lte('created_at', filters.endDate);
-  }
-  
-  const { data, error } = await query;
+};
 
-  if (error) throw error;
-  return data;
-}
+// Get audit logs
+export const getAcademicAuditLogs = async (limit = 50, offset = 0) => {
+  try {
+    const { data, error } = await supabase
+      .from('academic_audit_logs')
+      .select(`
+        *,
+        user:profiles(id, email, first_name, last_name)
+      `)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Error fetching audit logs:', error);
+      toast({
+        title: 'Error',
+        description: `Could not fetch audit logs: ${error.message}`,
+        variant: 'destructive',
+      });
+      return [];
+    }
+
+    return data || [];
+  } catch (error: any) {
+    console.error('Exception in getAcademicAuditLogs:', error);
+    toast({
+      title: 'Error',
+      description: `An unexpected error occurred: ${error.message}`,
+      variant: 'destructive',
+    });
+    return [];
+  }
+};
+
+// Clone academic structure from one year to another
+export const cloneAcademicStructure = async (
+  sourceYearId: string,
+  targetYearId: string,
+  options = {
+    cloneCourses: true,
+    cloneBatches: true,
+    cloneSubjects: true,
+    cloneGrading: false,
+    cloneElectives: false
+  }
+) => {
+  try {
+    const { data, error } = await supabase.rpc('clone_academic_structure', {
+      source_year_id: sourceYearId,
+      target_year_id: targetYearId,
+      clone_courses: options.cloneCourses,
+      clone_batches: options.cloneBatches,
+      clone_subjects: options.cloneSubjects,
+      clone_grading: options.cloneGrading,
+      clone_electives: options.cloneElectives
+    });
+
+    if (error) {
+      console.error('Error cloning academic structure:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to clone: ${error.message}`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    toast({
+      title: 'Success',
+      description: 'Academic structure cloned successfully',
+    });
+    
+    return data;
+  } catch (error: any) {
+    console.error('Exception in cloneAcademicStructure:', error);
+    toast({
+      title: 'Error',
+      description: `An unexpected error occurred: ${error.message}`,
+      variant: 'destructive',
+    });
+    return null;
+  }
+};
