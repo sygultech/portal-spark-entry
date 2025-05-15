@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import SchoolFormModal from "@/components/schools/SchoolFormModal";
+import SchoolEditModal from "@/components/schools/SchoolEditModal";
 
 // Icons
 import { 
@@ -52,6 +53,8 @@ interface ExtendedSchool extends School {
 const SchoolManagement: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentSchool, setCurrentSchool] = useState<ExtendedSchool | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -146,6 +149,18 @@ const SchoolManagement: React.FC = () => {
     }
   });
 
+  // Mutation for updating school details
+  const updateSchool = useMutation({
+    mutationFn: async (formData: any) => {
+      // School update is handled in the SchoolEditModal component
+      // This is just to invalidate the cache and refresh the UI
+      return formData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+    }
+  });
+
   // Handle confirmation action
   const handleConfirmEmail = (email: string) => {
     if (!email) {
@@ -158,6 +173,12 @@ const SchoolManagement: React.FC = () => {
     }
     
     confirmEmail.mutate(email);
+  };
+
+  // Handle edit action
+  const handleEdit = (school: ExtendedSchool) => {
+    setCurrentSchool(school);
+    setIsEditModalOpen(true);
   };
 
   // Filter schools
@@ -174,6 +195,11 @@ const SchoolManagement: React.FC = () => {
       description: `${formData.name} has been added to the system`,
     });
     refetch();
+  };
+
+  // Handle school update
+  const handleUpdateSchool = (formData: any) => {
+    updateSchool.mutate(formData);
   };
 
   return (
@@ -320,7 +346,11 @@ const SchoolManagement: React.FC = () => {
                           <Button variant="ghost" size="icon">
                             <Eye size={16} />
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleEdit(school)}
+                          >
                             <Edit size={16} />
                           </Button>
                           <Button variant="ghost" size="icon" className="text-red-500">
@@ -343,6 +373,16 @@ const SchoolManagement: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddSchool}
       />
+
+      {/* Edit School Modal */}
+      {currentSchool && (
+        <SchoolEditModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onUpdate={handleUpdateSchool}
+          schoolData={currentSchool}
+        />
+      )}
     </div>
   );
 };

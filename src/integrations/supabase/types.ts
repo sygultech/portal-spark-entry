@@ -828,6 +828,28 @@ export type Database = {
         Args: { email_address: string }
         Returns: boolean
       }
+      update_admin_user: {
+        Args: {
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_password?: string
+          p_school_id?: string
+        }
+        Returns: Json
+      }
+      update_school_details: {
+        Args: {
+          p_school_id: string
+          p_name: string
+          p_domain: string
+          p_contact_number: string
+          p_region: string
+          p_status: string
+          p_admin_email: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       user_role:
