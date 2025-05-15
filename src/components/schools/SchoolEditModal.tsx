@@ -24,20 +24,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Loader2, AlertTriangle, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
 
 // Types
 import type { School, SchoolFormData } from "@/types/school";
@@ -92,7 +84,6 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
   const [adminData, setAdminData] = useState<UserMetadata | null>(null);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("school-info");
   const [authUserDetails, setAuthUserDetails] = useState<AuthUserDetails | null>(null);
   const [isLoadingAuthDetails, setIsLoadingAuthDetails] = useState(false);
   const [isAuthDetailViewOpen, setIsAuthDetailViewOpen] = useState(false);
@@ -310,328 +301,260 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
             </DialogDescription>
           </DialogHeader>
           
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="school-info">School Info</TabsTrigger>
-              <TabsTrigger value="auth-settings" disabled={!adminData?.id}>Auth Settings</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="school-info" className="mt-4">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                {/* School Information */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-lg">School Information</h3>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <h3 className="font-medium">School Information</h3>
-                      
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>School Name*</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter school name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="domain"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Domain</FormLabel>
-                            <FormControl>
-                              <Input placeholder="school.edu" {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormDescription>
-                              The domain used for school email accounts
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="contact_number"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Contact Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="region"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Region</FormLabel>
-                            <FormControl>
-                              <Input placeholder="North America" {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Status</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="suspended">Suspended</SelectItem>
-                                <SelectItem value="expired">Expired</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>School Name*</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter school name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Administrator Account</h3>
-                      
-                      {loadingAdmin && (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                          <span className="ml-2">Loading admin data...</span>
-                        </div>
+                    <FormField
+                      control={form.control}
+                      name="domain"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Domain</FormLabel>
+                          <FormControl>
+                            <Input placeholder="school.edu" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormDescription>
+                            The domain used for school email accounts
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      
-                      {adminError && (
-                        <Alert variant="destructive">
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertDescription>{adminError}</AlertDescription>
-                        </Alert>
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contact_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      
-                      {adminData && (
-                        <div className="text-sm text-muted-foreground mb-4">
-                          <p>Admin user ID: <Badge variant="outline" className="font-mono text-xs">{adminData.id}</Badge></p>
-                          <p className="mt-1">Created: {new Date(adminData.created_at).toLocaleDateString()}</p>
-                        </div>
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="region"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Region</FormLabel>
+                          <FormControl>
+                            <Input placeholder="North America" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      
-                      <FormField
-                        control={form.control}
-                        name="admin_email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Admin Email*</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="email" 
-                                placeholder="admin@school.edu" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Changing this will reassign the school to a different admin
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="admin_first_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name*</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="admin_last_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name*</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="admin_password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>New Password</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="Leave blank to keep current password" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Only enter a password if you want to change it
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    />
                   </div>
                   
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={onClose}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>Update School</>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </TabsContent>
-            
-            <TabsContent value="auth-settings" className="mt-4">
-              {isLoadingAuthDetails ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="ml-2 text-lg">Loading authentication details...</span>
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="suspended">Suspended</SelectItem>
+                            <SelectItem value="expired">Expired</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              ) : authUserDetails ? (
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium">Authentication Settings</h3>
+                
+                {/* Administrator Details */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-lg">Administrator Account</h3>
+                    
+                    {adminData && authUserDetails && (
                       <Button 
-                        onClick={handleOpenAuthDetails} 
-                        variant="outline"
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleOpenAuthDetails}
+                        type="button"
                       >
-                        View Complete Details
+                        Authentication Settings
                       </Button>
+                    )}
+                  </div>
+                  
+                  {loadingAdmin && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2">Loading admin data...</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Manage user authentication settings and account status.
-                    </p>
-                    
-                    <Alert>
-                      <AlertDescription>
-                        These settings directly modify the auth.users table. Changes take effect immediately.
-                      </AlertDescription>
+                  )}
+                  
+                  {adminError && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{adminError}</AlertDescription>
                     </Alert>
+                  )}
+                  
+                  {adminData && (
+                    <div className="text-sm text-muted-foreground mb-4">
+                      <p>Admin user ID: <Badge variant="outline" className="font-mono text-xs">{adminData.id}</Badge></p>
+                      <p className="mt-1">Created: {new Date(adminData.created_at).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="admin_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Admin Email*</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="email" 
+                              placeholder="admin@school.edu" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Changing this will reassign the school to a different admin
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="admin_password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Leave blank to keep current password" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Only enter a password if you want to change it
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-
-                  <div className="grid gap-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">User Details</h4>
-                        <div className="space-y-2 text-sm">
-                          <p><span className="font-medium">Email:</span> {authUserDetails.email}</p>
-                          <p><span className="font-medium">Phone:</span> {authUserDetails.phone || 'Not set'}</p>
-                          <p><span className="font-medium">Created:</span> {new Date(authUserDetails.created_at).toLocaleString()}</p>
-                          <p><span className="font-medium">Last Sign In:</span> {authUserDetails.last_sign_in_at ? new Date(authUserDetails.last_sign_in_at).toLocaleString() : 'Never'}</p>
-                        </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="admin_first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name*</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="admin_last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name*</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {authUserDetails && (
+                    <div className="mt-4 bg-muted p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">Account Status</h4>
                       </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Account Status</h4>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">Email Confirmed</p>
-                              <p className="text-sm text-muted-foreground">User has verified their email address</p>
-                            </div>
-                            <Badge variant={authUserDetails.email_confirmed ? "success" : "outline"}>
-                              {authUserDetails.email_confirmed ? (
-                                <Check className="h-4 w-4" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">Phone Confirmed</p>
-                              <p className="text-sm text-muted-foreground">User has verified their phone number</p>
-                            </div>
-                            <Badge variant={authUserDetails.phone_confirmed ? "success" : "outline"}>
-                              {authUserDetails.phone_confirmed ? (
-                                <Check className="h-4 w-4" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">Account Banned</p>
-                              <p className="text-sm text-muted-foreground">User is prevented from signing in</p>
-                            </div>
-                            <Badge variant={authUserDetails.is_banned ? "destructive" : "outline"}>
-                              {authUserDetails.is_banned ? (
-                                <Check className="h-4 w-4" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                            </Badge>
-                          </div>
+                      <div className="grid grid-cols-3 gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Email Confirmed:</span>
+                          <Badge variant={authUserDetails.email_confirmed ? "success" : "outline"}>
+                            {authUserDetails.email_confirmed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Phone Confirmed:</span>
+                          <Badge variant={authUserDetails.phone_confirmed ? "success" : "outline"}>
+                            {authUserDetails.phone_confirmed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Banned:</span>
+                          <Badge variant={authUserDetails.is_banned ? "destructive" : "outline"}>
+                            {authUserDetails.is_banned ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          </Badge>
                         </div>
                       </div>
                     </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">User Metadata</h4>
-                      <div className="bg-muted p-3 rounded text-sm font-mono overflow-auto max-h-32">
-                        <pre>{JSON.stringify(authUserDetails.user_metadata, null, 2)}</pre>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
-                  <h3 className="mt-2 text-lg font-medium">Auth user details not found</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Unable to load authentication details for this user.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>Update School</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
