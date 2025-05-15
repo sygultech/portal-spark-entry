@@ -224,6 +224,7 @@ export function isValidAuthUserResponse(data: any): data is AuthUserDetails {
   return (
     data &&
     typeof data === 'object' &&
+    !Array.isArray(data) &&
     'id' in data &&
     'email' in data &&
     'email_confirmed' in data &&
@@ -304,14 +305,54 @@ export const fetchAuthUserDetails = async (userId: string) => {
       console.log("Auth user details response:", rawData);
       
       // Process the user_metadata to ensure it's an object
-      const data = {
-        ...rawData,
-        user_metadata: typeof rawData.user_metadata === 'string' 
-          ? JSON.parse(rawData.user_metadata) 
-          : rawData.user_metadata,
-        app_metadata: typeof rawData.app_metadata === 'string'
-          ? JSON.parse(rawData.app_metadata)
-          : rawData.app_metadata
+      let processedUserMetadata = rawData.user_metadata;
+      if (typeof processedUserMetadata === 'string') {
+        try {
+          processedUserMetadata = JSON.parse(processedUserMetadata);
+        } catch (e) {
+          console.warn("Failed to parse user_metadata string:", e);
+          processedUserMetadata = {};
+        }
+      }
+      
+      let processedAppMetadata = rawData.app_metadata;
+      if (typeof processedAppMetadata === 'string') {
+        try {
+          processedAppMetadata = JSON.parse(processedAppMetadata);
+        } catch (e) {
+          console.warn("Failed to parse app_metadata string:", e);
+          processedAppMetadata = {};
+        }
+      }
+      
+      // Create a new object instead of using spread
+      const data: AuthUserDetails = {
+        id: rawData.id,
+        aud: rawData.aud,
+        role: rawData.role,
+        email: rawData.email,
+        phone: rawData.phone,
+        created_at: rawData.created_at,
+        updated_at: rawData.updated_at,
+        last_sign_in_at: rawData.last_sign_in_at,
+        invited_at: rawData.invited_at,
+        confirmation_sent_at: rawData.confirmation_sent_at,
+        recovery_sent_at: rawData.recovery_sent_at,
+        email_change_sent_at: rawData.email_change_sent_at,
+        email_change: rawData.email_change,
+        phone_change: rawData.phone_change,
+        phone_change_sent_at: rawData.phone_change_sent_at,
+        user_metadata: processedUserMetadata,
+        app_metadata: processedAppMetadata,
+        email_confirmed: rawData.email_confirmed,
+        phone_confirmed: rawData.phone_confirmed,
+        is_banned: rawData.is_banned,
+        banned_until: rawData.banned_until,
+        is_super_admin: rawData.is_super_admin,
+        is_sso_user: rawData.is_sso_user,
+        is_anonymous: rawData.is_anonymous,
+        confirmed_at: rawData.confirmed_at,
+        deleted_at: rawData.deleted_at
       };
       
       return { success: true, data };
