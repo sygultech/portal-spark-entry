@@ -49,6 +49,7 @@ export const getRoleNavigation = (profile: Profile | null) => {
         { name: "Dashboard", href: "/school-admin" },
         { name: "Teachers", href: "/teachers" },
         { name: "Students", href: "/students" },
+        { name: "Academic", href: "/academic" },
       ];
     case "teacher":
       return [
