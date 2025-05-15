@@ -41,6 +41,7 @@ import { Switch } from "@/components/ui/switch";
 // Types
 import type { School, SchoolFormData } from "@/types/school";
 import { Json } from "@/integrations/supabase/types";
+import { updateAuthUserDetails } from "@/utils/authUtils";
 
 const formSchema = z.object({
   name: z.string().min(3, "School name must be at least 3 characters"),
@@ -211,69 +212,54 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details function
-  const updateAuthUserDetails = async (values: {
-    email: string;
-    phone: string | null;
-    emailConfirmed: boolean;
-    phoneConfirmed: boolean;
-    isBanned: boolean;
-  }) => {
-    if (!adminData?.id) {
-      console.error("No admin ID available");
-      return false;
-    }
+  // Update auth user details function - now using the imported utility
+  const handleAuthSettingsUpdate = async () => {
+    if (!authUserDetails || !adminData?.id) return;
+    
+    setIsSubmitting(true);
     
     try {
-      console.log("Updating auth user details for ID:", adminData.id);
-      console.log("Input values:", values);
+      // Use the utility function from authUtils
+      const { success, data, error } = await updateAuthUserDetails(adminData.id, {
+        email: authUserDetails.email,
+        phone: authUserDetails.phone,
+        emailConfirmed: authUserDetails.email_confirmed,
+        phoneConfirmed: authUserDetails.phone_confirmed,
+        isBanned: authUserDetails.is_banned
+      });
       
-      // Create a simple parameter object for the RPC call
-      const params = {
-        p_user_id: adminData.id,
-        p_email: values.email,
-        p_phone: values.phone,
-        p_email_confirmed: values.emailConfirmed,
-        p_phone_confirmed: values.phoneConfirmed,
-        p_banned: values.isBanned
-      };
-      
-      console.log("Final RPC payload:", params);
-      
-      const { data, error } = await supabase.rpc('update_auth_user', params);
-      
-      if (error) {
-        console.error("RPC error:", error);
+      if (success && data) {
+        // If the response is valid, update the local state
+        if (isValidAuthUserResponse(data)) {
+          setAuthUserDetails(data);
+          
+          toast({
+            title: "Auth settings updated",
+            description: "User authentication settings have been updated successfully",
+          });
+        }
+      } else if (error) {
         throw error;
       }
-      
-      console.log("Auth update response:", data);
-      
-      // If the response is valid, update the local state
-      if (data && isValidAuthUserResponse(data)) {
-        setAuthUserDetails(data);
-        
-        toast({
-          title: "Auth data updated",
-          description: "User authentication settings have been updated successfully",
-        });
-        
-        return true;
-      } else {
-        console.error("Invalid response format from update_auth_user:", data);
-        throw new Error("Invalid response format from server");
-      }
     } catch (error: any) {
-      console.error("Error updating auth user:", error);
-      
       toast({
-        title: "Update failed",
+        title: "Error updating auth settings",
         description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
-      
-      return false;
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Toggle auth user settings
+  const toggleAuthSetting = (field: keyof AuthUserDetails, value: boolean) => {
+    if (!authUserDetails) return;
+    
+    setAuthUserDetails({
+      ...authUserDetails,
+      [field]: value
+    });
   };
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -375,53 +361,6 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Handle auth settings update
-  const handleAuthSettingsUpdate = async () => {
-    if (!authUserDetails) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Create a simple object with primitive values only
-      const userData = {
-        email: authUserDetails.email,
-        phone: authUserDetails.phone,
-        emailConfirmed: authUserDetails.email_confirmed,
-        phoneConfirmed: authUserDetails.phone_confirmed,
-        isBanned: authUserDetails.is_banned
-      };
-      
-      console.log("Auth update request with data:", userData);
-      
-      const success = await updateAuthUserDetails(userData);
-      
-      if (success) {
-        toast({
-          title: "Auth settings updated",
-          description: "User authentication settings have been updated successfully",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error updating auth settings",
-        description: error.message || "An unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Toggle auth user settings
-  const toggleAuthSetting = (field: keyof AuthUserDetails, value: boolean) => {
-    if (!authUserDetails) return;
-    
-    setAuthUserDetails({
-      ...authUserDetails,
-      [field]: value
-    });
   };
 
   return (

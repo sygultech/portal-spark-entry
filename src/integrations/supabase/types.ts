@@ -847,7 +847,6 @@ export type Database = {
           p_user_id: string
           p_email?: string
           p_phone?: string
-          p_metadata?: Json
           p_email_confirmed?: boolean
           p_phone_confirmed?: boolean
           p_banned?: boolean

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/contexts/types";
 
@@ -185,6 +184,47 @@ export const createUserProfile = async (
     return { success: true };
   } catch (error) {
     console.error('Error creating user profile:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Updates authentication details for a user
+ * This function wraps the update_auth_user database function
+ */
+export const updateAuthUserDetails = async (
+  userId: string,
+  data: {
+    email?: string;
+    phone?: string | null;
+    emailConfirmed?: boolean;
+    phoneConfirmed?: boolean;
+    isBanned?: boolean;
+  }
+) => {
+  try {
+    console.log("Updating auth user details for user:", userId);
+    console.log("With data:", data);
+
+    // Call the RPC function with the correct parameters
+    const { data: response, error } = await supabase.rpc("update_auth_user", {
+      p_user_id: userId,
+      p_email: data.email,
+      p_phone: data.phone,
+      p_email_confirmed: data.emailConfirmed,
+      p_phone_confirmed: data.phoneConfirmed,
+      p_banned: data.isBanned
+    });
+
+    if (error) {
+      console.error("Error updating auth user:", error);
+      throw error;
+    }
+
+    console.log("Auth update response:", response);
+    return { success: true, data: response };
+  } catch (error: any) {
+    console.error("Auth update error:", error.message || error);
     return { success: false, error };
   }
 };
