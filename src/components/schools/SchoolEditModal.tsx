@@ -88,15 +88,17 @@ interface UserMetadata {
   };
 }
 
-// Define the exact type expected by the update_auth_user RPC function
-interface UpdateAuthUserParams {
-  p_user_id: string;
-  p_email?: string;
-  p_phone?: string | null;
-  p_metadata?: Json | null;
-  p_email_confirmed?: boolean;
-  p_phone_confirmed?: boolean;
-  p_banned?: boolean;
+// Helper function to safely type check and convert Supabase RPC response
+function isValidAuthUserResponse(data: any): data is AuthUserDetails {
+  return (
+    data &&
+    typeof data === 'object' &&
+    'id' in data &&
+    'email' in data &&
+    'email_confirmed' in data &&
+    'phone_confirmed' in data &&
+    'is_banned' in data
+  );
 }
 
 const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
@@ -188,18 +190,11 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       if (error) throw error;
       
       if (data && typeof data === 'object') {
-        // Validate that the data has the required AuthUserDetails properties
-        const userDetails = data as Record<string, any>;
-        
-        // Check that required fields are present
-        const requiredFields = ['id', 'email', 'created_at', 'email_confirmed', 'phone_confirmed', 'is_banned'];
-        const hasRequiredFields = requiredFields.every(field => field in userDetails);
-        
-        if (hasRequiredFields) {
-          // Safe to cast now after validation
-          setAuthUserDetails(userDetails as AuthUserDetails);
+        // Validate the response using our type guard
+        if (isValidAuthUserResponse(data)) {
+          setAuthUserDetails(data);
         } else {
-          throw new Error("Incomplete user details returned from database");
+          throw new Error("Invalid user details format returned from database");
         }
       } else {
         throw new Error("Invalid data format returned from database");
@@ -216,8 +211,14 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details function - FIXING THIS IS THE KEY CHANGE
-  const updateAuthUserDetails = async (values: any) => {
+  // Update auth user details function
+  const updateAuthUserDetails = async (values: {
+    email: string;
+    phone: string | null;
+    emailConfirmed: boolean;
+    phoneConfirmed: boolean;
+    isBanned: boolean;
+  }) => {
     if (!adminData?.id) {
       console.error("No admin ID available");
       return false;
@@ -225,48 +226,43 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     
     try {
       console.log("Updating auth user details for ID:", adminData.id);
+      console.log("Input values:", values);
       
-      // Create a simple object with only the necessary fields
-      // IMPORTANT: Don't include any complex objects or JSON data
-      const { data, error } = await supabase.rpc('update_auth_user', {
+      // Create a simple parameter object for the RPC call
+      const params = {
         p_user_id: adminData.id,
         p_email: values.email,
         p_phone: values.phone,
         p_email_confirmed: values.emailConfirmed,
         p_phone_confirmed: values.phoneConfirmed,
         p_banned: values.isBanned
-      });
+      };
+      
+      console.log("Final RPC payload:", params);
+      
+      const { data, error } = await supabase.rpc('update_auth_user', params);
       
       if (error) {
-        console.error("Error updating auth user:", error);
+        console.error("RPC error:", error);
         throw error;
       }
       
       console.log("Auth update response:", data);
       
-      // Update local state with new data
-      if (data && typeof data === 'object') {
-        setAuthUserDetails(prev => {
-          if (!prev) return null;
-          
-          // Create a shallow copy of the previous state
-          return {
-            ...prev,
-            email: data.email || prev.email,
-            phone: data.phone || prev.phone,
-            email_confirmed: data.email_confirmed || prev.email_confirmed,
-            phone_confirmed: data.phone_confirmed || prev.phone_confirmed,
-            is_banned: data.is_banned || prev.is_banned
-          };
+      // If the response is valid, update the local state
+      if (data && isValidAuthUserResponse(data)) {
+        setAuthUserDetails(data);
+        
+        toast({
+          title: "Auth data updated",
+          description: "User authentication settings have been updated successfully",
         });
+        
+        return true;
+      } else {
+        console.error("Invalid response format from update_auth_user:", data);
+        throw new Error("Invalid response format from server");
       }
-      
-      toast({
-        title: "Auth data updated",
-        description: "User authentication settings have been updated successfully",
-      });
-      
-      return true;
     } catch (error: any) {
       console.error("Error updating auth user:", error);
       
