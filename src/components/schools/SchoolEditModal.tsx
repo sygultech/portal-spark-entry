@@ -201,50 +201,49 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details - Fixed with proper TypeScript interface
+  // Update auth user details function - completely rewritten
   const updateAuthUserDetails = async (values: any) => {
-    if (!adminData?.id) return false;
+    if (!adminData?.id) {
+      console.error("No admin ID available");
+      return false;
+    }
     
     try {
-      console.log("Original values for update:", values);
+      console.log("Updating auth user details for ID:", adminData.id);
+      console.log("Input values:", values);
       
-      // Create the payload with the exact expected structure
+      // Create a properly typed payload object with explicit properties
       const payload: UpdateAuthUserParams = {
-        p_user_id: adminData.id // Always include the required user ID
+        p_user_id: adminData.id
       };
       
-      // Only add optional fields that are explicitly defined
-      if (values.email !== undefined) payload.p_email = String(values.email);
-      if (values.phone !== undefined) payload.p_phone = values.phone === null ? null : String(values.phone);
+      // Only add properties that are defined and with proper types
+      if (values.email !== undefined) payload.p_email = values.email.toString();
+      if (values.phone !== undefined) payload.p_phone = values.phone === null ? null : values.phone.toString();
       if (values.emailConfirmed !== undefined) payload.p_email_confirmed = Boolean(values.emailConfirmed);
       if (values.phoneConfirmed !== undefined) payload.p_phone_confirmed = Boolean(values.phoneConfirmed);
       if (values.isBanned !== undefined) payload.p_banned = Boolean(values.isBanned);
       
-      // We intentionally don't set p_metadata to avoid JSON parsing issues
+      // Intentionally don't set metadata as it's causing JSON parsing issues
       
-      console.log("Final payload being sent to update_auth_user:", payload);
+      console.log("Final RPC payload:", payload);
       
-      // Make sure we're explicitly passing the correctly typed payload
-      const { data, error } = await supabase.rpc(
-        'update_auth_user',
-        payload
-      );
+      const { data, error } = await supabase.rpc('update_auth_user', payload);
       
       if (error) {
-        console.error("RPC error details:", error);
+        console.error("RPC error:", error);
         throw error;
       }
       
+      console.log("Auth update response:", data);
+      
       // Update local state with new data
       if (data) {
-        console.log("Auth update successful, response:", data);
-        // Use a proper type assertion to handle the returned data
-        const typedData = data as unknown as AuthUserDetails;
         setAuthUserDetails(prev => {
           if (prev) {
-            return { ...prev, ...typedData };
+            return { ...prev, ...data };
           }
-          return typedData;
+          return data as unknown as AuthUserDetails;
         });
       }
       
@@ -256,10 +255,10 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       return true;
     } catch (error: any) {
       console.error("Error updating auth user:", error);
-      // Check for specific error patterns to give better error messages
+      
+      // Improved error handling with specific error messages
       let errorMessage = error.message || "An unknown error occurred";
       
-      // Specific error handling based on Postgres error codes
       if (error.code === '22P02') {
         if (error.message.includes('invalid input syntax for type json')) {
           errorMessage = "Invalid data format. Please try again with simplified data.";
@@ -388,7 +387,7 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create a simple, flat object with primitive values only
+      // Create a simple object with primitive values only
       const userData = {
         email: authUserDetails.email,
         phone: authUserDetails.phone,
@@ -397,7 +396,7 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
         isBanned: authUserDetails.is_banned
       };
       
-      console.log("Sending auth update with data:", userData);
+      console.log("Auth update request with data:", userData);
       
       const success = await updateAuthUserDetails(userData);
       
