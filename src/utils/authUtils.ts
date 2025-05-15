@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/contexts/types";
 
@@ -294,10 +295,11 @@ export const fetchAuthUserDetails = async (userId: string) => {
       throw error;
     }
     
-    if (data && typeof data === 'object') {
+    if (isValidAuthUserResponse(data)) {
       console.log("Auth user details response:", data);
-      return { success: true, data: data as AuthUserDetails };
+      return { success: true, data: data };
     } else {
+      console.error("Invalid data format returned:", data);
       throw new Error("Invalid data format returned from database");
     }
   } catch (error: any) {
