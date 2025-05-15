@@ -52,7 +52,7 @@ serve(async (req) => {
       )
     }
 
-    // Fix RLS policy for courses with fully qualified references to avoid ambiguity
+    // Fix RLS policy for courses and academic_years with fully qualified references to avoid ambiguity
     const fixRLSSQL = `
       -- Drop existing policies if they're causing conflicts
       DROP POLICY IF EXISTS "School admins can manage courses" ON public.courses;
@@ -81,7 +81,9 @@ serve(async (req) => {
       DROP POLICY IF EXISTS "School admins can manage their school's academic years" ON public.academic_years;
       
       CREATE POLICY "School admins can manage their school's academic years" 
-      ON public.academic_years
+      ON public.academic_years AS PERMISSIVE
+      FOR ALL
+      TO authenticated
       USING (
         EXISTS (
           SELECT 1 FROM public.profiles 

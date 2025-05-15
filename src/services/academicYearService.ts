@@ -87,7 +87,7 @@ export async function updateAcademicYear(id: string, academicYear: Partial<Acade
   const { data, error } = await supabase
     .from('academic_years')
     .update(formattedUpdate)
-    .match({ id })
+    .eq('id', id)
     .select(`
       id,
       name,
@@ -109,7 +109,7 @@ export async function deleteAcademicYear(id: string) {
   const { error } = await supabase
     .from('academic_years')
     .delete()
-    .match({ id });
+    .eq('id', id);
 
   if (error) throw error;
   return true;
@@ -135,7 +135,8 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
         is_active: true,
         updated_at: new Date().toISOString()
       })
-      .match({ id, school_id: schoolId })
+      .eq('id', id)
+      .eq('school_id', schoolId)
       .select(`
         id,
         name,
@@ -161,7 +162,7 @@ export async function archiveAcademicYear(id: string) {
   const { data, error } = await supabase
     .from('academic_years')
     .update({ is_archived: true, updated_at: new Date().toISOString() })
-    .match({ id })
+    .eq('id', id)
     .select(`
       id,
       name,
