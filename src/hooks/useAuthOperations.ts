@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +38,10 @@ export const useAuthOperations = () => {
       if (emailCheckError) {
         console.error("Error checking email confirmation:", emailCheckError);
       }
+      
+      // Log the parameters for the RPC call to assist with debugging
+      console.log("is_email_confirmed RPC params:", { email_address: email });
+      console.log("is_email_confirmed result:", { confirmed: emailConfirmed, error: emailCheckError });
       
       // Attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({

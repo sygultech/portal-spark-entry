@@ -189,26 +189,27 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details - Fixed to properly handle parameter formats
+  // Update auth user details - Complete rewrite to fix the data format issues
   const updateAuthUserDetails = async (values: any) => {
     if (!adminData?.id) return false;
     
     try {
       console.log("Original values for update:", values);
       
-      // Create a properly formatted payload with correct parameter types
-      const payload = {
-        p_user_id: adminData.id,
-        // Do not pass undefined or null values - only include defined fields
-        ...(values.email !== undefined && { p_email: values.email }),
-        ...(values.phone !== undefined && { p_phone: values.phone }),
-        ...(values.emailConfirmed !== undefined && { p_email_confirmed: values.emailConfirmed }),
-        ...(values.phoneConfirmed !== undefined && { p_phone_confirmed: values.phoneConfirmed }),
-        ...(values.isBanned !== undefined && { p_banned: values.isBanned })
-        // Intentionally omitting p_metadata to avoid JSON parsing issues
+      // Create a minimalist payload with only the essential fields and proper types
+      const payload: Record<string, any> = {
+        p_user_id: adminData.id // Ensure we're using the complete UUID
       };
       
-      console.log("Sending payload to update_auth_user:", payload);
+      // Only add fields that are explicitly defined and with the correct parameter names
+      if (values.email !== undefined) payload.p_email = String(values.email);
+      if (values.phone !== undefined) payload.p_phone = values.phone === null ? null : String(values.phone);
+      if (values.emailConfirmed !== undefined) payload.p_email_confirmed = Boolean(values.emailConfirmed);
+      if (values.phoneConfirmed !== undefined) payload.p_phone_confirmed = Boolean(values.phoneConfirmed);
+      if (values.isBanned !== undefined) payload.p_banned = Boolean(values.isBanned);
+      
+      // Never include metadata to avoid JSON parsing issues
+      console.log("Final payload being sent to update_auth_user:", payload);
       
       const { data, error } = await supabase.rpc(
         'update_auth_user',
@@ -242,9 +243,17 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     } catch (error: any) {
       console.error("Error updating auth user:", error);
       // Check for specific error patterns to give better error messages
-      let errorMessage = error.message;
-      if (error.code === '22P02' && error.message.includes('invalid input syntax for type json')) {
-        errorMessage = "Invalid data format. Please try again with simplified data.";
+      let errorMessage = error.message || "An unknown error occurred";
+      
+      // Specific error handling based on Postgres error codes
+      if (error.code === '22P02') {
+        if (error.message.includes('invalid input syntax for type json')) {
+          errorMessage = "Invalid data format. Please try again with simplified data.";
+        } else if (error.message.includes('invalid input syntax for type uuid')) {
+          errorMessage = "Invalid user ID format.";
+        } else {
+          errorMessage = "Invalid data format in request.";
+        }
       }
       
       toast({
@@ -365,11 +374,10 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create a cleaned-up version without any complex nested objects
+      // Create a simple, flat object with primitive values only
       const userData = {
         email: authUserDetails.email,
         phone: authUserDetails.phone,
-        // Completely remove metadata to avoid JSON parsing issues
         emailConfirmed: authUserDetails.email_confirmed,
         phoneConfirmed: authUserDetails.phone_confirmed,
         isBanned: authUserDetails.is_banned
@@ -388,7 +396,7 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     } catch (error: any) {
       toast({
         title: "Error updating auth settings",
-        description: error.message,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
     } finally {
