@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -217,7 +216,7 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details function - completely rewritten
+  // Update auth user details function - FIXING THIS IS THE KEY CHANGE
   const updateAuthUserDetails = async (values: any) => {
     if (!adminData?.id) {
       console.error("No admin ID available");
@@ -226,28 +225,20 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     
     try {
       console.log("Updating auth user details for ID:", adminData.id);
-      console.log("Input values:", values);
       
-      // Create a properly typed payload object with explicit properties
-      const payload: UpdateAuthUserParams = {
-        p_user_id: adminData.id
-      };
-      
-      // Only add properties that are defined and with proper types
-      if (values.email !== undefined) payload.p_email = values.email.toString();
-      if (values.phone !== undefined) payload.p_phone = values.phone === null ? null : values.phone.toString();
-      if (values.emailConfirmed !== undefined) payload.p_email_confirmed = Boolean(values.emailConfirmed);
-      if (values.phoneConfirmed !== undefined) payload.p_phone_confirmed = Boolean(values.phoneConfirmed);
-      if (values.isBanned !== undefined) payload.p_banned = Boolean(values.isBanned);
-      
-      // Intentionally don't set metadata as it's causing JSON parsing issues
-      
-      console.log("Final RPC payload:", payload);
-      
-      const { data, error } = await supabase.rpc('update_auth_user', payload);
+      // Create a simple object with only the necessary fields
+      // IMPORTANT: Don't include any complex objects or JSON data
+      const { data, error } = await supabase.rpc('update_auth_user', {
+        p_user_id: adminData.id,
+        p_email: values.email,
+        p_phone: values.phone,
+        p_email_confirmed: values.emailConfirmed,
+        p_phone_confirmed: values.phoneConfirmed,
+        p_banned: values.isBanned
+      });
       
       if (error) {
-        console.error("RPC error:", error);
+        console.error("Error updating auth user:", error);
         throw error;
       }
       
@@ -255,79 +246,37 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       
       // Update local state with new data
       if (data && typeof data === 'object') {
-        // Validate that data has the required fields before updating state
-        const validatedData = validateAuthUserData(data);
-        if (validatedData) {
-          setAuthUserDetails(prev => {
-            if (prev) {
-              // Make sure data is an object before spreading
-              return { ...prev, ...validatedData };
-            }
-            return validatedData;
-          });
-        }
+        setAuthUserDetails(prev => {
+          if (!prev) return null;
+          
+          // Create a shallow copy of the previous state
+          return {
+            ...prev,
+            email: data.email || prev.email,
+            phone: data.phone || prev.phone,
+            email_confirmed: data.email_confirmed || prev.email_confirmed,
+            phone_confirmed: data.phone_confirmed || prev.phone_confirmed,
+            is_banned: data.is_banned || prev.is_banned
+          };
+        });
       }
       
       toast({
         title: "Auth data updated",
-        description: "User auth details have been updated successfully",
+        description: "User authentication settings have been updated successfully",
       });
       
       return true;
     } catch (error: any) {
       console.error("Error updating auth user:", error);
       
-      // Improved error handling with specific error messages
-      let errorMessage = error.message || "An unknown error occurred";
-      
-      if (error.code === '22P02') {
-        if (error.message.includes('invalid input syntax for type json')) {
-          errorMessage = "Invalid data format. Please try again with simplified data.";
-        } else if (error.message.includes('invalid input syntax for type uuid')) {
-          errorMessage = "Invalid user ID format.";
-        } else {
-          errorMessage = "Invalid data format in request.";
-        }
-      }
-      
       toast({
         title: "Update failed",
-        description: errorMessage,
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
       
       return false;
-    }
-  };
-
-  // Helper function to validate auth user data
-  const validateAuthUserData = (data: any): AuthUserDetails | null => {
-    try {
-      // Check if data is an object
-      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-        console.error("Invalid data format, expected object:", data);
-        return null;
-      }
-
-      // Create a new object with only the properties we need
-      const validatedData: AuthUserDetails = {
-        id: data.id || '',
-        email: data.email || '',
-        phone: data.phone,
-        created_at: data.created_at || '',
-        last_sign_in_at: data.last_sign_in_at,
-        user_metadata: data.user_metadata || {},
-        app_metadata: data.app_metadata || {},
-        email_confirmed: !!data.email_confirmed,
-        phone_confirmed: !!data.phone_confirmed,
-        is_banned: !!data.is_banned,
-        banned_until: data.banned_until
-      };
-
-      return validatedData;
-    } catch (error) {
-      console.error("Error validating auth user data:", error);
-      return null;
     }
   };
 
