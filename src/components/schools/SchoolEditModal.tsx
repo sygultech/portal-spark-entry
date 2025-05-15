@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -238,12 +239,13 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       console.log("Auth update response:", data);
       
       // Update local state with new data
-      if (data) {
+      if (data && typeof data === 'object') {
         setAuthUserDetails(prev => {
           if (prev) {
-            return { ...prev, ...data };
+            // Make sure data is an object before spreading
+            return { ...prev, ...(data as Partial<AuthUserDetails>) };
           }
-          return data as unknown as AuthUserDetails;
+          return data as AuthUserDetails;
         });
       }
       
