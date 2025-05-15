@@ -53,7 +53,7 @@ serve(async (req) => {
     }
 
     // Fix RLS policy for courses with fully qualified references to avoid ambiguity
-    const fixCoursesRLS = `
+    const fixRLSSQL = `
       -- Drop existing policies if they're causing conflicts
       DROP POLICY IF EXISTS "School admins can manage courses" ON public.courses;
       
@@ -102,7 +102,7 @@ serve(async (req) => {
 
     // Execute SQL using the execute_admin_sql function
     const { data, error } = await supabaseClient.rpc('execute_admin_sql', { 
-      sql: fixCoursesRLS 
+      sql: fixRLSSQL 
     })
 
     if (error) {
