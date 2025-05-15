@@ -100,14 +100,15 @@ export async function deleteAcademicYear(id: string) {
 
 export async function setActiveAcademicYear(id: string, schoolId: string) {
   try {
-    // First, set all academic years to inactive
+    // First, set all academic years to inactive for this school
     const { error: updateError } = await supabase
       .from('academic_years')
       .update({
         is_active: false,
         updated_at: new Date().toISOString()
       })
-      .eq('school_id', schoolId);
+      .eq('school_id', schoolId)
+      .select('id'); // Add select to avoid ambiguity
 
     if (updateError) throw updateError;
 
@@ -118,9 +119,11 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
         is_active: true,
         updated_at: new Date().toISOString()
       })
-      .eq('id', id)
-      .eq('school_id', schoolId)
-      .select();
+      .match({ // Use match instead of multiple eq
+        id: id,
+        school_id: schoolId
+      })
+      .select('*');
 
     if (error) throw error;
     
