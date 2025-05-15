@@ -843,16 +843,30 @@ export type Database = {
         Returns: Json
       }
       update_auth_user: {
-        Args: {
-          p_user_id: string
-          p_email?: string
-          p_phone?: string
-          p_email_confirmed?: boolean
-          p_phone_confirmed?: boolean
-          p_banned?: boolean
-          p_user_metadata?: Json
-          p_app_metadata?: Json
-        }
+        Args:
+          | {
+              p_user_id: string
+              p_email?: string
+              p_phone?: string
+              p_email_confirmed?: boolean
+              p_phone_confirmed?: boolean
+              p_banned?: boolean
+              p_confirmation_token?: string
+              p_confirmation_sent_at?: string
+              p_instance_id?: string
+              p_user_metadata?: Json
+              p_app_metadata?: Json
+            }
+          | {
+              p_user_id: string
+              p_email?: string
+              p_phone?: string
+              p_email_confirmed?: boolean
+              p_phone_confirmed?: boolean
+              p_banned?: boolean
+              p_user_metadata?: Json
+              p_app_metadata?: Json
+            }
         Returns: Json
       }
       update_school_details: {

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/contexts/types";
 
@@ -332,7 +333,7 @@ export const fetchAuthUserDetails = async (userId: string) => {
         }
       }
       
-      // Create a new object instead of using spread
+      // Create a new object with all properties properly typed
       const data: AuthUserDetails = {
         id: rawData.id,
         aud: rawData.aud,
