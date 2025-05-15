@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAcademicYears } from '@/services/academicYearService';
 import { fetchAcademicSettings } from '@/services/academicSettingsService';
@@ -17,7 +17,6 @@ const AcademicContext = createContext<AcademicContextType | undefined>(undefined
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
   const schoolId = profile?.school_id;
-  const queryClient = useQueryClient();
   
   const [currentAcademicYear, setCurrentAcademicYear] = useState<AcademicYear | null>(null);
   

@@ -39,15 +39,33 @@ export const getStudentsByBatch = async (batchId: string) => {
   }
 };
 
+// Create batch_students table if it doesn't exist
+export const ensureBatchStudentsTable = async () => {
+  try {
+    const { error } = await supabase.functions.invoke('ensure-tables', {
+      body: { table: 'batch_students' }
+    });
+    
+    if (error) {
+      console.error('Error ensuring batch_students table:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error('Exception in ensureBatchStudentsTable:', error);
+    return false;
+  }
+};
+
 // Assign students to a batch
 export const assignStudentsToBatch = async (batchId: string, studentIds: string[]) => {
   try {
-    // First create the batch_students table if it doesn't exist
-    const { error: tableError } = await supabase.rpc('ensure_batch_students_table');
+    // First ensure the batch_students table exists
+    const tableCreated = await ensureBatchStudentsTable();
     
-    if (tableError) {
-      console.error('Error ensuring batch_students table:', tableError);
-      throw new Error(`Table creation failed: ${tableError.message}`);
+    if (!tableCreated) {
+      throw new Error('Failed to ensure batch_students table exists');
     }
     
     // Prepare batch insert data
@@ -56,21 +74,69 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
       student_id: studentId
     }));
     
-    const { data, error } = await supabase
-      .from('batch_students')
-      .upsert(batchAssignments, {
-        onConflict: 'batch_id,student_id',
-        ignoreDuplicates: true
-      });
-
-    if (error) {
-      console.error('Error assigning students to batch:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to assign students: ${error.message}`,
-        variant: 'destructive',
-      });
-      return false;
+    // Create a custom table if it doesn't exist
+    await supabase.functions.invoke('ensure-tables', {
+      body: {
+        table: 'batch_students',
+        schema: `
+          CREATE TABLE IF NOT EXISTS public.batch_students (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            batch_id UUID REFERENCES batches(id) NOT NULL,
+            student_id UUID REFERENCES profiles(id) NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT now(),
+            UNIQUE (batch_id, student_id)
+          );
+          
+          ALTER TABLE public.batch_students ENABLE ROW LEVEL SECURITY;
+          
+          CREATE POLICY "School admins can view batch students" 
+          ON public.batch_students FOR SELECT 
+          TO authenticated
+          USING (
+            EXISTS (
+              SELECT 1 FROM public.batches 
+              WHERE public.batches.id = public.batch_students.batch_id 
+              AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+            )
+          );
+          
+          CREATE POLICY "School admins can insert batch students" 
+          ON public.batch_students FOR INSERT 
+          TO authenticated
+          WITH CHECK (
+            EXISTS (
+              SELECT 1 FROM public.batches 
+              WHERE public.batches.id = public.batch_students.batch_id 
+              AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+            )
+          );
+          
+          CREATE POLICY "School admins can delete batch students" 
+          ON public.batch_students FOR DELETE 
+          TO authenticated
+          USING (
+            EXISTS (
+              SELECT 1 FROM public.batches 
+              WHERE public.batches.id = public.batch_students.batch_id 
+              AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+            )
+          );
+        `
+      }
+    });
+    
+    // Now insert the batch assignments
+    for (const assignment of batchAssignments) {
+      const { error } = await supabase
+        .from('batch_students')
+        .upsert(assignment, {
+          onConflict: 'batch_id,student_id',
+          ignoreDuplicates: true
+        });
+        
+      if (error) {
+        console.error('Error assigning student to batch:', error);
+      }
     }
 
     toast({

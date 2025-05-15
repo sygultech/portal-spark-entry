@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 export interface AcademicSettings {
   id: string;
@@ -15,14 +14,15 @@ export interface AcademicSettings {
 }
 
 // Get academic settings for the school
-export const getAcademicSettings = async () => {
+export const fetchAcademicSettings = async (schoolId: string) => {
   try {
     const { data, error } = await supabase
       .from('academic_settings')
       .select('*')
-      .single();
+      .eq('school_id', schoolId)
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+    if (error) {
       console.error('Error fetching academic settings:', error);
       toast({
         title: 'Error',
@@ -34,7 +34,7 @@ export const getAcademicSettings = async () => {
 
     return data;
   } catch (error: any) {
-    console.error('Exception in getAcademicSettings:', error);
+    console.error('Exception in fetchAcademicSettings:', error);
     toast({
       title: 'Error',
       description: `An unexpected error occurred: ${error.message}`,
@@ -45,80 +45,112 @@ export const getAcademicSettings = async () => {
 };
 
 // Create or update academic settings
-export const saveAcademicSettings = async (settings: Partial<AcademicSettings>) => {
+export const updateAcademicSettings = async (id: string, settings: Partial<AcademicSettings>) => {
   try {
-    const { profile } = useAuth();
-    
-    if (!profile || !profile.school_id) {
+    const { data, error } = await supabase
+      .from('academic_settings')
+      .update({
+        ...settings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('Error updating academic settings:', error);
       toast({
         title: 'Error',
-        description: 'School information not available',
+        description: `Could not update settings: ${error.message}`,
         variant: 'destructive',
       });
       return null;
     }
-
-    const { data: existingData } = await supabase
-      .from('academic_settings')
-      .select('id')
-      .eq('school_id', profile.school_id)
-      .maybeSingle();
-
-    let result;
     
-    if (existingData) {
-      // Update existing settings
-      const { data, error } = await supabase
-        .from('academic_settings')
-        .update({
-          ...settings,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingData.id)
-        .select();
-
-      if (error) {
-        console.error('Error updating academic settings:', error);
-        toast({
-          title: 'Error',
-          description: `Could not update settings: ${error.message}`,
-          variant: 'destructive',
-        });
-        return null;
-      }
-      
-      result = data?.[0];
-    } else {
-      // Create new settings
-      const { data, error } = await supabase
-        .from('academic_settings')
-        .insert({
-          ...settings,
-          school_id: profile.school_id
-        })
-        .select();
-
-      if (error) {
-        console.error('Error creating academic settings:', error);
-        toast({
-          title: 'Error',
-          description: `Could not create settings: ${error.message}`,
-          variant: 'destructive',
-        });
-        return null;
-      }
-      
-      result = data?.[0];
-    }
-
     toast({
       title: 'Success',
       description: 'Academic settings saved successfully',
     });
     
-    return result;
+    return data?.[0];
   } catch (error: any) {
-    console.error('Exception in saveAcademicSettings:', error);
+    console.error('Exception in updateAcademicSettings:', error);
+    toast({
+      title: 'Error',
+      description: `An unexpected error occurred: ${error.message}`,
+      variant: 'destructive',
+    });
+    return null;
+  }
+};
+
+// Set default academic year
+export const setDefaultAcademicYear = async (settingsId: string, academicYearId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('academic_settings')
+      .update({
+        default_academic_year_id: academicYearId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', settingsId)
+      .select();
+
+    if (error) {
+      console.error('Error setting default academic year:', error);
+      toast({
+        title: 'Error',
+        description: `Could not set default year: ${error.message}`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+    
+    toast({
+      title: 'Success',
+      description: 'Default academic year set successfully',
+    });
+    
+    return data?.[0];
+  } catch (error: any) {
+    console.error('Exception in setDefaultAcademicYear:', error);
+    toast({
+      title: 'Error',
+      description: `An unexpected error occurred: ${error.message}`,
+      variant: 'destructive',
+    });
+    return null;
+  }
+};
+
+// Create academic settings if they don't exist
+export const createAcademicSettings = async (schoolId: string, settings: Partial<AcademicSettings>) => {
+  try {
+    const { data, error } = await supabase
+      .from('academic_settings')
+      .insert({
+        ...settings,
+        school_id: schoolId
+      })
+      .select();
+
+    if (error) {
+      console.error('Error creating academic settings:', error);
+      toast({
+        title: 'Error',
+        description: `Could not create settings: ${error.message}`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+    
+    toast({
+      title: 'Success',
+      description: 'Academic settings created successfully',
+    });
+    
+    return data?.[0];
+  } catch (error: any) {
+    console.error('Exception in createAcademicSettings:', error);
     toast({
       title: 'Error',
       description: `An unexpected error occurred: ${error.message}`,
@@ -129,16 +161,39 @@ export const saveAcademicSettings = async (settings: Partial<AcademicSettings>) 
 };
 
 // Get audit logs
-export const getAcademicAuditLogs = async (limit = 50, offset = 0) => {
+export const fetchAcademicAuditLogs = async (schoolId: string, filters?: {
+  entityType?: string;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+}) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('academic_audit_logs')
       .select(`
         *,
-        user:profiles(id, email, first_name, last_name)
+        user:user_id (id, email, first_name, last_name)
       `)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
+    
+    if (filters?.entityType) {
+      query = query.eq('entity_type', filters.entityType);
+    }
+    
+    if (filters?.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters?.startDate) {
+      query = query.gte('created_at', filters.startDate);
+    }
+    
+    if (filters?.endDate) {
+      query = query.lte('created_at', filters.endDate);
+    }
+    
+    const { data, error } = await query.limit(100);
 
     if (error) {
       console.error('Error fetching audit logs:', error);
@@ -152,7 +207,7 @@ export const getAcademicAuditLogs = async (limit = 50, offset = 0) => {
 
     return data || [];
   } catch (error: any) {
-    console.error('Exception in getAcademicAuditLogs:', error);
+    console.error('Exception in fetchAcademicAuditLogs:', error);
     toast({
       title: 'Error',
       description: `An unexpected error occurred: ${error.message}`,

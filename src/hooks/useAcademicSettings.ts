@@ -5,7 +5,8 @@ import {
   fetchAcademicSettings,
   updateAcademicSettings,
   setDefaultAcademicYear,
-  fetchAcademicAuditLogs
+  fetchAcademicAuditLogs,
+  createAcademicSettings
 } from '@/services/academicSettingsService';
 
 export function useAcademicSettings(schoolId?: string) {
@@ -20,6 +21,26 @@ export function useAcademicSettings(schoolId?: string) {
       return fetchAcademicSettings(schoolId);
     },
     enabled: !!schoolId
+  });
+
+  // Create academic settings
+  const createSettingsMutation = useMutation({
+    mutationFn: (settings: any) => 
+      createAcademicSettings(schoolId!, settings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['academicSettings'] });
+      toast({
+        title: "Settings Created",
+        description: "Academic settings have been created successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create settings",
+        variant: "destructive"
+      });
+    }
   });
 
   // Update academic settings
@@ -63,7 +84,7 @@ export function useAcademicSettings(schoolId?: string) {
   });
 
   // Fetch audit logs
-  const getAuditLogs = (filters?: {
+  const useAuditLogs = (filters?: {
     entityType?: string;
     userId?: string;
     startDate?: string;
@@ -83,9 +104,10 @@ export function useAcademicSettings(schoolId?: string) {
     settings: settingsQuery.data,
     isLoading: settingsQuery.isLoading,
     error: settingsQuery.error,
+    createSettings: createSettingsMutation.mutate,
     updateSettings: updateSettingsMutation.mutate,
     setDefaultYear: setDefaultYearMutation.mutate,
-    getAuditLogs,
-    isUpdating: updateSettingsMutation.isPending
+    useAuditLogs,
+    isUpdating: updateSettingsMutation.isPending || createSettingsMutation.isPending
   };
 }
