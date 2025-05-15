@@ -14,11 +14,11 @@ export async function fixRLSPolicies() {
     
     if (error) {
       console.error('Error fixing RLS policies:', error);
-      console.error('Error details:', JSON.stringify(error));
+      console.error('Error details:', JSON.stringify(error, null, 2));
       
       toast({
         title: 'Error',
-        description: 'Failed to update database security policies.',
+        description: 'Failed to update database security policies. Please try again later.',
         variant: 'destructive',
       });
       return false;

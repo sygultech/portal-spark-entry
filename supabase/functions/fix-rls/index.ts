@@ -24,17 +24,35 @@ serve(async (req) => {
     // Get the current authenticated user
     const {
       data: { user },
+      error: authError
     } = await supabaseClient.auth.getUser()
 
-    if (!user) {
+    if (authError || !user) {
+      console.error('Authentication error:', authError)
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', details: authError }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
-    // Fix RLS policy for courses
-    // We'll use a direct SQL query instead since the function appears to be having issues
+    // Check if user is a super admin
+    const { data: isSuperAdmin, error: roleError } = await supabaseClient.rpc('is_super_admin')
+    if (roleError) {
+      console.error('Error checking super admin status:', roleError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify admin status', details: roleError }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+
+    if (!isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Only super administrators can update RLS policies' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      )
+    }
+
+    // Fix RLS policy for courses with fully qualified references to avoid ambiguity
     const fixCoursesRLS = `
       -- Drop existing policies if they're causing conflicts
       DROP POLICY IF EXISTS "School admins can manage courses" ON public.courses;
@@ -47,6 +65,7 @@ serve(async (req) => {
           SELECT 1 FROM public.profiles 
           WHERE public.profiles.id = auth.uid() 
           AND public.profiles.school_id = public.courses.school_id
+          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
         )
       )
       WITH CHECK (
@@ -54,11 +73,12 @@ serve(async (req) => {
           SELECT 1 FROM public.profiles 
           WHERE public.profiles.id = auth.uid() 
           AND public.profiles.school_id = public.courses.school_id
+          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
         )
       );
     `
 
-    // Execute SQL using a more direct approach with rpc
+    // Execute SQL using the execute_admin_sql function
     const { data, error } = await supabaseClient.rpc('execute_admin_sql', { 
       sql: fixCoursesRLS 
     })
@@ -68,8 +88,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: `Failed to fix RLS: ${error.message}`,
-          details: error,
-          function_call: 'execute_admin_sql'
+          details: error
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
@@ -79,12 +98,12 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'RLS policies updated successfully',
-        executed_sql: 'Updated courses table policies with fully qualified references'
+        details: data
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('Unhandled error in fix-rls:', error.message)
+    console.error('Unhandled error in fix-rls:', error.message, error.stack)
     return new Response(
       JSON.stringify({ 
         error: error.message,

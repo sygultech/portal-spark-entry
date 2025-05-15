@@ -934,6 +934,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      execute_admin_sql: {
+        Args: { sql: string }
+        Returns: Json
+      }
       get_auth_user_details: {
         Args: { p_user_id: string }
         Returns: Json
