@@ -149,6 +149,81 @@ const SchoolManagement: React.FC = () => {
     }
   });
 
+  // Mutation for confirming user by ID
+  const confirmUserById = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.rpc('manually_confirm_user_by_id', { 
+        user_id: userId 
+      });
+      
+      if (error) {
+        console.error("Error confirming user:", error);
+        throw error;
+      }
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data) {
+        toast({
+          title: "User Activated",
+          description: "The user has been successfully activated in Supabase.",
+        });
+        
+        // Refetch schools data to update UI
+        queryClient.invalidateQueries({ queryKey: ['schools'] });
+      } else {
+        toast({
+          title: "Activation Failed",
+          description: "Could not activate the user. User ID might not exist.",
+          variant: "destructive"
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Error activating user:", error);
+      toast({
+        title: "Activation Error",
+        description: `Failed to activate user: ${error}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation for getting user ID from email
+  const getUserIdByEmail = useMutation({
+    mutationFn: async (email: string) => {
+      // First get user metadata to find the ID
+      const { data, error } = await supabase.rpc('get_user_metadata_by_email', {
+        email_address: email
+      });
+      
+      if (error) {
+        console.error("Error getting user metadata:", error);
+        throw error;
+      }
+      
+      if (!data || !data.id) {
+        throw new Error("User not found with this email");
+      }
+      
+      return data.id;
+    },
+    onSuccess: (userId, email) => {
+      console.log(`Found user ID ${userId} for email ${email}`);
+      // Now activate the user with the ID
+      confirmUserById.mutate(userId);
+    },
+    onError: (error, email) => {
+      console.error(`Error finding user ID for ${email}:`, error);
+      toast({
+        title: "User Lookup Failed",
+        description: `Could not find a user with email ${email}.`,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Mutation for updating school details
   const updateSchool = useMutation({
     mutationFn: async (formData: any) => {
@@ -161,7 +236,7 @@ const SchoolManagement: React.FC = () => {
     }
   });
 
-  // Handle confirmation action
+  // Handle confirmation action for email
   const handleConfirmEmail = (email: string) => {
     if (!email) {
       toast({
@@ -173,6 +248,21 @@ const SchoolManagement: React.FC = () => {
     }
     
     confirmEmail.mutate(email);
+  };
+
+  // Handle full user activation by email
+  const handleActivateUser = (email: string) => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "No admin email found for this school",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // First get the user ID from email, then activate them
+    getUserIdByEmail.mutate(email);
   };
 
   // Handle edit action
@@ -250,6 +340,7 @@ const SchoolManagement: React.FC = () => {
                   <TableHead>School Name</TableHead>
                   <TableHead>Admin Email</TableHead>
                   <TableHead>Email Confirmed</TableHead>
+                  <TableHead>Supabase Activated</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Region</TableHead>
                   <TableHead>Status</TableHead>
@@ -260,7 +351,7 @@ const SchoolManagement: React.FC = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center h-32">
+                    <TableCell colSpan={9} className="text-center h-32">
                       <div className="flex justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                       </div>
@@ -268,7 +359,7 @@ const SchoolManagement: React.FC = () => {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center h-32">
+                    <TableCell colSpan={9} className="text-center h-32">
                       <div className="flex flex-col items-center justify-center text-red-500">
                         <AlertTriangle size={24} className="mb-2" />
                         <p>Error loading schools. This might be due to permissions or database issues.</p>
@@ -285,7 +376,7 @@ const SchoolManagement: React.FC = () => {
                   </TableRow>
                 ) : filteredSchools.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center h-32">
+                    <TableCell colSpan={9} className="text-center h-32">
                       No schools found. Add a new school to get started.
                     </TableCell>
                   </TableRow>
@@ -321,7 +412,7 @@ const SchoolManagement: React.FC = () => {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Confirm email manually</p>
+                                        <p>Confirm email</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -332,6 +423,41 @@ const SchoolManagement: React.FC = () => {
                             <Badge variant="outline">No Admin Email</Badge>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {school.admin_email && (
+                          <div className="flex items-center">
+                            {school.isEmailConfirmed ? (
+                              <Badge variant="success" className="flex items-center gap-1">
+                                <Check size={14} /> Active
+                              </Badge>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="destructive" className="flex items-center gap-1">
+                                  <X size={14} /> Inactive
+                                </Badge>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => handleActivateUser(school.admin_email!)}
+                                        disabled={getUserIdByEmail.isPending || confirmUserById.isPending}
+                                      >
+                                        <Check size={16} className="text-green-500" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Activate user in Supabase</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>{school.contact_number || "N/A"}</TableCell>
                       <TableCell>{school.region || "N/A"}</TableCell>

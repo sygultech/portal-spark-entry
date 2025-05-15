@@ -832,6 +832,10 @@ export type Database = {
         Args: { email_address: string }
         Returns: boolean
       }
+      manually_confirm_user_by_id: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       update_admin_user: {
         Args: {
           p_email: string
