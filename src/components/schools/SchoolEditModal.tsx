@@ -189,33 +189,24 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details - Fixed to properly handle JSON data
+  // Update auth user details - Fixed to properly handle parameter formats
   const updateAuthUserDetails = async (values: any) => {
     if (!adminData?.id) return false;
     
     try {
-      // Create a properly formatted payload
-      const payload: any = {
+      console.log("Original values for update:", values);
+      
+      // Create a properly formatted payload with correct parameter types
+      const payload = {
         p_user_id: adminData.id,
+        // Do not pass undefined or null values - only include defined fields
+        ...(values.email !== undefined && { p_email: values.email }),
+        ...(values.phone !== undefined && { p_phone: values.phone }),
+        ...(values.emailConfirmed !== undefined && { p_email_confirmed: values.emailConfirmed }),
+        ...(values.phoneConfirmed !== undefined && { p_phone_confirmed: values.phoneConfirmed }),
+        ...(values.isBanned !== undefined && { p_banned: values.isBanned })
+        // Intentionally omitting p_metadata to avoid JSON parsing issues
       };
-      
-      // Only add properties that are defined
-      if (values.email !== undefined) payload.p_email = values.email;
-      if (values.phone !== undefined) payload.p_phone = values.phone;
-      if (values.emailConfirmed !== undefined) payload.p_email_confirmed = values.emailConfirmed;
-      if (values.phoneConfirmed !== undefined) payload.p_phone_confirmed = values.phoneConfirmed;
-      if (values.isBanned !== undefined) payload.p_banned = values.isBanned;
-      
-      // Handle metadata specifically to avoid JSON formatting issues
-      if (values.metadata !== undefined && values.metadata !== null) {
-        // Make sure it's a valid object before stringifying
-        if (typeof values.metadata === 'object') {
-          payload.p_metadata = values.metadata;
-        } else {
-          // Don't send invalid metadata
-          console.warn('Invalid metadata format, not sending this field');
-        }
-      }
       
       console.log("Sending payload to update_auth_user:", payload);
       
@@ -224,10 +215,14 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
         payload
       );
       
-      if (error) throw error;
+      if (error) {
+        console.error("RPC error details:", error);
+        throw error;
+      }
       
       // Update local state with new data
       if (data) {
+        console.log("Auth update successful, response:", data);
         // Use a proper type assertion to handle the returned data
         const typedData = data as unknown as AuthUserDetails;
         setAuthUserDetails(prev => {
@@ -246,9 +241,15 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       return true;
     } catch (error: any) {
       console.error("Error updating auth user:", error);
+      // Check for specific error patterns to give better error messages
+      let errorMessage = error.message;
+      if (error.code === '22P02' && error.message.includes('invalid input syntax for type json')) {
+        errorMessage = "Invalid data format. Please try again with simplified data.";
+      }
+      
       toast({
         title: "Update failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       
@@ -364,14 +365,11 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create a cleaned-up version of the user_metadata to avoid issues
-      // This ensures we're not passing potentially problematic stringified JSON
+      // Create a cleaned-up version without any complex nested objects
       const userData = {
         email: authUserDetails.email,
         phone: authUserDetails.phone,
-        // Only send the metadata if we actually want to update it
-        // Since we're not editing it in this UI flow, best to omit it
-        // metadata: authUserDetails.user_metadata,
+        // Completely remove metadata to avoid JSON parsing issues
         emailConfirmed: authUserDetails.email_confirmed,
         phoneConfirmed: authUserDetails.phone_confirmed,
         isBanned: authUserDetails.is_banned
