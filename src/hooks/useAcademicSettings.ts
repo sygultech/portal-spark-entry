@@ -1,13 +1,33 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  fetchAcademicSettings,
-  updateAcademicSettings,
-  setDefaultAcademicYear,
-  fetchAcademicAuditLogs,
-  createAcademicSettings
-} from '@/services/academicSettingsService';
+
+// Mock data for academic settings
+const mockAcademicSettings = {
+  id: '1',
+  school_id: '1',
+  default_academic_year_id: '1',
+  enable_audit_log: true,
+  student_self_enroll: false,
+  teacher_edit_subjects: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+};
+
+// Mock data for audit logs
+const mockAuditLogs = [
+  {
+    id: '1',
+    user_id: '1',
+    action: 'CREATE',
+    entity_type: 'academic_years',
+    entity_id: '1',
+    previous_data: null,
+    new_data: { name: 'Academic Year 2024-2025' },
+    school_id: '1',
+    created_at: new Date().toISOString()
+  }
+];
 
 export function useAcademicSettings(schoolId?: string) {
   const { toast } = useToast();
@@ -18,15 +38,21 @@ export function useAcademicSettings(schoolId?: string) {
     queryKey: ['academicSettings', schoolId],
     queryFn: () => {
       if (!schoolId) throw new Error("School ID is required");
-      return fetchAcademicSettings(schoolId);
+      console.log('Mocked fetchAcademicSettings called with schoolId:', schoolId);
+      return Promise.resolve(mockAcademicSettings);
     },
     enabled: !!schoolId
   });
 
   // Create academic settings
   const createSettingsMutation = useMutation({
-    mutationFn: (settings: any) => 
-      createAcademicSettings(schoolId!, settings),
+    mutationFn: (settings: any) => {
+      console.log('Mocked createAcademicSettings called with:', settings);
+      return Promise.resolve({
+        ...mockAcademicSettings,
+        ...settings
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['academicSettings'] });
       toast({
@@ -45,8 +71,14 @@ export function useAcademicSettings(schoolId?: string) {
 
   // Update academic settings
   const updateSettingsMutation = useMutation({
-    mutationFn: ({ id, settings }: { id: string, settings: any }) => 
-      updateAcademicSettings(id, settings),
+    mutationFn: ({ id, settings }: { id: string, settings: any }) => {
+      console.log('Mocked updateAcademicSettings called with id:', id, 'and settings:', settings);
+      return Promise.resolve({
+        ...mockAcademicSettings,
+        ...settings,
+        updated_at: new Date().toISOString()
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['academicSettings'] });
       toast({
@@ -65,8 +97,14 @@ export function useAcademicSettings(schoolId?: string) {
 
   // Set default academic year
   const setDefaultYearMutation = useMutation({
-    mutationFn: ({ settingsId, academicYearId }: { settingsId: string, academicYearId: string }) => 
-      setDefaultAcademicYear(settingsId, academicYearId),
+    mutationFn: ({ settingsId, academicYearId }: { settingsId: string, academicYearId: string }) => {
+      console.log('Mocked setDefaultAcademicYear called with settingsId:', settingsId, 'and academicYearId:', academicYearId);
+      return Promise.resolve({
+        ...mockAcademicSettings,
+        default_academic_year_id: academicYearId,
+        updated_at: new Date().toISOString()
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['academicSettings'] });
       toast({
@@ -94,7 +132,8 @@ export function useAcademicSettings(schoolId?: string) {
       queryKey: ['academicAuditLogs', schoolId, filters],
       queryFn: () => {
         if (!schoolId) throw new Error("School ID is required");
-        return fetchAcademicAuditLogs(schoolId, filters);
+        console.log('Mocked fetchAcademicAuditLogs called with schoolId:', schoolId, 'and filters:', filters);
+        return Promise.resolve(mockAuditLogs);
       },
       enabled: !!schoolId
     });

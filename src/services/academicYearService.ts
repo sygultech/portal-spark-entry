@@ -2,156 +2,133 @@
 import { supabase } from '@/integrations/supabase/client';
 import { AcademicYear, CloneStructureOptions, CloneStructureResult } from '@/types/academic';
 
-export async function fetchAcademicYears(schoolId?: string) {
-  const query = supabase
-    .from('academic_years')
-    .select('*')
-    .order('start_date', { ascending: false });
-    
-  // Add school_id filter if provided
-  if (schoolId) {
-    query.eq('school_id', schoolId);
+// Mock data to use instead of actual backend calls
+const mockAcademicYears: AcademicYear[] = [
+  {
+    id: '1',
+    name: 'Academic Year 2024-2025',
+    start_date: '2024-08-01',
+    end_date: '2025-05-31',
+    is_active: true,
+    is_archived: false,
+    school_id: '1',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    name: 'Academic Year 2023-2024',
+    start_date: '2023-08-01',
+    end_date: '2024-05-31',
+    is_active: false,
+    is_archived: true,
+    school_id: '1',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
-  
-  const { data, error } = await query;
+];
 
-  if (error) throw error;
-  return data as AcademicYear[];
+// Mocked functions that no longer interact with the backend
+export async function fetchAcademicYears(schoolId?: string) {
+  console.log('Mocked fetchAcademicYears called with schoolId:', schoolId);
+  // Return mock data instead of querying the database
+  return mockAcademicYears;
 }
 
 export async function fetchAcademicYear(id: string) {
-  const { data, error } = await supabase
-    .from('academic_years')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) throw error;
-  return data as AcademicYear;
+  console.log('Mocked fetchAcademicYear called with id:', id);
+  const academicYear = mockAcademicYears.find(year => year.id === id);
+  if (!academicYear) {
+    throw new Error('Academic year not found');
+  }
+  return academicYear;
 }
 
 export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' | 'created_at' | 'updated_at'>) {
-  try {
-    // Format dates properly
-    const formattedYear = {
-      name: academicYear.name,
-      start_date: new Date(academicYear.start_date).toISOString().split('T')[0],
-      end_date: new Date(academicYear.end_date).toISOString().split('T')[0],
-      school_id: academicYear.school_id,
-      is_active: academicYear.is_active !== undefined ? academicYear.is_active : false,
-      is_archived: academicYear.is_archived !== undefined ? academicYear.is_archived : false
-    };
-
-    // Insert with explicit column selection
-    const { data, error } = await supabase
-      .from('academic_years')
-      .insert([formattedYear])
-      .select();
-
-    if (error) {
-      console.error('Error creating academic year:', error);
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      throw new Error('No data returned after creating academic year');
-    }
-
-    return data[0] as AcademicYear;
-  } catch (error) {
-    console.error('Error creating academic year:', error);
-    throw error;
-  }
+  console.log('Mocked createAcademicYear called with:', academicYear);
+  // Create a new mock academic year
+  const newAcademicYear: AcademicYear = {
+    id: Date.now().toString(),
+    ...academicYear,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  // For demonstration purposes only (this won't persist between page reloads)
+  mockAcademicYears.push(newAcademicYear);
+  return newAcademicYear;
 }
 
 export async function updateAcademicYear(id: string, academicYear: Partial<AcademicYear>) {
-  // Format dates if they are included in the update
-  const formattedUpdate = { ...academicYear };
-  if (academicYear.start_date) {
-    formattedUpdate.start_date = new Date(academicYear.start_date).toISOString().split('T')[0];
-  }
-  if (academicYear.end_date) {
-    formattedUpdate.end_date = new Date(academicYear.end_date).toISOString().split('T')[0];
+  console.log('Mocked updateAcademicYear called with id:', id, 'and data:', academicYear);
+  const index = mockAcademicYears.findIndex(year => year.id === id);
+  if (index === -1) {
+    throw new Error('Academic year not found');
   }
   
-  // Add updated_at timestamp
-  formattedUpdate.updated_at = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('academic_years')
-    .update(formattedUpdate)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as AcademicYear;
+  // Update the mock academic year
+  mockAcademicYears[index] = {
+    ...mockAcademicYears[index],
+    ...academicYear,
+    updated_at: new Date().toISOString()
+  };
+  
+  return mockAcademicYears[index];
 }
 
 export async function deleteAcademicYear(id: string) {
-  const { error } = await supabase
-    .from('academic_years')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw error;
+  console.log('Mocked deleteAcademicYear called with id:', id);
+  const index = mockAcademicYears.findIndex(year => year.id === id);
+  if (index === -1) {
+    throw new Error('Academic year not found');
+  }
+  
+  // Remove the academic year from our mock data
+  mockAcademicYears.splice(index, 1);
   return true;
 }
 
 export async function setActiveAcademicYear(id: string, schoolId: string) {
-  try {
-    // First, set all academic years to inactive using a filter object
-    const { error: updateError } = await supabase
-      .from('academic_years')
-      .update({
-        is_active: false,
-        updated_at: new Date().toISOString()
-      })
-      .filter('school_id', 'eq', schoolId)
-      .select('id');
-
-    if (updateError) throw updateError;
-
-    // Then, set the specified one as active using a filter object
-    const { data, error } = await supabase
-      .from('academic_years')
-      .update({
-        is_active: true,
-        updated_at: new Date().toISOString()
-      })
-      .filter('id', 'eq', id)
-      .filter('school_id', 'eq', schoolId)
-      .select('*');
-
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      throw new Error('No data returned after setting active academic year');
-    }
-
-    return data[0] as AcademicYear;
-  } catch (error) {
-    console.error('Error setting active academic year:', error);
-    throw error;
+  console.log('Mocked setActiveAcademicYear called with id:', id, 'and schoolId:', schoolId);
+  
+  // Update all academic years to be inactive
+  mockAcademicYears.forEach(year => {
+    year.is_active = false;
+  });
+  
+  // Set the specified one as active
+  const academicYear = mockAcademicYears.find(year => year.id === id);
+  if (!academicYear) {
+    throw new Error('Academic year not found');
   }
+  
+  academicYear.is_active = true;
+  academicYear.updated_at = new Date().toISOString();
+  
+  return academicYear;
 }
 
 export async function archiveAcademicYear(id: string) {
-  const { data, error } = await supabase
-    .from('academic_years')
-    .update({ is_archived: true, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as AcademicYear;
+  console.log('Mocked archiveAcademicYear called with id:', id);
+  const academicYear = mockAcademicYears.find(year => year.id === id);
+  if (!academicYear) {
+    throw new Error('Academic year not found');
+  }
+  
+  academicYear.is_archived = true;
+  academicYear.updated_at = new Date().toISOString();
+  
+  return academicYear;
 }
 
 export async function cloneAcademicStructure(options: CloneStructureOptions) {
-  const { data, error } = await supabase
-    .rpc('clone_academic_structure', options);
-
-  if (error) throw error;
-  return data as CloneStructureResult;
+  console.log('Mocked cloneAcademicStructure called with options:', options);
+  
+  // Return mock result
+  return {
+    courses_cloned: 5,
+    subjects_cloned: 15,
+    batches_cloned: 8,
+    grading_systems_cloned: 2,
+    elective_groups_cloned: 3
+  } as CloneStructureResult;
 }

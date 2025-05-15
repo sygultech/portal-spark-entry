@@ -1,10 +1,33 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchAcademicYears } from '@/services/academicYearService';
-import { fetchAcademicSettings } from '@/services/academicSettingsService';
 import type { AcademicYear } from '@/types/academic';
+
+// Mock academic year data
+const mockAcademicYears: AcademicYear[] = [
+  {
+    id: '1',
+    name: 'Academic Year 2024-2025',
+    start_date: '2024-08-01',
+    end_date: '2025-05-31',
+    is_active: true,
+    is_archived: false,
+    school_id: '1',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    name: 'Academic Year 2023-2024',
+    start_date: '2023-08-01',
+    end_date: '2024-05-31',
+    is_active: false,
+    is_archived: true,
+    school_id: '1',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
 
 interface AcademicContextType {
   currentAcademicYear: AcademicYear | null;
@@ -17,67 +40,30 @@ const AcademicContext = createContext<AcademicContextType | undefined>(undefined
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
-  const schoolId = profile?.school_id;
   
   const [currentAcademicYear, setCurrentAcademicYear] = useState<AcademicYear | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch all academic years
-  const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['academicYears', schoolId],
-    queryFn: () => {
-      if (!schoolId) throw new Error("School ID is required");
-      return fetchAcademicYears(schoolId);
-    },
-    enabled: !!schoolId
-  });
-  
-  // Fetch academic settings to get the default academic year
-  const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['academicSettings', schoolId],
-    queryFn: () => {
-      if (!schoolId) throw new Error("School ID is required");
-      return fetchAcademicSettings(schoolId);
-    },
-    enabled: !!schoolId
-  });
-  
-  // Set the current academic year based on default or active year
+  // Set up mock data
   useEffect(() => {
-    if (!yearsLoading && academicYears.length > 0) {
-      // If we have settings with a default year, use that
-      if (settings?.default_academic_year_id) {
-        const defaultYear = academicYears.find(y => y.id === settings.default_academic_year_id);
-        if (defaultYear) {
-          setCurrentAcademicYear(defaultYear);
-          return;
-        }
-      }
-      
-      // Otherwise, find an active year
-      const activeYear = academicYears.find(y => y.is_active);
+    // Simulate loading
+    setTimeout(() => {
+      const activeYear = mockAcademicYears.find(y => y.is_active);
       if (activeYear) {
         setCurrentAcademicYear(activeYear);
-        return;
+      } else if (mockAcademicYears.length > 0) {
+        setCurrentAcademicYear(mockAcademicYears[0]);
       }
-      
-      // If no active year, use the most recent one
-      const sortedYears = [...academicYears].sort(
-        (a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
-      );
-      if (sortedYears.length > 0) {
-        setCurrentAcademicYear(sortedYears[0]);
-      }
-    }
-  }, [academicYears, settings, yearsLoading]);
-  
-  const isLoading = yearsLoading || settingsLoading;
+      setIsLoading(false);
+    }, 500);
+  }, []);
   
   return (
     <AcademicContext.Provider 
       value={{ 
         currentAcademicYear, 
         setCurrentAcademicYear,
-        academicYears,
+        academicYears: mockAcademicYears,
         isLoading 
       }}
     >
