@@ -16,11 +16,14 @@ export async function fixRLSPolicies() {
       console.error('Error fixing RLS policies:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
       
-      toast({
-        title: 'Error',
-        description: 'Failed to update database security policies. Please try again later.',
-        variant: 'destructive',
-      });
+      // Only show toast for unexpected errors, not authorization errors
+      if (!error.message?.includes('Unauthorized') && !error.message?.includes('administrators')) {
+        toast({
+          title: 'Error',
+          description: 'Failed to update database security policies. Please try again later.',
+          variant: 'destructive',
+        });
+      }
       return false;
     }
     

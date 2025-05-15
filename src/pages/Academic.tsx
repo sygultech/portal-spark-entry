@@ -26,14 +26,14 @@ const Academic = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("academic-years");
 
-  // Attempt to fix RLS policies on component load
+  // Attempt to fix RLS policies on component load - only for super_admin
   useEffect(() => {
-    if (profile?.role === "school_admin" || profile?.role === "super_admin") {
+    if (profile?.role === "super_admin") {
       fixRLSPolicies();
     }
   }, [profile]);
 
-  // Redirect if not school_admin
+  // Redirect if not authorized
   if (!isLoading && profile?.role !== "school_admin" && profile?.role !== "super_admin") {
     navigate("/");
     return null;
