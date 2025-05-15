@@ -273,8 +273,8 @@ export const updateAuthUserDetails = async (
       p_confirmation_token: data.confirmationToken,
       p_confirmation_sent_at: data.confirmationSentAt,
       p_instance_id: data.instanceId,
-      p_user_metadata: userMetadata ? JSON.stringify(userMetadata) : null,
-      p_app_metadata: appMetadata ? JSON.stringify(appMetadata) : null
+      p_user_metadata: userMetadata,
+      p_app_metadata: appMetadata
     });
 
     if (error) {
