@@ -46,15 +46,18 @@ export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' |
     const { data, error } = await supabase
       .from('academic_years')
       .insert([formattedYear])
-      .select('*, academic_years.id, academic_years.school_id')
-      .single();
+      .select();
 
     if (error) {
       console.error('Error creating academic year:', error);
       throw error;
     }
 
-    return data as AcademicYear;
+    if (!data || data.length === 0) {
+      throw new Error('No data returned after creating academic year');
+    }
+
+    return data[0] as AcademicYear;
   } catch (error) {
     console.error('Error creating academic year:', error);
     throw error;
@@ -104,24 +107,28 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
         is_active: false,
         updated_at: new Date().toISOString()
       })
-      .eq('academic_years.school_id', schoolId);
+      .eq('school_id', schoolId);
 
     if (updateError) throw updateError;
 
-    // Then, set the specified one as active with explicit table reference
+    // Then, set the specified one as active
     const { data, error } = await supabase
       .from('academic_years')
       .update({
         is_active: true,
         updated_at: new Date().toISOString()
       })
-      .eq('academic_years.id', id)
-      .eq('academic_years.school_id', schoolId)
-      .select('*, academic_years.id, academic_years.school_id')
-      .single();
+      .eq('id', id)
+      .eq('school_id', schoolId)
+      .select();
 
     if (error) throw error;
-    return data as AcademicYear;
+    
+    if (!data || data.length === 0) {
+      throw new Error('No data returned after setting active academic year');
+    }
+
+    return data[0] as AcademicYear;
   } catch (error) {
     console.error('Error setting active academic year:', error);
     throw error;
