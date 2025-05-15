@@ -1,9 +1,9 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 // Components
 import {
@@ -216,7 +216,8 @@ const SchoolManagement: React.FC = () => {
         throw new Error("User not found with this email");
       }
       
-      const userData = data as UserMetadata;
+      // First cast to unknown, then to UserMetadata to satisfy TypeScript
+      const userData = data as unknown as UserMetadata;
       if (!userData.id) {
         throw new Error("User ID not found in metadata");
       }
