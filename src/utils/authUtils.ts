@@ -252,6 +252,10 @@ export const updateAuthUserDetails = async (
     console.log("Updating auth user details for user:", userId);
     console.log("With data:", data);
 
+    // Make sure metadata is properly handled as an object, not a string
+    const userMetadata = data.userMetadata;
+    const appMetadata = data.appMetadata;
+
     // Call the RPC function with the correct parameters
     const { data: response, error } = await supabase.rpc("update_auth_user", {
       p_user_id: userId,
@@ -260,8 +264,8 @@ export const updateAuthUserDetails = async (
       p_email_confirmed: data.emailConfirmed,
       p_phone_confirmed: data.phoneConfirmed,
       p_banned: data.isBanned,
-      p_user_metadata: data.userMetadata ? JSON.stringify(data.userMetadata) : null,
-      p_app_metadata: data.appMetadata ? JSON.stringify(data.appMetadata) : null
+      p_user_metadata: userMetadata ? JSON.stringify(userMetadata) : null,
+      p_app_metadata: appMetadata ? JSON.stringify(appMetadata) : null
     });
 
     if (error) {
@@ -285,7 +289,7 @@ export const fetchAuthUserDetails = async (userId: string) => {
   try {
     console.log("Fetching auth user details for user:", userId);
     
-    const { data, error } = await supabase.rpc(
+    const { data: rawData, error } = await supabase.rpc(
       'get_auth_user_details',
       { p_user_id: userId }
     );
@@ -295,11 +299,24 @@ export const fetchAuthUserDetails = async (userId: string) => {
       throw error;
     }
     
-    if (isValidAuthUserResponse(data)) {
-      console.log("Auth user details response:", data);
-      return { success: true, data: data };
+    // Use the type guard to validate the response
+    if (rawData && isValidAuthUserResponse(rawData)) {
+      console.log("Auth user details response:", rawData);
+      
+      // Process the user_metadata to ensure it's an object
+      const data = {
+        ...rawData,
+        user_metadata: typeof rawData.user_metadata === 'string' 
+          ? JSON.parse(rawData.user_metadata) 
+          : rawData.user_metadata,
+        app_metadata: typeof rawData.app_metadata === 'string'
+          ? JSON.parse(rawData.app_metadata)
+          : rawData.app_metadata
+      };
+      
+      return { success: true, data };
     } else {
-      console.error("Invalid data format returned:", data);
+      console.error("Invalid data format returned:", rawData);
       throw new Error("Invalid data format returned from database");
     }
   } catch (error: any) {

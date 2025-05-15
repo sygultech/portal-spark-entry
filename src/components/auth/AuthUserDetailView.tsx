@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,9 +60,22 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
   const updateUserMetadata = (key: string, value: any) => {
     if (!editedUserData) return;
     
+    // Try to parse the value as JSON if it looks like JSON
+    let processedValue = value;
+    if (typeof value === 'string') {
+      try {
+        if (value.trim().startsWith('{') || value.trim().startsWith('[')) {
+          processedValue = JSON.parse(value);
+        }
+      } catch (e) {
+        // If parsing fails, keep the original string
+        processedValue = value;
+      }
+    }
+    
     const newMetadata = {
       ...editedUserData.user_metadata,
-      [key]: value
+      [key]: processedValue
     };
     
     setEditedUserData({
@@ -77,13 +89,32 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
     
     setIsSubmitting(true);
     try {
+      // Properly handle user_metadata to ensure it's an object, not a string
+      let userMetadata = editedUserData.user_metadata;
+      
+      // If user_metadata is somehow a string at this point, try to parse it
+      if (typeof userMetadata === 'string') {
+        try {
+          userMetadata = JSON.parse(userMetadata);
+        } catch (e) {
+          console.error('Failed to parse user_metadata as JSON:', e);
+          toast({
+            title: "Invalid metadata format",
+            description: "User metadata must be in valid JSON format",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
       const updateData = {
         email: editedUserData.email,
         phone: editedUserData.phone,
         emailConfirmed: editedUserData.email_confirmed,
         phoneConfirmed: editedUserData.phone_confirmed,
         isBanned: editedUserData.is_banned,
-        userMetadata: editedUserData.user_metadata,
+        userMetadata,  // Now we're sure it's an object
         appMetadata: editedUserData.app_metadata
       };
       
@@ -233,7 +264,7 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
                   <Label className="font-medium">{key}</Label>
                   <Input 
                     className="col-span-2"
-                    value={typeof value === 'string' ? value : JSON.stringify(value)}
+                    value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     onChange={(e) => updateUserMetadata(key, e.target.value)}
                     disabled={!isSuperAdmin}
                   />
