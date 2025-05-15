@@ -1,25 +1,5 @@
 
-project_id = "sjzbturfgadikgzokpyo"
+sjzbturfgadikgzokpyo = 'project'
 
-[auth]
-required_user_fields = ["first_name", "last_name"]
-enable_signup = true
-
-[functions]
-[functions.handle_new_user]
-verify_jwt = true
-
-[functions.auto_confirm_email]
-verify_jwt = true
-
-[functions.manually_confirm_email]
-verify_jwt = true
-
-[functions.is_email_confirmed]
-verify_jwt = true
-
-[functions.get_user_metadata_by_email]
-verify_jwt = true
-
-[functions.create_profile_for_existing_user]
+[functions.create-admin-user]
 verify_jwt = true

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,22 +97,21 @@ const SchoolFormModal: React.FC<SchoolFormModalProps> = ({
         throw schoolError;
       }
 
-      // 2. Create the admin user using RPC function
-      const { data: adminData, error: adminError } = await supabase.rpc(
-        "create_and_confirm_admin_user",
-        {
+      // 2. Create the admin user using the edge function
+      const response = await supabase.functions.invoke('create-admin-user', {
+        body: {
           admin_email: values.admin_email,
           admin_password: values.admin_password,
           admin_first_name: values.admin_first_name,
           admin_last_name: values.admin_last_name,
           admin_school_id: schoolData.id
         }
-      );
+      });
 
-      if (adminError) {
+      if (response.error) {
         // If admin creation fails, delete the school
         await supabase.from("schools").delete().eq("id", schoolData.id);
-        throw new Error(`Failed to create admin user: ${adminError.message}`);
+        throw new Error(`Failed to create admin user: ${response.error.message || response.error}`);
       }
 
       // Build a properly typed SchoolFormData object
