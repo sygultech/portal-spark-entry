@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AcademicYear } from '@/types/academic';
 import { fetchAcademicYears } from '@/services/academicYearService';
+import { useToast } from '@/hooks/use-toast';
 
 interface AcademicContextType {
   currentAcademicYear: AcademicYear | null;
@@ -15,6 +16,7 @@ const AcademicContext = createContext<AcademicContextType | undefined>(undefined
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
+  const { toast } = useToast();
   
   const [currentAcademicYear, setCurrentAcademicYear] = useState<AcademicYear | null>(null);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -38,14 +40,21 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         } catch (error) {
           console.error("Error loading academic years:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load academic years. Please try again.",
+            variant: "destructive"
+          });
         } finally {
           setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     }
     
     loadAcademicYears();
-  }, [profile?.school_id]);
+  }, [profile?.school_id, toast]);
   
   return (
     <AcademicContext.Provider 

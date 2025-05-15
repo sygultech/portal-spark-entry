@@ -25,7 +25,8 @@ export function useAcademicYears() {
   const academicYearsQuery = useQuery({
     queryKey: ['academicYears', schoolId],
     queryFn: () => fetchAcademicYears(schoolId),
-    enabled: !!schoolId
+    enabled: !!schoolId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Fetch a single academic year
@@ -103,12 +104,15 @@ export function useAcademicYears() {
       if (!schoolId) throw new Error("School ID is required");
       return setActiveAcademicYear(id, schoolId);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
-      toast({
-        title: "Academic Year Activated",
-        description: "The academic year has been set as active."
-      });
+      // Update the context after setting active
+      if (data) {
+        toast({
+          title: "Academic Year Activated",
+          description: `"${data.name}" has been set as the active academic year.`
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -122,13 +126,15 @@ export function useAcademicYears() {
   // Archive an academic year
   const archiveAcademicYearMutation = useMutation({
     mutationFn: (id: string) => archiveAcademicYear(id),
-    onSuccess: (_, id) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
-      queryClient.invalidateQueries({ queryKey: ['academicYear', id] });
-      toast({
-        title: "Academic Year Archived",
-        description: "The academic year has been archived successfully."
-      });
+      
+      if (data) {
+        toast({
+          title: "Academic Year Archived",
+          description: `"${data.name}" has been archived successfully.`
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -153,7 +159,7 @@ export function useAcademicYears() {
       
       toast({
         title: "Academic Structure Cloned",
-        description: `Cloned ${data.courses_cloned} courses, ${data.subjects_cloned} subjects, ${data.batches_cloned} batches, ${data.grading_systems_cloned} grading systems, and ${data.elective_groups_cloned} elective groups.`
+        description: `Successfully cloned academic structure with ${data.courses_cloned} courses, ${data.batches_cloned} batches, ${data.subjects_cloned} subjects, ${data.grading_systems_cloned} grading systems, and ${data.elective_groups_cloned} elective groups.`
       });
     },
     onError: (error: any) => {
@@ -181,6 +187,7 @@ export function useAcademicYears() {
     isDeleting: deleteAcademicYearMutation.isPending,
     isActivating: setActiveAcademicYearMutation.isPending,
     isArchiving: archiveAcademicYearMutation.isPending,
-    isCloning: cloneStructureMutation.isPending
+    isCloning: cloneStructureMutation.isPending,
+    refetch: academicYearsQuery.refetch
   };
 }

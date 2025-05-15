@@ -112,19 +112,14 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
       .rpc('set_active_academic_year', {
         year_id: id,
         school_id: schoolId
-      })
-      .select()
-      .single();
+      });
     
     if (error) {
       throw error;
     }
     
-    if (!data) {
-      throw new Error('Failed to set active academic year: No data returned');
-    }
-    
-    return data as AcademicYear;
+    // Fetch the updated academic year
+    return await fetchAcademicYear(id);
   } catch (error) {
     console.error('Error setting active academic year:', error);
     throw error;
@@ -136,15 +131,14 @@ export async function archiveAcademicYear(id: string) {
     const { data, error } = await supabase
       .rpc('archive_academic_year', {
         year_id: id
-      })
-      .select()
-      .single();
+      });
     
     if (error) {
       throw error;
     }
     
-    return data as AcademicYear;
+    // Fetch the updated academic year
+    return await fetchAcademicYear(id);
   } catch (error) {
     console.error('Error archiving academic year:', error);
     throw error;
