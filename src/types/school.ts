@@ -33,5 +33,5 @@ export interface SchoolFormData {
   admin_password?: string;
   contact_number?: string;
   region?: string;
-  status?: 'active' | 'suspended' | 'expired' | 'pending' | string; // Updated to also accept string
+  status?: 'active' | 'suspended' | 'expired' | 'pending';
 }

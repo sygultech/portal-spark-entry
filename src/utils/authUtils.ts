@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Profile, UserRole } from "@/contexts/types";
+import { Profile } from "@/contexts/types";
 
 // Helper function to clean up auth state
 export const cleanupAuthState = () => {
@@ -23,8 +23,6 @@ export const cleanupAuthState = () => {
 // Function to fetch user profile data
 export const fetchUserProfile = async (userId: string) => {
   try {
-    console.log("Fetching profile for user:", userId);
-    
     // Use maybeSingle() to handle cases where profile might not exist
     const { data, error } = await supabase
       .from("profiles")
@@ -33,7 +31,6 @@ export const fetchUserProfile = async (userId: string) => {
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching profile:", error);
       throw error;
     }
 
@@ -49,13 +46,10 @@ export const fetchUserProfile = async (userId: string) => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
-          console.error("Error getting user data:", userError);
           throw userError;
         }
         
         if (userData && userData.user) {
-          console.log("User data retrieved:", userData.user);
-          
           // Create a profile with required fields based on database schema
           const defaultProfile = {
             id: userId,
@@ -72,14 +66,7 @@ export const fetchUserProfile = async (userId: string) => {
             console.log("Setting up super admin profile");
             defaultProfile.role = "super_admin";
           }
-          
-          // Special case for school admin - check user metadata
-          if (userData.user.user_metadata?.role === 'school_admin') {
-            console.log("Setting up school admin profile from metadata:", userData.user.user_metadata);
-            defaultProfile.role = "school_admin";
-            defaultProfile.school_id = userData.user.user_metadata?.school_id || null;
-          }
-          
+
           // Call the create_user_profile RPC function that was created in the database
           const { error: insertError } = await supabase.rpc('create_user_profile', {
             user_id: userId,
@@ -90,24 +77,17 @@ export const fetchUserProfile = async (userId: string) => {
           });
 
           if (insertError) {
-            console.error("Error creating default profile via RPC:", insertError.message);
-            // Try fallback approach
-            const { error: directInsertError } = await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                email: defaultProfile.email,
-                first_name: defaultProfile.first_name,
-                last_name: defaultProfile.last_name,
-                role: defaultProfile.role,
-                school_id: defaultProfile.school_id
+            console.error("Error creating default profile:", insertError.message);
+            // Try fallback approach for super admin account creation
+            if (defaultProfile.email === "super@edufar.co") {
+              const { error: adminError } = await supabase.auth.updateUser({
+                data: { role: 'super_admin' }
               });
               
-            if (directInsertError) {
-              console.error("Fallback profile creation failed:", directInsertError);
-            } else {
-              console.log("Created profile via fallback method");
-              return defaultProfile;
+              if (!adminError) {
+                // Force reload to apply changes
+                window.location.reload();
+              }
             }
           } else {
             console.log("Created default profile:", defaultProfile);
@@ -124,67 +104,5 @@ export const fetchUserProfile = async (userId: string) => {
   } catch (error: any) {
     console.error("Error fetching user profile:", error.message);
     return null;
-  }
-};
-
-/**
- * Creates a profile for a new user
- * @param userId - The ID of the user to create a profile for
- * @param email - The email address of the user
- * @param firstName - The first name of the user
- * @param lastName - The last name of the user
- * @param role - The role of the user
- * @param schoolId - The school ID to associate with the user profile
- */
-export const createUserProfile = async (
-  userId: string, 
-  email: string, 
-  firstName: string, 
-  lastName: string, 
-  role: UserRole,
-  schoolId?: string
-) => {
-  try {
-    // Profile data object
-    const profileData = {
-      id: userId,
-      email,
-      first_name: firstName,
-      last_name: lastName,
-      role,
-      school_id: schoolId || null
-    };
-    
-    console.log("Creating profile with data:", profileData);
-    
-    // Try to create a new profile
-    const { error: insertError } = await supabase
-      .from('profiles')
-      .insert(profileData);
-    
-    // If profile already exists, update it
-    if (insertError) {
-      console.log("Insert error, attempting update:", insertError.message);
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          role,
-          school_id: schoolId || null
-        })
-        .eq('id', userId);
-      
-      if (updateError) {
-        console.error('Error updating user profile:', updateError);
-        throw updateError;
-      }
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error creating user profile:', error);
-    return { success: false, error };
   }
 };

@@ -1,22 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { Profile, UserRole } from "@/contexts/types";
+import { Profile } from "@/contexts/types";
 import { toast } from "@/components/ui/use-toast";
 import { cleanupAuthState, fetchUserProfile } from "@/utils/authUtils";
+import { getRoleBasedRoute } from "@/utils/roleUtils";
 
 export const useAuthOperations = () => {
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Use optional chaining to avoid errors when not in a Router context
   const navigate = useNavigate();
 
   // Handle sign in
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log("Attempting to sign in with:", email);
-      
       // Clean up existing state
       cleanupAuthState();
       
@@ -25,24 +23,8 @@ export const useAuthOperations = () => {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
         // Continue even if this fails
-        console.log("Global sign out failed, continuing with sign in");
       }
       
-      // Check if the email is confirmed before attempting to sign in
-      const { data: emailConfirmed, error: emailCheckError } = await supabase.rpc(
-        'is_email_confirmed',
-        { email_address: email }
-      );
-      
-      if (emailCheckError) {
-        console.error("Error checking email confirmation:", emailCheckError);
-      }
-      
-      // Log the parameters for the RPC call to assist with debugging
-      console.log("is_email_confirmed RPC params:", { email_address: email });
-      console.log("is_email_confirmed result:", { confirmed: emailConfirmed, error: emailCheckError });
-      
-      // Attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -51,114 +33,24 @@ export const useAuthOperations = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch user profile after successful sign in
-        // Use setTimeout to prevent potential deadlocks
-        setTimeout(() => {
-          fetchUserProfile(data.user.id);
-        }, 0);
+        // Fetch user profile and handle navigation based on role
+        const userProfile = await fetchUserProfile(data.user.id);
+        const redirectPath = getRoleBasedRoute(userProfile?.role);
         
-        navigate("/");
+        navigate(redirectPath);
         toast({
           title: "Login successful!",
           description: "Welcome back!",
         });
       }
     } catch (error: any) {
-      console.error("Login process error:", error);
       toast({
         title: "Login failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-  
-  // Helper function for handling successful login
-  const handleSuccessfulLogin = async (userId: string) => {
-    try {
-      console.log("Login successful, fetching profile for:", userId);
-      
-      // Fetch or create user profile
-      let userProfile = await fetchUserProfile(userId);
-      
-      // If profile doesn't exist, create it with safe defaults
-      if (!userProfile) {
-        console.log("No profile found, creating profile for:", userId);
-        
-        // Get user data
-        const { data: userData } = await supabase.auth.getUser();
-        
-        if (userData?.user) {
-          // Determine appropriate role based on metadata
-          let role: UserRole = "student"; // Safe default
-          let schoolId = null;
-          
-          // Only use metadata role if it exists and is valid
-          if (userData.user.user_metadata?.role) {
-            // Special case for super admin and school admin
-            if (userData.user.user_metadata.role === "super_admin" || 
-                userData.user.user_metadata.role === "school_admin") {
-              role = userData.user.user_metadata.role as UserRole;
-              
-              // For school_admin, also get school_id
-              if (role === "school_admin" && userData.user.user_metadata.school_id) {
-                schoolId = userData.user.user_metadata.school_id;
-              }
-            }
-          }
-          
-          // Handle the special case for super@edufar.co
-          if (userData.user.email === "super@edufar.co") {
-            role = "super_admin";
-          }
-          
-          // Try to create the profile using the new database function
-          const { error: profileError } = await supabase.rpc(
-            'create_profile_for_existing_user',
-            { 
-              user_id: userId, 
-              user_email: userData.user.email || '', 
-              user_role: role 
-            }
-          );
-          
-          if (profileError) {
-            console.error("Error creating profile via RPC:", profileError);
-            // Fall back to regular createUserProfile function
-            await createUserProfile(
-              userId,
-              userData.user.email || '',
-              userData.user.user_metadata?.first_name || userData.user.email?.split('@')[0] || '',
-              userData.user.user_metadata?.last_name || '',
-              role,
-              schoolId
-            );
-          }
-          
-          // Fetch the newly created profile
-          userProfile = await fetchUserProfile(userId);
-        }
-      }
-      
-      // Redirect based on role
-      const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
-      
-      console.log("Redirecting to:", roleBasedRoute);
-      if (navigate) {
-        navigate(roleBasedRoute);
-      } else {
-        window.location.href = roleBasedRoute;
-      }
-      
-      toast({
-        title: "Login successful!",
-        description: "Welcome back!",
-      });
-    } catch (error: any) {
-      console.error("Error in handleSuccessfulLogin:", error);
-      throw error; // Let the calling function handle this
     }
   };
 
@@ -176,8 +68,6 @@ export const useAuthOperations = () => {
           data: {
             first_name: firstName,
             last_name: lastName,
-            // Default role is student - more secure
-            role: "student" 
           },
         },
       });
@@ -211,11 +101,7 @@ export const useAuthOperations = () => {
       await supabase.auth.signOut({ scope: 'global' });
       
       // Redirect to login page
-      if (navigate) {
-        navigate("/login");
-      } else {
-        window.location.href = "/login";
-      }
+      navigate("/login");
       
       toast({
         title: "Logged out successfully",
