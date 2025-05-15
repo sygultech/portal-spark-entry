@@ -76,6 +76,28 @@ serve(async (req) => {
           AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
         )
       );
+      
+      -- Fix academic years RLS policy to avoid ambiguous column references
+      DROP POLICY IF EXISTS "School admins can manage their school's academic years" ON public.academic_years;
+      
+      CREATE POLICY "School admins can manage their school's academic years" 
+      ON public.academic_years
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.profiles 
+          WHERE public.profiles.id = auth.uid() 
+          AND public.profiles.school_id = public.academic_years.school_id
+          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.profiles 
+          WHERE public.profiles.id = auth.uid() 
+          AND public.profiles.school_id = public.academic_years.school_id
+          AND (public.profiles.role = 'school_admin' OR public.profiles.role = 'super_admin')
+        )
+      );
     `
 
     // Execute SQL using the execute_admin_sql function
