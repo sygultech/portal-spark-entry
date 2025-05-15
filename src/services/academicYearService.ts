@@ -2,11 +2,18 @@
 import { supabase } from '@/integrations/supabase/client';
 import { AcademicYear, CloneStructureOptions, CloneStructureResult } from '@/types/academic';
 
-export async function fetchAcademicYears() {
-  const { data, error } = await supabase
+export async function fetchAcademicYears(schoolId?: string) {
+  const query = supabase
     .from('academic_years')
     .select('*')
     .order('start_date', { ascending: false });
+    
+  // Add school_id filter if provided
+  if (schoolId) {
+    query.eq('school_id', schoolId);
+  }
+  
+  const { data, error } = await query;
 
   if (error) throw error;
   return data as AcademicYear[];

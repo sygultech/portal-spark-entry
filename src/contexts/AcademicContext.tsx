@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,8 +23,11 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   // Fetch all academic years
   const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['academicYears'],
-    queryFn: fetchAcademicYears,
+    queryKey: ['academicYears', schoolId],
+    queryFn: () => {
+      if (!schoolId) throw new Error("School ID is required");
+      return fetchAcademicYears(schoolId);
+    },
     enabled: !!schoolId
   });
   

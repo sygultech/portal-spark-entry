@@ -23,8 +23,8 @@ export function useAcademicYears() {
 
   // Fetch all academic years
   const academicYearsQuery = useQuery({
-    queryKey: ['academicYears'],
-    queryFn: fetchAcademicYears,
+    queryKey: ['academicYears', schoolId],
+    queryFn: () => fetchAcademicYears(schoolId),
     enabled: !!schoolId
   });
 
@@ -42,7 +42,7 @@ export function useAcademicYears() {
     mutationFn: (newAcademicYear: Omit<AcademicYear, 'id' | 'created_at' | 'updated_at'>) => 
       createAcademicYear(newAcademicYear),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
       toast({
         title: "Academic Year Created",
         description: "The academic year has been created successfully."
@@ -62,7 +62,7 @@ export function useAcademicYears() {
     mutationFn: ({ id, academicYear }: { id: string, academicYear: Partial<AcademicYear> }) => 
       updateAcademicYear(id, academicYear),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['academicYear', id] });
       toast({
         title: "Academic Year Updated",
@@ -82,7 +82,7 @@ export function useAcademicYears() {
   const deleteAcademicYearMutation = useMutation({
     mutationFn: (id: string) => deleteAcademicYear(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
       toast({
         title: "Academic Year Deleted",
         description: "The academic year has been deleted successfully."
@@ -104,7 +104,7 @@ export function useAcademicYears() {
       return setActiveAcademicYear(id, schoolId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
       toast({
         title: "Academic Year Activated",
         description: "The academic year has been set as active."
@@ -123,7 +123,7 @@ export function useAcademicYears() {
   const archiveAcademicYearMutation = useMutation({
     mutationFn: (id: string) => archiveAcademicYear(id),
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['academicYear', id] });
       toast({
         title: "Academic Year Archived",
@@ -143,7 +143,7 @@ export function useAcademicYears() {
   const cloneStructureMutation = useMutation({
     mutationFn: (options: CloneStructureOptions) => cloneAcademicStructure(options),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
       // Invalidate other potentially affected queries
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['batches'] });
