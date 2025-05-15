@@ -40,6 +40,7 @@ import { Switch } from "@/components/ui/switch";
 
 // Types
 import type { School, SchoolFormData } from "@/types/school";
+import { Json } from "@/integrations/supabase/types";
 
 const formSchema = z.object({
   name: z.string().min(3, "School name must be at least 3 characters"),
@@ -85,6 +86,17 @@ interface UserMetadata {
     role?: string;
     [key: string]: any;
   };
+}
+
+// Define the exact type expected by the update_auth_user RPC function
+interface UpdateAuthUserParams {
+  p_user_id: string;
+  p_email?: string;
+  p_phone?: string | null;
+  p_metadata?: Json | null;
+  p_email_confirmed?: boolean;
+  p_phone_confirmed?: boolean;
+  p_banned?: boolean;
 }
 
 const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
@@ -189,24 +201,15 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
     }
   };
 
-  // Update auth user details - Fixed to match the expected TypeScript interface
+  // Update auth user details - Fixed with proper TypeScript interface
   const updateAuthUserDetails = async (values: any) => {
     if (!adminData?.id) return false;
     
     try {
       console.log("Original values for update:", values);
       
-      // Define the payload with the required type structure
-      // This ensures TypeScript validates the structure properly
-      const payload: {
-        p_user_id: string;
-        p_email?: string;
-        p_phone?: string | null;
-        p_metadata?: any; // Using any for metadata as it's complex
-        p_email_confirmed?: boolean;
-        p_phone_confirmed?: boolean;
-        p_banned?: boolean;
-      } = {
+      // Create the payload with the exact expected structure
+      const payload: UpdateAuthUserParams = {
         p_user_id: adminData.id // Always include the required user ID
       };
       
@@ -221,6 +224,7 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       
       console.log("Final payload being sent to update_auth_user:", payload);
       
+      // Make sure we're explicitly passing the correctly typed payload
       const { data, error } = await supabase.rpc(
         'update_auth_user',
         payload
