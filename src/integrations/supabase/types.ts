@@ -804,6 +804,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_auth_user_details: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
@@ -835,6 +839,18 @@ export type Database = {
           p_last_name: string
           p_password?: string
           p_school_id?: string
+        }
+        Returns: Json
+      }
+      update_auth_user: {
+        Args: {
+          p_user_id: string
+          p_email?: string
+          p_phone?: string
+          p_metadata?: Json
+          p_email_confirmed?: boolean
+          p_phone_confirmed?: boolean
+          p_banned?: boolean
         }
         Returns: Json
       }

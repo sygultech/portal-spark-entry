@@ -75,6 +75,19 @@ interface AuthUserDetails {
   banned_until: string | null;
 }
 
+// Define a type for user metadata from get_user_metadata_by_email
+interface UserMetadata {
+  id: string;
+  email: string;
+  created_at: string;
+  user_metadata: {
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+    [key: string]: any;
+  };
+}
+
 const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
   isOpen,
   onClose,
@@ -82,7 +95,7 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
   schoolData,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [adminData, setAdminData] = useState<any>(null);
+  const [adminData, setAdminData] = useState<UserMetadata | null>(null);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("school-info");
@@ -124,17 +137,18 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
           }
           
           if (data && typeof data === 'object') {
-            setAdminData(data);
+            const userData = data as UserMetadata;
+            setAdminData(userData);
             
             // Update form with admin data
-            if (data.user_metadata) {
-              form.setValue('admin_first_name', data.user_metadata.first_name || '');
-              form.setValue('admin_last_name', data.user_metadata.last_name || '');
+            if (userData.user_metadata && typeof userData.user_metadata === 'object') {
+              form.setValue('admin_first_name', userData.user_metadata.first_name || '');
+              form.setValue('admin_last_name', userData.user_metadata.last_name || '');
             }
             form.setValue('admin_email', schoolData.admin_email);
 
             // Fetch additional auth user details
-            fetchAuthUserDetails(data.id);
+            fetchAuthUserDetails(userData.id);
           } else {
             setAdminError("Admin user data not found");
           }
@@ -161,7 +175,8 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       
       if (error) throw error;
       
-      setAuthUserDetails(data as AuthUserDetails);
+      // Cast the data to the expected type with type assertion
+      setAuthUserDetails(data as unknown as AuthUserDetails);
     } catch (error: any) {
       console.error("Error fetching auth user details:", error);
       toast({
@@ -195,7 +210,9 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       if (error) throw error;
       
       // Update local state with new data
-      setAuthUserDetails(prev => prev ? { ...prev, ...data } : data);
+      if (data) {
+        setAuthUserDetails(prev => prev ? { ...prev, ...data } : data as unknown as AuthUserDetails);
+      }
       
       toast({
         title: "Auth data updated",
@@ -699,3 +716,4 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
 };
 
 export default SchoolEditModal;
+
