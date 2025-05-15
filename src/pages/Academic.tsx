@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -19,14 +19,22 @@ import ElectiveGroups from "@/components/academic/ElectiveGroups";
 import StudentPromotions from "@/components/academic/StudentPromotions";
 import AcademicConfig from "@/components/academic/AcademicConfig";
 import { AcademicProvider } from "@/contexts/AcademicContext";
+import { fixRLSPolicies } from "@/utils/supabaseFixRLS";
 
 const Academic = () => {
   const { profile, isLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("academic-years");
 
+  // Attempt to fix RLS policies on component load
+  useEffect(() => {
+    if (profile?.role === "school_admin" || profile?.role === "super_admin") {
+      fixRLSPolicies();
+    }
+  }, [profile]);
+
   // Redirect if not school_admin
-  if (!isLoading && profile?.role !== "school_admin") {
+  if (!isLoading && profile?.role !== "school_admin" && profile?.role !== "super_admin") {
     navigate("/");
     return null;
   }

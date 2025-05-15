@@ -27,14 +27,27 @@ export async function fetchCourse(id: string) {
 }
 
 export async function createCourse(course: Omit<Course, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
-    .from('courses')
-    .insert(course)
-    .select()
-    .single();
+  // Add proper error handling and logging to trace what's being sent
+  try {
+    console.log("Creating course with data:", course);
+    
+    const { data, error } = await supabase
+      .from('courses')
+      .insert(course)
+      .select()
+      .single();
 
-  if (error) throw error;
-  return data as Course;
+    if (error) {
+      console.error("Error creating course:", error);
+      throw error;
+    }
+    
+    console.log("Course created successfully:", data);
+    return data as Course;
+  } catch (error) {
+    console.error("Exception in createCourse:", error);
+    throw error;
+  }
 }
 
 export async function updateCourse(id: string, course: Partial<Course>) {
