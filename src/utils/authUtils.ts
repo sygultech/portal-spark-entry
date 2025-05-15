@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/contexts/types";
 
@@ -188,6 +189,49 @@ export const createUserProfile = async (
   }
 };
 
+// Define a comprehensive interface for auth user details
+export interface AuthUserDetails {
+  id: string;
+  aud?: string;
+  role?: string;
+  email: string;
+  phone: string | null;
+  created_at: string;
+  updated_at?: string;
+  last_sign_in_at: string | null;
+  invited_at?: string | null;
+  confirmation_sent_at?: string | null;
+  recovery_sent_at?: string | null;
+  email_change_sent_at?: string | null;
+  email_change?: string | null;
+  phone_change?: string | null;
+  phone_change_sent_at?: string | null;
+  user_metadata: Record<string, any>;
+  app_metadata: Record<string, any>;
+  email_confirmed: boolean;
+  phone_confirmed: boolean;
+  is_banned: boolean;
+  banned_until: string | null;
+  is_super_admin?: boolean;
+  is_sso_user?: boolean;
+  is_anonymous?: boolean;
+  confirmed_at?: string | null;
+  deleted_at?: string | null;
+}
+
+// Helper function to safely type check and convert Supabase RPC response
+export function isValidAuthUserResponse(data: any): data is AuthUserDetails {
+  return (
+    data &&
+    typeof data === 'object' &&
+    'id' in data &&
+    'email' in data &&
+    'email_confirmed' in data &&
+    'phone_confirmed' in data &&
+    'is_banned' in data
+  );
+}
+
 /**
  * Updates authentication details for a user
  * This function wraps the update_auth_user database function
@@ -200,6 +244,8 @@ export const updateAuthUserDetails = async (
     emailConfirmed?: boolean;
     phoneConfirmed?: boolean;
     isBanned?: boolean;
+    userMetadata?: Record<string, any>;
+    appMetadata?: Record<string, any>;
   }
 ) => {
   try {
@@ -213,7 +259,9 @@ export const updateAuthUserDetails = async (
       p_phone: data.phone,
       p_email_confirmed: data.emailConfirmed,
       p_phone_confirmed: data.phoneConfirmed,
-      p_banned: data.isBanned
+      p_banned: data.isBanned,
+      p_user_metadata: data.userMetadata ? JSON.stringify(data.userMetadata) : null,
+      p_app_metadata: data.appMetadata ? JSON.stringify(data.appMetadata) : null
     });
 
     if (error) {
@@ -225,6 +273,36 @@ export const updateAuthUserDetails = async (
     return { success: true, data: response };
   } catch (error: any) {
     console.error("Auth update error:", error.message || error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Fetches extended authentication details for a user
+ * This function wraps the get_auth_user_details database function
+ */
+export const fetchAuthUserDetails = async (userId: string) => {
+  try {
+    console.log("Fetching auth user details for user:", userId);
+    
+    const { data, error } = await supabase.rpc(
+      'get_auth_user_details',
+      { p_user_id: userId }
+    );
+    
+    if (error) {
+      console.error("Error fetching auth user details:", error);
+      throw error;
+    }
+    
+    if (data && typeof data === 'object') {
+      console.log("Auth user details response:", data);
+      return { success: true, data: data as AuthUserDetails };
+    } else {
+      throw new Error("Invalid data format returned from database");
+    }
+  } catch (error: any) {
+    console.error("Error fetching auth user details:", error.message || error);
     return { success: false, error };
   }
 };

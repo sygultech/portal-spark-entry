@@ -850,6 +850,8 @@ export type Database = {
           p_email_confirmed?: boolean
           p_phone_confirmed?: boolean
           p_banned?: boolean
+          p_user_metadata?: Json
+          p_app_metadata?: Json
         }
         Returns: Json
       }
