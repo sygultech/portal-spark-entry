@@ -188,8 +188,23 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       
       if (error) throw error;
       
-      // Cast the data to the expected type with type assertion
-      setAuthUserDetails(data as unknown as AuthUserDetails);
+      if (data && typeof data === 'object') {
+        // Validate that the data has the required AuthUserDetails properties
+        const userDetails = data as Record<string, any>;
+        
+        // Check that required fields are present
+        const requiredFields = ['id', 'email', 'created_at', 'email_confirmed', 'phone_confirmed', 'is_banned'];
+        const hasRequiredFields = requiredFields.every(field => field in userDetails);
+        
+        if (hasRequiredFields) {
+          // Safe to cast now after validation
+          setAuthUserDetails(userDetails as AuthUserDetails);
+        } else {
+          throw new Error("Incomplete user details returned from database");
+        }
+      } else {
+        throw new Error("Invalid data format returned from database");
+      }
     } catch (error: any) {
       console.error("Error fetching auth user details:", error);
       toast({
@@ -240,13 +255,17 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       
       // Update local state with new data
       if (data && typeof data === 'object') {
-        setAuthUserDetails(prev => {
-          if (prev) {
-            // Make sure data is an object before spreading
-            return { ...prev, ...(data as Partial<AuthUserDetails>) };
-          }
-          return data as AuthUserDetails;
-        });
+        // Validate that data has the required fields before updating state
+        const validatedData = validateAuthUserData(data);
+        if (validatedData) {
+          setAuthUserDetails(prev => {
+            if (prev) {
+              // Make sure data is an object before spreading
+              return { ...prev, ...validatedData };
+            }
+            return validatedData;
+          });
+        }
       }
       
       toast({
@@ -278,6 +297,37 @@ const SchoolEditModal: React.FC<SchoolEditModalProps> = ({
       });
       
       return false;
+    }
+  };
+
+  // Helper function to validate auth user data
+  const validateAuthUserData = (data: any): AuthUserDetails | null => {
+    try {
+      // Check if data is an object
+      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        console.error("Invalid data format, expected object:", data);
+        return null;
+      }
+
+      // Create a new object with only the properties we need
+      const validatedData: AuthUserDetails = {
+        id: data.id || '',
+        email: data.email || '',
+        phone: data.phone,
+        created_at: data.created_at || '',
+        last_sign_in_at: data.last_sign_in_at,
+        user_metadata: data.user_metadata || {},
+        app_metadata: data.app_metadata || {},
+        email_confirmed: !!data.email_confirmed,
+        phone_confirmed: !!data.phone_confirmed,
+        is_banned: !!data.is_banned,
+        banned_until: data.banned_until
+      };
+
+      return validatedData;
+    } catch (error) {
+      console.error("Error validating auth user data:", error);
+      return null;
     }
   };
 
