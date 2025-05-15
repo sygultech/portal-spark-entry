@@ -1,6 +1,5 @@
 
--- Create a function to execute SQL as administrator (for Edge Functions)
--- This is secured with SECURITY DEFINER and only available to service role
+-- Ensure the execute_admin_sql function exists
 CREATE OR REPLACE FUNCTION public.execute_admin_sql(sql text)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -18,7 +17,7 @@ REVOKE ALL ON FUNCTION public.execute_admin_sql FROM anon;
 REVOKE ALL ON FUNCTION public.execute_admin_sql FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.execute_admin_sql TO service_role;
 
--- Function to ensure batch_students table exists
+-- Create function to ensure batch_students table exists
 CREATE OR REPLACE FUNCTION public.ensure_batch_students_table()
 RETURNS BOOLEAN
 LANGUAGE plpgsql

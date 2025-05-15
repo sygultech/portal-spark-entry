@@ -6,10 +6,16 @@ export async function fixRLSPolicies() {
   try {
     console.log('Attempting to fix RLS policies...');
     
-    const { data, error } = await supabase.functions.invoke('fix-rls');
+    // Add more detailed logging for debugging
+    const { data, error } = await supabase.functions.invoke('fix-rls', {
+      method: 'POST',
+      body: { timestamp: new Date().toISOString() } // Add payload for tracking
+    });
     
     if (error) {
       console.error('Error fixing RLS policies:', error);
+      console.error('Error details:', JSON.stringify(error));
+      
       toast({
         title: 'Error',
         description: 'Failed to update database security policies.',
@@ -26,6 +32,8 @@ export async function fixRLSPolicies() {
     return true;
   } catch (error) {
     console.error('Exception in fixRLSPolicies:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
     toast({
       title: 'Error',
       description: 'An unexpected error occurred while updating security policies.',

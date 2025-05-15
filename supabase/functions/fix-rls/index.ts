@@ -33,43 +33,63 @@ serve(async (req) => {
       )
     }
 
-    // Fix RLS policies for courses table
+    // Fix RLS policy for courses
+    // We'll use a direct SQL query instead since the function appears to be having issues
     const fixCoursesRLS = `
       -- Drop existing policies if they're causing conflicts
       DROP POLICY IF EXISTS "School admins can manage courses" ON public.courses;
       
-      -- Create a clear policy with qualified table references
+      -- Create a clear policy with fully qualified table references
       CREATE POLICY "School admins can manage courses" 
       ON public.courses
       USING (
-        public.courses.school_id = (SELECT school_id FROM public.profiles WHERE id = auth.uid())
+        EXISTS (
+          SELECT 1 FROM public.profiles 
+          WHERE public.profiles.id = auth.uid() 
+          AND public.profiles.school_id = public.courses.school_id
+        )
       )
       WITH CHECK (
-        public.courses.school_id = (SELECT school_id FROM public.profiles WHERE id = auth.uid())
+        EXISTS (
+          SELECT 1 FROM public.profiles 
+          WHERE public.profiles.id = auth.uid() 
+          AND public.profiles.school_id = public.courses.school_id
+        )
       );
     `
 
-    // Execute SQL to fix RLS - using the correct function name
-    const { error } = await supabaseClient.rpc('execute_admin_sql', { 
+    // Execute SQL using a more direct approach with rpc
+    const { data, error } = await supabaseClient.rpc('execute_admin_sql', { 
       sql: fixCoursesRLS 
     })
 
     if (error) {
-      console.error('Error fixing RLS:', error)
+      console.error('Error executing SQL:', error)
       return new Response(
-        JSON.stringify({ error: `Failed to fix RLS: ${error.message}` }),
+        JSON.stringify({ 
+          error: `Failed to fix RLS: ${error.message}`,
+          details: error,
+          function_call: 'execute_admin_sql'
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'RLS policies updated successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'RLS policies updated successfully',
+        executed_sql: 'Updated courses table policies with fully qualified references'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Unhandled error in fix-rls:', error.message)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        stack: error.stack 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
