@@ -1,5 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+interface FixRLSRequest {
+  action: 'verify' | 'fix';
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +17,131 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // This function has been disabled as per user request
-  return new Response(
-    JSON.stringify({
-      message: "This functionality has been disabled. The fix-rls edge function no longer applies any changes."
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-  );
+  try {
+    // Get environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing environment variables')
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const { data: requestData } = await req.json() as { data: FixRLSRequest };
+    const action = requestData?.action || 'verify';
+
+    if (action === 'fix') {
+      // Apply RLS policies to required tables
+      await fixAcademicYearsRLS(supabase);
+
+      return new Response(
+        JSON.stringify({
+          message: "Row Level Security policies have been successfully applied.",
+          success: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    } else {
+      // Verify RLS status
+      const academicYearsRLS = await verifyTableRLS(supabase, 'academic_years');
+
+      return new Response(
+        JSON.stringify({
+          tables: {
+            academic_years: academicYearsRLS,
+          },
+          message: "RLS verification completed"
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+  } catch (error) {
+    console.error("Error in fix-rls function:", error);
+    return new Response(
+      JSON.stringify({ 
+        message: "Error fixing RLS policies", 
+        error: error.message 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
 })
+
+async function verifyTableRLS(supabase, tableName) {
+  const { data, error } = await supabase
+    .rpc('admin_execute_sql', {
+      sql: `SELECT rls_enabled FROM pg_tables WHERE tablename = '${tableName}' AND schemaname = 'public'`
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return data && data.length > 0 ? data[0].rls_enabled : false;
+}
+
+async function fixAcademicYearsRLS(supabase) {
+  // Enable RLS on academic_years table
+  await supabase.rpc('admin_execute_sql', {
+    sql: `
+      ALTER TABLE public.academic_years ENABLE ROW LEVEL SECURITY;
+      
+      -- Drop existing policies if they exist
+      DROP POLICY IF EXISTS "Users can view academic years for their school" ON public.academic_years;
+      DROP POLICY IF EXISTS "School admins can manage academic years" ON public.academic_years;
+      DROP POLICY IF EXISTS "Super admins can manage all academic years" ON public.academic_years;
+      
+      -- Create view policy for all users in the same school
+      CREATE POLICY "Users can view academic years for their school"
+        ON public.academic_years
+        FOR SELECT
+        USING (
+          auth.uid() IN (
+            SELECT id FROM public.profiles 
+            WHERE school_id = academic_years.school_id
+          )
+        );
+        
+      -- Create management policy for school admins
+      CREATE POLICY "School admins can manage academic years"
+        ON public.academic_years
+        FOR ALL
+        USING (
+          EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() 
+            AND school_id = academic_years.school_id
+            AND role = 'school_admin'
+          )
+        )
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() 
+            AND school_id = academic_years.school_id
+            AND role = 'school_admin'
+          )
+        );
+        
+      -- Create management policy for super admins
+      CREATE POLICY "Super admins can manage all academic years"
+        ON public.academic_years
+        FOR ALL
+        USING (
+          EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+            AND role = 'super_admin'
+          )
+        )
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+            AND role = 'super_admin'
+          )
+        );
+    `
+  });
+}

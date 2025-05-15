@@ -890,6 +890,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_academic_year: {
+        Args: { year_id: string }
+        Returns: {
+          created_at: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          is_archived: boolean | null
+          name: string
+          school_id: string
+          start_date: string
+          updated_at: string | null
+        }[]
+      }
       auto_confirm_email: {
         Args: { target_email: string }
         Returns: boolean
@@ -994,6 +1008,20 @@ export type Database = {
           p_remarks?: string
         }
         Returns: string
+      }
+      set_active_academic_year: {
+        Args: { year_id: string; school_id: string }
+        Returns: {
+          created_at: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          is_archived: boolean | null
+          name: string
+          school_id: string
+          start_date: string
+          updated_at: string | null
+        }[]
       }
       update_admin_user: {
         Args: {
