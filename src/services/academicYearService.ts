@@ -46,7 +46,7 @@ export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' |
     const { data, error } = await supabase
       .from('academic_years')
       .insert([formattedYear])
-      .select()
+      .select('*, academic_years.id, academic_years.school_id')
       .single();
 
     if (error) {
@@ -104,20 +104,20 @@ export async function setActiveAcademicYear(id: string, schoolId: string) {
         is_active: false,
         updated_at: new Date().toISOString()
       })
-      .eq('school_id', schoolId);
+      .eq('academic_years.school_id', schoolId);
 
     if (updateError) throw updateError;
 
-    // Then, set the specified one as active with explicit school_id match
+    // Then, set the specified one as active with explicit table reference
     const { data, error } = await supabase
       .from('academic_years')
       .update({
         is_active: true,
         updated_at: new Date().toISOString()
       })
-      .eq('id', id)
-      .eq('school_id', schoolId)
-      .select()
+      .eq('academic_years.id', id)
+      .eq('academic_years.school_id', schoolId)
+      .select('*, academic_years.id, academic_years.school_id')
       .single();
 
     if (error) throw error;
