@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useSubjectCategories } from "@/hooks/useSubjectCategories";
@@ -13,21 +12,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Tag } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { BookOpen } from "lucide-react";
 import SubjectCategoryList from "./SubjectCategoryList";
-import SubjectList from "./SubjectList";
+import VerticalSubjectManager from "./VerticalSubjectManager";
 
 const SubjectsSection = () => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("subjects");
-  const { toast } = useToast();
   const { academicYears, isLoading: academicYearsLoading } = useAcademicYears();
   const { categories, isLoading: categoriesLoading } = useSubjectCategories();
 
   // Get current academic year
   const currentAcademicYear = academicYears.find(year => year.is_current);
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
 
   if (academicYearsLoading) {
     return (
@@ -63,20 +59,15 @@ const SubjectsSection = () => {
       </Card>
     );
   }
-  
-  // Handle category change
-  const handleCategoryFilter = (categoryId?: string) => {
-    setSelectedCategory(categoryId);
-  };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Subject Management</CardTitle>
-          <CardDescription>
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
             Managing for academic year: <Badge variant="outline" className="font-normal">{currentAcademicYear.name}</Badge>
-          </CardDescription>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -87,36 +78,10 @@ const SubjectsSection = () => {
           </TabsList>
           
           <TabsContent value="subjects" className="space-y-4">
-            {/* Category filter */}
-            {!categoriesLoading && categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Button 
-                  variant={selectedCategory === undefined ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleCategoryFilter(undefined)}
-                >
-                  All Subjects
-                </Button>
-                {categories.map(category => (
-                  <Button 
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleCategoryFilter(category.id)}
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-            )}
-            
-            <SubjectList 
-              academicYearId={currentAcademicYear.id}
-              categoryId={selectedCategory}
-            />
+            <VerticalSubjectManager academicYearId={currentAcademicYear.id} />
           </TabsContent>
           
-          <TabsContent value="categories" className="space-y-4">
+          <TabsContent value="categories">
             <SubjectCategoryList />
           </TabsContent>
         </Tabs>

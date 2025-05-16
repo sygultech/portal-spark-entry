@@ -40,6 +40,9 @@ import { SubjectFormDialog } from "./SubjectFormDialog";
 import { useToast } from "@/hooks/use-toast";
 import AssignTeachersDialog from "./AssignTeachersDialog";
 import TimeSlotDialog from "./TimeSlotDialog";
+import { useBatchSubjects } from "@/hooks/useBatchSubjects";
+import { assignSubjectToBatch } from "@/services/subjectService";
+import { Subject } from "@/types/academic";
 
 interface SubjectListProps {
   academicYearId: string;
@@ -50,7 +53,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
   const { subjects, isLoading, createSubject, updateSubject, deleteSubject } = useSubjects(academicYearId, categoryId);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [isAssignTeacherDialogOpen, setIsAssignTeacherDialogOpen] = useState(false);
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -60,42 +63,83 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
     setIsFormOpen(true);
   };
 
-  const handleEditClick = (subject: any) => {
+  const handleEditClick = (subject: Subject) => {
     setSelectedSubject(subject);
     setIsFormOpen(true);
   };
 
-  const handleDeleteClick = (subject: any) => {
+  const handleDeleteClick = (subject: Subject) => {
     setSelectedSubject(subject);
     setIsDeleteDialogOpen(true);
   };
   
-  const handleTeachersClick = (subject: any) => {
+  const handleTeachersClick = (subject: Subject) => {
     setSelectedSubject(subject);
     setIsAssignTeacherDialogOpen(true);
   };
   
-  const handleTimeSlotClick = (subject: any) => {
+  const handleTimeSlotClick = (subject: Subject) => {
     setSelectedSubject(subject);
     setIsTimeSlotDialogOpen(true);
   };
 
-  const handleFormSubmit = (data: any) => {
-    if (selectedSubject) {
-      updateSubject({ id: selectedSubject.id, ...data });
-    } else {
-      createSubject({
-        ...data,
-        academic_year_id: academicYearId
+  const handleFormSubmit = async (data: any) => {
+    try {
+      const { batch_assignments, ...subjectData } = data;
+      
+      if (selectedSubject) {
+        // Update existing subject
+        await updateSubject({ id: selectedSubject.id, ...subjectData });
+        
+        // Handle batch assignments if provided
+        if (batch_assignments?.length > 0) {
+          for (const assignment of batch_assignments) {
+            await assignSubjectToBatch(assignment.batch_id, selectedSubject.id, assignment.is_mandatory);
+          }
+        }
+      } else {
+        // Create new subject
+        const newSubject = await createSubject({
+          ...subjectData,
+          academic_year_id: academicYearId
+        });
+        
+        // Assign to selected batches
+        if (batch_assignments?.length > 0) {
+          for (const assignment of batch_assignments) {
+            await assignSubjectToBatch(assignment.batch_id, newSubject.id, assignment.is_mandatory);
+          }
+        }
+      }
+      
+      setIsFormOpen(false);
+      toast({
+        title: "Success",
+        description: `Subject ${selectedSubject ? "updated" : "created"} successfully`
+      });
+    } catch (error) {
+      console.error("Error handling subject form:", error);
+      toast({
+        title: "Error",
+        description: `Failed to ${selectedSubject ? "update" : "create"} subject`,
+        variant: "destructive"
       });
     }
-    setIsFormOpen(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedSubject) {
-      deleteSubject(selectedSubject.id);
-      setIsDeleteDialogOpen(false);
+      try {
+        await deleteSubject(selectedSubject.id);
+        setIsDeleteDialogOpen(false);
+      } catch (error) {
+        console.error("Error deleting subject:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete subject",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -209,6 +253,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleFormSubmit}
         subject={selectedSubject}
+        academicYearId={academicYearId}
       />
 
       {selectedSubject && (

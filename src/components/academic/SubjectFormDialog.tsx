@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,11 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface SubjectFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  academicYearId: string;
   subject?: {
     id: string;
     name: string;
@@ -56,7 +57,8 @@ export const SubjectFormDialog = ({
   isOpen,
   onClose,
   onSubmit,
-  subject
+  subject,
+  academicYearId
 }: SubjectFormDialogProps) => {
   const { profile } = useAuth();
   const { categories } = useSubjectCategories();
@@ -71,7 +73,7 @@ export const SubjectFormDialog = ({
       grading_type: "",
       max_marks: undefined as number | undefined,
       weightage: undefined as number | undefined,
-      school_id: profile?.school_id || ""
+      is_mandatory: true
     }
   });
   
@@ -86,7 +88,7 @@ export const SubjectFormDialog = ({
         grading_type: subject.grading_type || "",
         max_marks: subject.max_marks,
         weightage: subject.weightage,
-        school_id: profile?.school_id || ""
+        is_mandatory: true
       });
     } else {
       form.reset({
@@ -98,14 +100,14 @@ export const SubjectFormDialog = ({
         grading_type: "",
         max_marks: undefined,
         weightage: undefined,
-        school_id: profile?.school_id || ""
+        is_mandatory: true
       });
     }
-  }, [subject, form, profile?.school_id]);
+  }, [subject, form]);
   
   const subjectTypes = [
-    { value: "core", label: "Core" },
-    { value: "elective", label: "Elective" },
+    { value: "theory", label: "Theory" },
+    { value: "practical", label: "Practical" },
     { value: "activity-based", label: "Activity-Based" },
     { value: "language", label: "Language" },
     { value: "other", label: "Other" }
@@ -136,73 +138,86 @@ export const SubjectFormDialog = ({
         <DialogHeader>
           <DialogTitle>{subject ? "Edit Subject" : "Add Subject"}</DialogTitle>
           <DialogDescription>
-            {subject ? "Update subject details" : "Create a new subject with details"}
+            {subject ? "Update subject details" : "Create a new subject"}
           </DialogDescription>
         </DialogHeader>
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                rules={{ required: "Subject name is required" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Mathematics, Physics" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. MATH101, PHY201" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
             <FormField
               control={form.control}
-              name="description"
+              name="name"
+              rules={{ required: "Name is required" }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Describe this subject" {...field} />
+                    <Input placeholder="e.g. Mathematics" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. MATH101" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    A unique code to identify this subject (optional)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter a description of the subject"
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
                         {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                          <SelectItem
+                            key={category.id}
+                            value={category.id}
+                          >
+                            {category.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -210,49 +225,66 @@ export const SubjectFormDialog = ({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="subject_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subject Type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <FormLabel>Subject Nature</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select subject type" />
+                          <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
                         {subjectTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                          <SelectItem
+                            key={type.value}
+                            value={type.value}
+                          >
+                            {type.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription>
+                      The nature or method of teaching this subject
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="grading_type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Grading Type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select grading type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
                         {gradingTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                          <SelectItem
+                            key={type.value}
+                            value={type.value}
+                          >
+                            {type.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -260,7 +292,7 @@ export const SubjectFormDialog = ({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="max_marks"
@@ -268,44 +300,40 @@ export const SubjectFormDialog = ({
                   <FormItem>
                     <FormLabel>Maximum Marks</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="e.g. 100" 
+                      <Input
+                        type="number"
+                        placeholder="e.g. 100"
                         {...field}
-                        value={field.value === undefined ? "" : field.value}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="weightage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Weightage (%)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0"
-                        max="100"
-                        placeholder="e.g. 50" 
-                        {...field}
-                        value={field.value === undefined ? "" : field.value}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Importance in evaluation (0-100)
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="is_mandatory"
+              render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Make subject mandatory
+                    </FormLabel>
+                    <FormDescription>
+                      If checked, students must complete this subject to progress. If unchecked, this will be an elective subject.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
             
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={onClose}>

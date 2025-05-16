@@ -1,4 +1,3 @@
-
 import { Json } from "@/integrations/supabase/types";
 
 // Basic types for academic features
@@ -16,7 +15,15 @@ export interface Subject {
   school_id: string;
   created_at: string;
   updated_at: string;
-  category?: SubjectCategory;
+  category?: {
+    id: string;
+    name: string;
+  };
+  batch_assignments?: Array<{
+    id: string;
+    batch_id: string;
+    is_mandatory: boolean;
+  }>;
 }
 
 export interface SubjectCategory {
