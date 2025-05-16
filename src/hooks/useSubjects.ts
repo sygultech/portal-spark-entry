@@ -80,8 +80,6 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       description?: string;
       category_id?: string;
       subject_type?: string;
-      grading_type?: string;
-      max_marks?: number;
       weightage?: number;
       academic_year_id: string;
       school_id: string;
@@ -102,8 +100,6 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
           description: subjectData.description,
           category_id: subjectData.category_id,
           subject_type: subjectData.subject_type,
-          grading_type: subjectData.grading_type,
-          max_marks: subjectData.max_marks,
           weightage: subjectData.weightage,
           academic_year_id: subjectData.academic_year_id,
           school_id: subjectData.school_id

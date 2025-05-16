@@ -541,9 +541,7 @@ export type Database = {
           code: string | null
           created_at: string
           description: string | null
-          grading_type: string | null
           id: string
-          max_marks: number | null
           name: string
           school_id: string
           subject_type: string | null
@@ -556,9 +554,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           description?: string | null
-          grading_type?: string | null
           id?: string
-          max_marks?: number | null
           name: string
           school_id: string
           subject_type?: string | null
@@ -571,9 +567,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           description?: string | null
-          grading_type?: string | null
           id?: string
-          max_marks?: number | null
           name?: string
           school_id?: string
           subject_type?: string | null

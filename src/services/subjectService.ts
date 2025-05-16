@@ -117,8 +117,6 @@ export async function createSubject(subject: {
   description?: string,
   category_id?: string,
   subject_type?: string,
-  grading_type?: string,
-  max_marks?: number,
   weightage?: number,
   academic_year_id: string,
   school_id: string

@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,8 +44,6 @@ export interface SubjectFormDialogProps {
     description?: string;
     category_id?: string;
     subject_type?: string;
-    grading_type?: string;
-    max_marks?: number;
     weightage?: number;
     category?: {
       id: string;
@@ -70,8 +69,6 @@ export const SubjectFormDialog = ({
       description: "",
       category_id: "",
       subject_type: "",
-      grading_type: "",
-      max_marks: undefined as number | undefined,
       weightage: undefined as number | undefined,
       is_mandatory: true
     }
@@ -85,8 +82,6 @@ export const SubjectFormDialog = ({
         description: subject.description || "",
         category_id: subject.category_id || subject.category?.id || "",
         subject_type: subject.subject_type || "",
-        grading_type: subject.grading_type || "",
-        max_marks: subject.max_marks,
         weightage: subject.weightage,
         is_mandatory: true
       });
@@ -97,8 +92,6 @@ export const SubjectFormDialog = ({
         description: "",
         category_id: "",
         subject_type: "",
-        grading_type: "",
-        max_marks: undefined,
         weightage: undefined,
         is_mandatory: true
       });
@@ -112,19 +105,9 @@ export const SubjectFormDialog = ({
     { value: "language", label: "Language" },
     { value: "other", label: "Other" }
   ];
-  
-  const gradingTypes = [
-    { value: "grade", label: "Grade Only" },
-    { value: "marks", label: "Marks Only" },
-    { value: "both", label: "Both Grade & Marks" }
-  ];
 
   const handleSubmit = (data: any) => {
     // Convert numeric strings to numbers
-    if (data.max_marks) {
-      data.max_marks = Number(data.max_marks);
-    }
-    
     if (data.weightage) {
       data.weightage = Number(data.weightage);
     }
@@ -211,14 +194,18 @@ export const SubjectFormDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem
-                            key={category.id}
-                            value={category.id}
-                          >
-                            {category.name}
-                          </SelectItem>
-                        ))}
+                        {categories.length > 0 ? (
+                          categories.map((category) => (
+                            <SelectItem
+                              key={category.id}
+                              value={category.id}
+                            >
+                              {category.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none">No categories available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -261,56 +248,26 @@ export const SubjectFormDialog = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="grading_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Grading Type</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select grading type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {gradingTypes.map((type) => (
-                          <SelectItem
-                            key={type.value}
-                            value={type.value}
-                          >
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="max_marks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Marks</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g. 100"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="weightage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weightage</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g. 100"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    The weightage of this subject in overall grade calculation (optional)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
