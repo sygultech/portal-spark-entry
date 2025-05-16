@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, BookOpen, Settings } from "lucide-react";
+import { Users, BookOpen, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const SchoolAdmin = () => {
@@ -23,12 +23,6 @@ const SchoolAdmin = () => {
   }
 
   const modules = [
-    {
-      title: "Academic Management",
-      description: "Manage academic years, courses, subjects, and grading",
-      icon: Calendar,
-      href: "/academic",
-    },
     {
       title: "Student Management",
       description: "Manage students, admissions, and student records",

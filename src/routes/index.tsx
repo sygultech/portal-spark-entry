@@ -1,3 +1,4 @@
+
 import {
   Routes as RouterRoutes,
   Route,
@@ -16,7 +17,6 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 import SignUp from "@/pages/SignUp";
-import Academic from "@/pages/Academic";
 
 const AppRoutes = () => {
   return (
@@ -90,16 +90,6 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>
               <SchoolAdminDashboard />
-            </AppLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/academic" 
-        element={
-          <ProtectedRoute requiredRoles={["school_admin", "super_admin"]}>
-            <AppLayout>
-              <Academic />
             </AppLayout>
           </ProtectedRoute>
         } 
