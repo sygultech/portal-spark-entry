@@ -123,6 +123,7 @@ const TimeSlotDialog = ({
   };
   
   const canAddTimeSlot = selectedTeacher && dayOfWeek && startTime && endTime;
+  const hasTeacherAssignments = subjectTeachers.length > 0;
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -142,7 +143,7 @@ const TimeSlotDialog = ({
                 <SelectValue placeholder="Choose a teacher assignment" />
               </SelectTrigger>
               <SelectContent>
-                {subjectTeachers.length === 0 ? (
+                {!hasTeacherAssignments ? (
                   <SelectItem value="no-assignments" disabled>No teacher assignments available</SelectItem>
                 ) : (
                   subjectTeachers.map((assignment) => (
@@ -156,7 +157,7 @@ const TimeSlotDialog = ({
                 )}
               </SelectContent>
             </Select>
-            {subjectTeachers.length === 0 && !teachersLoading && (
+            {!hasTeacherAssignments && !teachersLoading && (
               <p className="text-sm text-muted-foreground mt-1">
                 No teacher assignments found. Please assign teachers to this subject first.
               </p>
