@@ -200,7 +200,7 @@ export const SubjectFormDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                         ))}
@@ -224,7 +224,7 @@ export const SubjectFormDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {subjectTypes.map((type) => (
                           <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                         ))}
@@ -250,7 +250,7 @@ export const SubjectFormDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {gradingTypes.map((type) => (
                           <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                         ))}
