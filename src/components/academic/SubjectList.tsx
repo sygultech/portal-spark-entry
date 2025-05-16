@@ -202,7 +202,6 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
                     <TableHead>Code</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Grading</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -216,14 +215,6 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
                       </TableCell>
                       <TableCell>
                         {getSubjectTypeBadge(subject.subject_type)}
-                      </TableCell>
-                      <TableCell>
-                        {subject.grading_type ? (
-                          <Badge variant="outline">
-                            {subject.grading_type}
-                            {subject.max_marks ? ` (${subject.max_marks})` : ''}
-                          </Badge>
-                        ) : "-"}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button variant="ghost" size="icon" onClick={() => handleTeachersClick(subject)} title="Assign Teachers">

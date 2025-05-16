@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { GradingSystem, GradeThreshold } from "@/types/academic";
@@ -378,7 +377,7 @@ export const GradingSystemDialog = ({
                           name: "",
                           min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
                           max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10),
-                          grade_point: Math.max(0, Number((lastThreshold?.grade_point || 4.0) - 0.3).toFixed(1))
+                          grade_point: Math.max(0, Number((lastThreshold?.grade_point || 4.0) - 0.3))
                         };
                       } else {
                         newThreshold = {
