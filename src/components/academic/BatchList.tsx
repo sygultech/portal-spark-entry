@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Batch } from "@/types/academic";
 import { Plus, Edit, Trash, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface BatchListProps {
   batches: Batch[];
@@ -10,12 +11,26 @@ interface BatchListProps {
 }
 
 const BatchList = ({ batches, courseId, academicYearId }: BatchListProps) => {
+  const { toast } = useToast();
+  
+  const handleAction = (action: string) => {
+    toast({
+      title: "Feature Coming Soon",
+      description: `${action} functionality will be available soon.`
+    });
+  };
+  
   return (
     <div className="space-y-2">
       {batches.length === 0 ? (
         <div className="text-center py-4">
           <p className="text-muted-foreground text-sm">No batches created yet for this course</p>
-          <Button variant="outline" size="sm" className="mt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2"
+            onClick={() => handleAction("Add Batch")}
+          >
             <Plus className="h-4 w-4 mr-1" /> Add Batch
           </Button>
         </div>
@@ -38,13 +53,26 @@ const BatchList = ({ batches, courseId, academicYearId }: BatchListProps) => {
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => handleAction("Manage Students")}
+                >
                   <Users className="h-4 w-4 mr-1" /> Students
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => handleAction("Edit Batch")}
+                >
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" className="text-destructive">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="text-destructive"
+                  onClick={() => handleAction("Delete Batch")}
+                >
                   <Trash className="h-4 w-4" />
                 </Button>
               </div>

@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -12,17 +11,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, FileText } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { GradingSystem } from "@/types/academic";
 
 const GradingSystemsSection = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   
-  // Fetch grading systems
-  const { data: gradingSystems = [], isLoading } = useQuery({
+  // Mock empty grading systems array
+  const mockGradingSystems: GradingSystem[] = [];
+
+  // Use mock data
+  const { data: gradingSystems = mockGradingSystems, isLoading } = useQuery({
     queryKey: ['gradingSystems', profile?.school_id],
     queryFn: async () => {
+      // Return mock data
+      return mockGradingSystems;
+      
+      /* This will be uncommented once database tables are created
       if (!profile?.school_id) throw new Error("School ID is required");
       
       const { data, error } = await supabase
@@ -36,6 +41,7 @@ const GradingSystemsSection = () => {
         
       if (error) throw error;
       return data as GradingSystem[];
+      */
     },
     enabled: !!profile?.school_id
   });
@@ -59,7 +65,12 @@ const GradingSystemsSection = () => {
           <CardTitle>Grading Systems</CardTitle>
           <CardDescription>Configure custom grading scales for your school</CardDescription>
         </div>
-        <Button>
+        <Button onClick={() => {
+          toast({
+            title: "Feature Coming Soon",
+            description: "Create Grading System functionality will be available soon."
+          });
+        }}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Grading System
         </Button>
@@ -71,7 +82,12 @@ const GradingSystemsSection = () => {
           <p className="text-muted-foreground mt-2 max-w-md">
             Create custom grading systems for different courses and assessment types.
           </p>
-          <Button className="mt-4">
+          <Button className="mt-4" onClick={() => {
+            toast({
+              title: "Feature Coming Soon",
+              description: "Create Grading System functionality will be available soon."
+            });
+          }}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create First Grading System
           </Button>

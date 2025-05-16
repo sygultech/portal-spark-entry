@@ -1,26 +1,15 @@
 
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Card, 
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle,
-  CardFooter 
+  CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose
-} from "@/components/ui/dialog";
 import {
   Accordion,
   AccordionContent,
@@ -32,63 +21,91 @@ import { useToast } from "@/hooks/use-toast";
 import {
   PlusCircle,
   GraduationCap,
-  Edit,
-  Trash,
-  Users,
   BookOpen
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Course, Batch, AcademicYear } from "@/types/academic";
 import BatchList from "./BatchList";
 
 const CoursesSection = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
-  // Fetch academic years
-  const { data: academicYears = [] } = useQuery({
-    queryKey: ['academicYears', profile?.school_id],
-    queryFn: async () => {
-      if (!profile?.school_id) throw new Error("School ID is required");
-      
-      const { data, error } = await supabase
-        .from('academic_years')
-        .select('*')
-        .eq('school_id', profile.school_id)
-        .order('is_current', { ascending: false })
-        .order('start_date', { ascending: false });
-        
-      if (error) throw error;
-      return data as AcademicYear[];
+  // Mock academic years
+  const mockAcademicYears: AcademicYear[] = [
+    {
+      id: "1",
+      name: "Academic Year 2024-2025",
+      start_date: "2024-06-01",
+      end_date: "2025-04-30",
+      is_current: true,
+      is_locked: false,
+      school_id: profile?.school_id || "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
+
+  // Mock courses with batches
+  const mockCourses: (Course & { batches: Batch[] })[] = [
+    {
+      id: "1",
+      name: "Grade 1",
+      code: "G1",
+      academic_year_id: "1",
+      school_id: profile?.school_id || "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      batches: [
+        {
+          id: "1",
+          name: "Grade 1-A",
+          capacity: 30,
+          course_id: "1",
+          academic_year_id: "1",
+          school_id: profile?.school_id || "",
+          is_archived: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: "2",
+          name: "Grade 1-B",
+          capacity: 30,
+          course_id: "1",
+          academic_year_id: "1", 
+          school_id: profile?.school_id || "",
+          is_archived: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]
     },
+    {
+      id: "2",
+      name: "Grade 2",
+      code: "G2",
+      academic_year_id: "1",
+      school_id: profile?.school_id || "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      batches: []
+    }
+  ];
+  
+  // Use mock data for academicYears
+  const { data: academicYears = mockAcademicYears } = useQuery({
+    queryKey: ['academicYears', profile?.school_id],
+    queryFn: async () => mockAcademicYears,
     enabled: !!profile?.school_id
   });
 
   // Get current academic year
   const currentAcademicYear = academicYears.find(year => year.is_current) || academicYears[0];
 
-  // Fetch courses
-  const { data: courses = [], isLoading } = useQuery({
+  // Use mock data for courses
+  const { data: courses = mockCourses, isLoading } = useQuery({
     queryKey: ['courses', currentAcademicYear?.id, profile?.school_id],
-    queryFn: async () => {
-      if (!profile?.school_id || !currentAcademicYear?.id) {
-        return [];
-      }
-      
-      const { data, error } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          batches:batches(*)
-        `)
-        .eq('school_id', profile.school_id)
-        .eq('academic_year_id', currentAcademicYear.id)
-        .order('name');
-        
-      if (error) throw error;
-      return data as (Course & { batches: Batch[] })[];
-    },
+    queryFn: async () => mockCourses,
     enabled: !!profile?.school_id && !!currentAcademicYear?.id
   });
 
@@ -135,11 +152,26 @@ const CoursesSection = () => {
           </CardDescription>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={() => {
+              toast({
+                title: "Feature Coming Soon",
+                description: "Add Course functionality will be available soon."
+              });
+            }}
+          >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Course
           </Button>
-          <Button>
+          <Button
+            onClick={() => {
+              toast({
+                title: "Feature Coming Soon",
+                description: "Add Batch functionality will be available soon."
+              });
+            }}
+          >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Batch
           </Button>
@@ -153,7 +185,14 @@ const CoursesSection = () => {
             <p className="text-muted-foreground mt-2 max-w-md">
               You haven't created any courses for this academic year yet.
             </p>
-            <Button className="mt-4">
+            <Button className="mt-4"
+              onClick={() => {
+                toast({
+                  title: "Feature Coming Soon",
+                  description: "Create Course functionality will be available soon."
+                });
+              }}
+            >
               <PlusCircle className="mr-2 h-4 w-4" />
               Create First Course
             </Button>
