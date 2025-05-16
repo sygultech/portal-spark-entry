@@ -546,7 +546,6 @@ export type Database = {
           school_id: string
           subject_type: string | null
           updated_at: string
-          weightage: number | null
         }
         Insert: {
           academic_year_id: string
@@ -559,7 +558,6 @@ export type Database = {
           school_id: string
           subject_type?: string | null
           updated_at?: string
-          weightage?: number | null
         }
         Update: {
           academic_year_id?: string
@@ -572,7 +570,6 @@ export type Database = {
           school_id?: string
           subject_type?: string | null
           updated_at?: string
-          weightage?: number | null
         }
         Relationships: [
           {

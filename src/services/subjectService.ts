@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Subject, SubjectCategory } from '@/types/academic';
 
@@ -117,7 +118,6 @@ export async function createSubject(subject: {
   description?: string,
   category_id?: string,
   subject_type?: string,
-  weightage?: number,
   academic_year_id: string,
   school_id: string
 }) {

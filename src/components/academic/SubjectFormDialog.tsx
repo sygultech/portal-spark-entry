@@ -44,7 +44,6 @@ export interface SubjectFormDialogProps {
     description?: string;
     category_id?: string;
     subject_type?: string;
-    weightage?: number;
     category?: {
       id: string;
       name: string;
@@ -69,7 +68,6 @@ export const SubjectFormDialog = ({
       description: "",
       category_id: "",
       subject_type: "",
-      weightage: undefined as number | undefined,
       is_mandatory: true
     }
   });
@@ -82,7 +80,6 @@ export const SubjectFormDialog = ({
         description: subject.description || "",
         category_id: subject.category_id || subject.category?.id || "",
         subject_type: subject.subject_type || "",
-        weightage: subject.weightage,
         is_mandatory: true
       });
     } else {
@@ -92,7 +89,6 @@ export const SubjectFormDialog = ({
         description: "",
         category_id: "",
         subject_type: "",
-        weightage: undefined,
         is_mandatory: true
       });
     }
@@ -107,11 +103,6 @@ export const SubjectFormDialog = ({
   ];
 
   const handleSubmit = (data: any) => {
-    // Convert numeric strings to numbers
-    if (data.weightage) {
-      data.weightage = Number(data.weightage);
-    }
-    
     onSubmit(data);
   };
 
@@ -247,27 +238,6 @@ export const SubjectFormDialog = ({
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="weightage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Weightage</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 100"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    The weightage of this subject in overall grade calculation (optional)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

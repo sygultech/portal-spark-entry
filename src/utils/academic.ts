@@ -16,8 +16,8 @@ export const resolveGradingSystem = async (
   }
 
   // Then check batch level
-  if (batch.grading_system_id) {
-    return batch.grading_system || await fetchGradingSystem(batch.grading_system_id);
+  if (batch.grading_system) {
+    return batch.grading_system;
   }
 
   // Finally fall back to school default

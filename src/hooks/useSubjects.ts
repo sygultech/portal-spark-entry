@@ -80,7 +80,6 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       description?: string;
       category_id?: string;
       subject_type?: string;
-      weightage?: number;
       academic_year_id: string;
       school_id: string;
       batch_assignments?: Array<{
@@ -100,7 +99,6 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
           description: subjectData.description,
           category_id: subjectData.category_id,
           subject_type: subjectData.subject_type,
-          weightage: subjectData.weightage,
           academic_year_id: subjectData.academic_year_id,
           school_id: subjectData.school_id
         })
