@@ -1,6 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useSubjectCategories } from "@/hooks/useSubjectCategories";
 import { 
   Card, 
   CardContent, 
@@ -11,40 +13,35 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, BookOpen, Tag } from "lucide-react";
+import { BookOpen, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { AcademicYear, Subject, SubjectCategory } from "@/types/academic";
+import SubjectCategoryList from "./SubjectCategoryList";
+import SubjectList from "./SubjectList";
 
 const SubjectsSection = () => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("subjects");
   const { toast } = useToast();
-  
-  // Use mock academic years data to avoid querying non-existent table
-  const mockAcademicYears: AcademicYear[] = [
-    {
-      id: "1",
-      name: "2025-2026",
-      start_date: "2025-06-01",
-      end_date: "2026-04-30",
-      is_current: true,
-      is_locked: false,
-      school_id: profile?.school_id || "",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ];
-  
-  // Get current academic year
-  const currentAcademicYear = mockAcademicYears[0];
+  const { academicYears, isLoading: academicYearsLoading } = useAcademicYears();
+  const { categories, isLoading: categoriesLoading } = useSubjectCategories();
 
-  // Mock handler for button clicks
-  const handleAction = (action: string) => {
-    toast({
-      title: "Feature Coming Soon",
-      description: `${action} functionality will be available soon.`
-    });
-  };
+  // Get current academic year
+  const currentAcademicYear = academicYears.find(year => year.is_current);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+
+  if (academicYearsLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Subject Management</CardTitle>
+          <CardDescription>Manage subjects and categories</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-10 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!currentAcademicYear) {
     return (
@@ -66,6 +63,11 @@ const SubjectsSection = () => {
       </Card>
     );
   }
+  
+  // Handle category change
+  const handleCategoryFilter = (categoryId?: string) => {
+    setSelectedCategory(categoryId);
+  };
 
   return (
     <Card>
@@ -76,19 +78,6 @@ const SubjectsSection = () => {
             Managing for academic year: <Badge variant="outline" className="font-normal">{currentAcademicYear.name}</Badge>
           </CardDescription>
         </div>
-        <div className="flex gap-2">
-          {activeTab === "categories" ? (
-            <Button onClick={() => handleAction("Add Category")}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Category
-            </Button>
-          ) : (
-            <Button onClick={() => handleAction("Add Subject")}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Subject
-            </Button>
-          )}
-        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="subjects" onValueChange={setActiveTab}>
@@ -98,31 +87,37 @@ const SubjectsSection = () => {
           </TabsList>
           
           <TabsContent value="subjects" className="space-y-4">
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold">Subject Management</h3>
-              <p className="text-muted-foreground mt-2 max-w-md">
-                Add and manage subjects for different courses and batches.
-              </p>
-              <Button className="mt-4" onClick={() => handleAction("Create First Subject")}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create First Subject
-              </Button>
-            </div>
+            {/* Category filter */}
+            {!categoriesLoading && categories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button 
+                  variant={selectedCategory === undefined ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleCategoryFilter(undefined)}
+                >
+                  All Subjects
+                </Button>
+                {categories.map(category => (
+                  <Button 
+                    key={category.id}
+                    variant={selectedCategory === category.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleCategoryFilter(category.id)}
+                  >
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+            
+            <SubjectList 
+              academicYearId={currentAcademicYear.id}
+              categoryId={selectedCategory}
+            />
           </TabsContent>
           
           <TabsContent value="categories" className="space-y-4">
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <Tag className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold">Subject Categories</h3>
-              <p className="text-muted-foreground mt-2 max-w-md">
-                Organize subjects by creating categories.
-              </p>
-              <Button className="mt-4" onClick={() => handleAction("Create First Category")}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create First Category
-              </Button>
-            </div>
+            <SubjectCategoryList />
           </TabsContent>
         </Tabs>
       </CardContent>
