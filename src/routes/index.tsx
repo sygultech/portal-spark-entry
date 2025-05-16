@@ -18,6 +18,7 @@ import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 import SignUp from "@/pages/SignUp";
 import SchoolAdmin from "@/pages/SchoolAdmin";
+import Academic from "@/pages/Academic";
 
 const AppRoutes = () => {
   return (
@@ -91,6 +92,18 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>
               <SchoolAdmin />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Academic Routes */}
+      <Route 
+        path="/academic" 
+        element={
+          <ProtectedRoute requiredRoles={["school_admin"]}>
+            <AppLayout>
+              <Academic />
             </AppLayout>
           </ProtectedRoute>
         } 
