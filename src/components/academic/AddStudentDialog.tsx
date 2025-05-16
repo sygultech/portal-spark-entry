@@ -116,14 +116,18 @@ const AddStudentDialog = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableStudents.map((student) => (
-                        <SelectItem 
-                          key={student.id} 
-                          value={student.id || "unknown-id"}
-                        >
-                          {student.first_name || ''} {student.last_name || ''} ({student.email || 'no email'})
-                        </SelectItem>
-                      ))}
+                      {availableStudents.length === 0 ? (
+                        <SelectItem value="no-students" disabled>No available students</SelectItem>
+                      ) : (
+                        availableStudents.map((student) => (
+                          <SelectItem 
+                            key={student.id} 
+                            value={student.id || "unknown-id"}
+                          >
+                            {student.first_name || ''} {student.last_name || ''} ({student.email || 'no email'})
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -89,6 +89,11 @@ const AssignTeachersDialog = ({
       st => st.teacher_id === teacherId && st.batch_id === batchId
     );
   };
+
+  // Ensure we have teachers and batches to display
+  const availableTeachers = teachers.filter(teacher => teacher.role === 'teacher');
+  const hasTeachers = availableTeachers.length > 0;
+  const hasBatches = batches.length > 0;
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -108,13 +113,17 @@ const AssignTeachersDialog = ({
                 <SelectValue placeholder="Choose a teacher" />
               </SelectTrigger>
               <SelectContent>
-                {teachers
-                  .filter(teacher => teacher.role === 'teacher')
-                  .map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id || "unknown-id"}>
+                {!hasTeachers ? (
+                  <SelectItem value="no-teachers" disabled>No teachers available</SelectItem>
+                ) : (
+                  availableTeachers.map((teacher) => (
+                    <SelectItem 
+                      key={teacher.id} 
+                      value={teacher.id || "unknown-id"}>
                       {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.email})
                     </SelectItem>
-                  ))}
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -126,15 +135,19 @@ const AssignTeachersDialog = ({
                 <SelectValue placeholder="Choose a batch" />
               </SelectTrigger>
               <SelectContent>
-                {batches.map((batch) => (
-                  <SelectItem 
-                    key={batch.id} 
-                    value={batch.id || "unknown-id"}
-                    disabled={selectedTeacher ? isAlreadyAssigned(selectedTeacher, batch.id) : false}
-                  >
-                    {batch.name} {batch.code ? `(${batch.code})` : ''}
-                  </SelectItem>
-                ))}
+                {!hasBatches ? (
+                  <SelectItem value="no-batches" disabled>No batches available</SelectItem>
+                ) : (
+                  batches.map((batch) => (
+                    <SelectItem 
+                      key={batch.id} 
+                      value={batch.id || "unknown-id"}
+                      disabled={selectedTeacher ? isAlreadyAssigned(selectedTeacher, batch.id) : false}
+                    >
+                      {batch.name} {batch.code ? `(${batch.code})` : ''}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
