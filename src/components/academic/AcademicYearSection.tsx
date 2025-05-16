@@ -66,7 +66,7 @@ const AcademicYearSection = ({ onCurrentYearChange }: AcademicYearSectionProps) 
     toggleLockStatus({ id, isLocked: !isLocked });
   };
   
-  const handleSaveAcademicYear = (values: any) => {
+  const handleSaveAcademicYear = async (values: any) => {
     if (selectedYear) {
       updateAcademicYear({
         id: selectedYear.id,
@@ -81,7 +81,7 @@ const AcademicYearSection = ({ onCurrentYearChange }: AcademicYearSectionProps) 
     setIsDialogOpen(false);
   };
   
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedYear) {
       deleteAcademicYear(selectedYear.id);
       setIsDeleteDialogOpen(false);
@@ -191,7 +191,7 @@ const AcademicYearSection = ({ onCurrentYearChange }: AcademicYearSectionProps) 
       <AcademicYearFormDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        onSave={handleSaveAcademicYear}
+        onSubmit={handleSaveAcademicYear}
         academicYear={selectedYear}
       />
       
@@ -199,7 +199,7 @@ const AcademicYearSection = ({ onCurrentYearChange }: AcademicYearSectionProps) 
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleConfirmDelete}
-        academicYear={selectedYear}
+        yearName={selectedYear?.name || ""}
       />
     </Card>
   );
