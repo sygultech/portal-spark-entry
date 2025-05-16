@@ -25,8 +25,8 @@ const Academic = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("academic-years");
 
-  // Redirect if not school_admin
-  if (!isLoading && profile?.role !== "school_admin") {
+  // Redirect if not authorized
+  if (!isLoading && profile?.role !== "school_admin" && profile?.role !== "super_admin") {
     navigate("/");
     return null;
   }

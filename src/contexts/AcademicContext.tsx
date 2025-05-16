@@ -1,9 +1,9 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchAcademicYears } from '@/services/academicYearService';
-import { fetchAcademicSettings } from '@/services/academicSettingsService';
 import type { AcademicYear } from '@/types/academic';
+import { fetchAcademicYears } from '@/services/academicYearService';
+import { useToast } from '@/hooks/use-toast';
 
 interface AcademicContextType {
   currentAcademicYear: AcademicYear | null;
@@ -16,58 +16,45 @@ const AcademicContext = createContext<AcademicContextType | undefined>(undefined
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
-  const schoolId = profile?.school_id;
-  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const [currentAcademicYear, setCurrentAcademicYear] = useState<AcademicYear | null>(null);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch all academic years
-  const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['academicYears'],
-    queryFn: fetchAcademicYears,
-    enabled: !!schoolId
-  });
-  
-  // Fetch academic settings to get the default academic year
-  const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['academicSettings', schoolId],
-    queryFn: () => {
-      if (!schoolId) throw new Error("School ID is required");
-      return fetchAcademicSettings(schoolId);
-    },
-    enabled: !!schoolId
-  });
-  
-  // Set the current academic year based on default or active year
+  // Fetch academic years from the database
   useEffect(() => {
-    if (!yearsLoading && academicYears.length > 0) {
-      // If we have settings with a default year, use that
-      if (settings?.default_academic_year_id) {
-        const defaultYear = academicYears.find(y => y.id === settings.default_academic_year_id);
-        if (defaultYear) {
-          setCurrentAcademicYear(defaultYear);
-          return;
+    async function loadAcademicYears() {
+      if (profile?.school_id) {
+        try {
+          setIsLoading(true);
+          const data = await fetchAcademicYears(profile.school_id);
+          setAcademicYears(data);
+          
+          // Set current academic year to the active one, or the first one if none are active
+          const activeYear = data.find(y => y.is_active);
+          if (activeYear) {
+            setCurrentAcademicYear(activeYear);
+          } else if (data.length > 0) {
+            setCurrentAcademicYear(data[0]);
+          }
+        } catch (error) {
+          console.error("Error loading academic years:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load academic years. Please try again.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
         }
-      }
-      
-      // Otherwise, find an active year
-      const activeYear = academicYears.find(y => y.is_active);
-      if (activeYear) {
-        setCurrentAcademicYear(activeYear);
-        return;
-      }
-      
-      // If no active year, use the most recent one
-      const sortedYears = [...academicYears].sort(
-        (a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
-      );
-      if (sortedYears.length > 0) {
-        setCurrentAcademicYear(sortedYears[0]);
+      } else {
+        setIsLoading(false);
       }
     }
-  }, [academicYears, settings, yearsLoading]);
-  
-  const isLoading = yearsLoading || settingsLoading;
+    
+    loadAcademicYears();
+  }, [profile?.school_id, toast]);
   
   return (
     <AcademicContext.Provider 

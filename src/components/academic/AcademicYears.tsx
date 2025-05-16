@@ -1,16 +1,9 @@
+
 import { useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useAcademic } from "@/contexts/AcademicContext";
-import { useToast } from "@/hooks/use-toast";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
 import {
-  createAcademicYear,
-  updateAcademicYear,
-  deleteAcademicYear,
-  setActiveAcademicYear,
-  archiveAcademicYear,
-  cloneAcademicStructure
-} from '@/services/academicYearService';
-import { 
   Dialog, 
   DialogContent,
   DialogDescription, 
@@ -33,14 +26,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { useQueryClient } from '@tanstack/react-query';
 import { AcademicYear } from '@/types/academic';
 
 const AcademicYears = () => {
   const { profile } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { academicYears, isLoading, currentAcademicYear, setCurrentAcademicYear } = useAcademic();
+  const { currentAcademicYear, setCurrentAcademicYear } = useAcademic();
+  
+  const {
+    academicYears,
+    isLoading,
+    createAcademicYear,
+    updateAcademicYear,
+    deleteAcademicYear,
+    setActiveAcademicYear,
+    archiveAcademicYear,
+    cloneStructure,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    isActivating,
+    isArchiving,
+    isCloning
+  } = useAcademicYears();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
@@ -72,15 +79,10 @@ const AcademicYears = () => {
     
     try {
       if (!profile?.school_id) {
-        toast({
-          title: "Error",
-          description: "School ID not found",
-          variant: "destructive"
-        });
-        return;
+        throw new Error("School ID not found");
       }
       
-      const newYear = await createAcademicYear({
+      createAcademicYear({
         name: formData.name,
         start_date: formData.start_date,
         end_date: formData.end_date,
@@ -89,20 +91,10 @@ const AcademicYears = () => {
         is_archived: false
       });
       
-      toast({
-        title: "Academic Year Created",
-        description: `${newYear.name} has been created successfully.`
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["academicYears"] });
       setFormData({ name: "", start_date: "", end_date: "" });
       setIsCreateDialogOpen(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create academic year",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error("Error creating academic year:", error);
     }
   };
   
@@ -112,90 +104,48 @@ const AcademicYears = () => {
     try {
       if (!selectedYear) return;
       
-      const updatedYear = await updateAcademicYear(selectedYear.id, {
-        name: formData.name,
-        start_date: formData.start_date,
-        end_date: formData.end_date
+      updateAcademicYear({
+        id: selectedYear.id,
+        academicYear: {
+          name: formData.name,
+          start_date: formData.start_date,
+          end_date: formData.end_date
+        }
       });
       
-      toast({
-        title: "Academic Year Updated",
-        description: `${updatedYear.name} has been updated successfully.`
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["academicYears"] });
       setIsEditDialogOpen(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update academic year",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error("Error updating academic year:", error);
     }
   };
   
   const handleSetActive = async (yearId: string) => {
     try {
-      if (!profile?.school_id) return;
-      
-      const activeYear = await setActiveAcademicYear(yearId, profile.school_id);
-      
-      toast({
-        title: "Academic Year Activated",
-        description: `${activeYear.name} is now the active academic year.`
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["academicYears"] });
+      setActiveAcademicYear(yearId);
       
       // Find the activated year in the list and set it as current
       const foundYear = academicYears.find(y => y.id === yearId);
       if (foundYear) {
         setCurrentAcademicYear(foundYear);
       }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to activate academic year",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error("Error setting active academic year:", error);
     }
   };
   
   const handleArchive = async (yearId: string) => {
     try {
-      const archivedYear = await archiveAcademicYear(yearId);
-      
-      toast({
-        title: "Academic Year Archived",
-        description: `${archivedYear.name} has been archived.`
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["academicYears"] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to archive academic year",
-        variant: "destructive"
-      });
+      archiveAcademicYear(yearId);
+    } catch (error) {
+      console.error("Error archiving academic year:", error);
     }
   };
   
   const handleDelete = async (yearId: string) => {
     try {
-      await deleteAcademicYear(yearId);
-      
-      toast({
-        title: "Academic Year Deleted",
-        description: "The academic year has been deleted."
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["academicYears"] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete academic year",
-        variant: "destructive"
-      });
+      deleteAcademicYear(yearId);
+    } catch (error) {
+      console.error("Error deleting academic year:", error);
     }
   };
   
@@ -203,7 +153,7 @@ const AcademicYears = () => {
     e.preventDefault();
     
     try {
-      const result = await cloneAcademicStructure({
+      cloneStructure({
         source_year_id: cloneOptions.sourceYearId,
         target_year_id: cloneOptions.targetYearId,
         clone_courses: cloneOptions.cloneCourses,
@@ -213,31 +163,9 @@ const AcademicYears = () => {
         clone_electives: cloneOptions.cloneElectives
       });
       
-      toast({
-        title: "Academic Structure Cloned",
-        description: `Cloned: ${result.courses_cloned} courses, ${result.subjects_cloned} subjects, ${result.batches_cloned} batches.`
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["academicYears"] });
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
-      queryClient.invalidateQueries({ queryKey: ["subjects"] });
-      queryClient.invalidateQueries({ queryKey: ["batches"] });
-      
-      if (cloneOptions.cloneGrading) {
-        queryClient.invalidateQueries({ queryKey: ["gradingSystems"] });
-      }
-      
-      if (cloneOptions.cloneElectives) {
-        queryClient.invalidateQueries({ queryKey: ["electiveGroups"] });
-      }
-      
       setIsCloneDialogOpen(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to clone academic structure",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error("Error cloning academic structure:", error);
     }
   };
   
@@ -258,7 +186,7 @@ const AcademicYears = () => {
         <div className="flex gap-2">
           <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">Clone Structure</Button>
+              <Button variant="outline" disabled={isCloning}>Clone Structure</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
@@ -367,7 +295,9 @@ const AcademicYears = () => {
                 </div>
                 
                 <DialogFooter>
-                  <Button type="submit">Clone Structure</Button>
+                  <Button type="submit" disabled={isCloning}>
+                    {isCloning ? "Cloning..." : "Clone Structure"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -375,7 +305,7 @@ const AcademicYears = () => {
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>Create New Year</Button>
+              <Button disabled={isCreating}>Create New Year</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -421,7 +351,9 @@ const AcademicYears = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Create</Button>
+                  <Button type="submit" disabled={isCreating}>
+                    {isCreating ? "Creating..." : "Create"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -484,7 +416,7 @@ const AcademicYears = () => {
                           variant="outline" 
                           size="sm" 
                           onClick={() => openEditDialog(year)}
-                          disabled={year.is_archived}
+                          disabled={year.is_archived || isUpdating}
                         >
                           Edit
                         </Button>
@@ -493,6 +425,7 @@ const AcademicYears = () => {
                             variant="outline" 
                             size="sm"
                             onClick={() => handleSetActive(year.id)}
+                            disabled={isActivating}
                           >
                             Set Active
                           </Button>
@@ -502,6 +435,7 @@ const AcademicYears = () => {
                             variant="outline" 
                             size="sm"
                             onClick={() => handleArchive(year.id)}
+                            disabled={isArchiving}
                           >
                             Archive
                           </Button>
@@ -511,7 +445,7 @@ const AcademicYears = () => {
                           size="sm" 
                           className="text-destructive hover:bg-destructive/10"
                           onClick={() => handleDelete(year.id)}
-                          disabled={year.is_active}
+                          disabled={year.is_active || isDeleting}
                         >
                           Delete
                         </Button>
@@ -569,7 +503,9 @@ const AcademicYears = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">Update</Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? "Updating..." : "Update"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
