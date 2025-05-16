@@ -511,8 +511,8 @@ const CoursesAndBatchesSection = ({
       )}
       
       {/* Batch Details Dialog */}
-      {isBatchDetailsDialogOpen && selectedBatch && (
-        <BatchDetailsDialog
+      {selectedBatch && (
+        <BatchDetailsDialog  
           isOpen={isBatchDetailsDialogOpen}
           onClose={() => setIsBatchDetailsDialogOpen(false)}
           batch={selectedBatch}

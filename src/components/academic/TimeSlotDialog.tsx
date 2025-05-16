@@ -143,7 +143,7 @@ const TimeSlotDialog = ({
               </SelectTrigger>
               <SelectContent>
                 {subjectTeachers.map((assignment) => (
-                  <SelectItem key={assignment.id} value={assignment.id}>
+                  <SelectItem key={assignment.id} value={assignment.id || "unknown-id"}>
                     {assignment.teacher?.first_name || ''} {assignment.teacher?.last_name || ''} - {assignment.batch?.name || 'Unknown Batch'}
                   </SelectItem>
                 ))}

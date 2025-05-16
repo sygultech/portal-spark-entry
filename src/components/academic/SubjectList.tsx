@@ -168,7 +168,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
                       <TableCell className="font-medium">{subject.name}</TableCell>
                       <TableCell>{subject.code || "-"}</TableCell>
                       <TableCell>
-                        {subject.category ? subject.category.name : "-"}
+                        {subject.category?.name || "-"}
                       </TableCell>
                       <TableCell>
                         {getSubjectTypeBadge(subject.subject_type)}
