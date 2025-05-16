@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useBatchSubjects } from "@/hooks/useBatchSubjects";
@@ -170,36 +171,43 @@ const BatchSubjectTab = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {batchSubjects.map((batchSubject) => (
-                    <TableRow key={batchSubject.id}>
-                      <TableCell className="font-medium">
-                        {batchSubject.subject?.name || "Unknown Subject"}
-                      </TableCell>
-                      <TableCell>{batchSubject.subject?.code || "-"}</TableCell>
-                      <TableCell>
-                        {getSubjectTypeBadge(batchSubject.subject?.subject_type)}
-                      </TableCell>
-                      <TableCell>
-                        {batchSubject.subject?.category?.name || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Switch 
-                          checked={batchSubject.is_mandatory} 
-                          onCheckedChange={() => handleToggleMandatory(batchSubject.id, batchSubject.is_mandatory)}
-                          aria-label="Toggle mandatory"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleRemoveSubject(batchSubject.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {batchSubjects.map((batchSubject) => {
+                    // Get the category name safely
+                    const categoryName = batchSubject.subject?.category_id ? 
+                      subjects.find(s => s.id === batchSubject.subject?.id)?.category?.name || "-" :
+                      "-";
+                      
+                    return (
+                      <TableRow key={batchSubject.id}>
+                        <TableCell className="font-medium">
+                          {batchSubject.subject?.name || "Unknown Subject"}
+                        </TableCell>
+                        <TableCell>{batchSubject.subject?.code || "-"}</TableCell>
+                        <TableCell>
+                          {getSubjectTypeBadge(batchSubject.subject?.subject_type)}
+                        </TableCell>
+                        <TableCell>
+                          {categoryName}
+                        </TableCell>
+                        <TableCell>
+                          <Switch 
+                            checked={batchSubject.is_mandatory} 
+                            onCheckedChange={() => handleToggleMandatory(batchSubject.id, batchSubject.is_mandatory)}
+                            aria-label="Toggle mandatory"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleRemoveSubject(batchSubject.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </ScrollArea>

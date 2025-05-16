@@ -516,6 +516,7 @@ const CoursesAndBatchesSection = ({
           isOpen={isBatchDetailsDialogOpen}
           onClose={() => setIsBatchDetailsDialogOpen(false)}
           batch={selectedBatch}
+          academicYearId={academicYearId}
         />
       )}
       

@@ -155,6 +155,7 @@ const BatchDetailsDialog = ({
         onClose={() => setIsAddStudentDialogOpen(false)}
         onSubmit={handleAddStudent}
         existingStudentIds={students.map(s => s.student_id)}
+        batch={batch}
       />
     </Dialog>
   );

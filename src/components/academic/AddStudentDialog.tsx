@@ -33,9 +33,9 @@ import { Batch } from "@/types/academic";
 interface AddStudentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  batch: Batch;
-  onSuccess?: () => void;
+  onSubmit: (studentId: string, rollNumber?: string) => void;
   existingStudentIds: string[];
+  batch?: Batch;
 }
 
 interface AddStudentFormValues {
@@ -46,13 +46,12 @@ interface AddStudentFormValues {
 const AddStudentDialog = ({
   isOpen,
   onClose,
-  batch,
-  onSuccess,
-  existingStudentIds
+  onSubmit,
+  existingStudentIds,
+  batch
 }: AddStudentDialogProps) => {
   const [loading, setLoading] = useState(false);
   const { students, isLoading: isLoadingStudents } = useStudents();
-  const { addStudent } = useBatchStudents(batch?.id);
   
   // Filter out students already in the batch
   const availableStudents = students.filter(
@@ -70,15 +69,9 @@ const AddStudentDialog = ({
     try {
       setLoading(true);
       
-      await addStudent({
-        studentId: values.student_id,
-        rollNumber: values.roll_number || undefined
-      });
+      await onSubmit(values.student_id, values.roll_number || undefined);
       
       form.reset();
-      if (onSuccess) {
-        onSuccess();
-      }
       onClose();
     } catch (error) {
       console.error("Error adding student to batch:", error);
@@ -91,7 +84,7 @@ const AddStudentDialog = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Student to {batch?.name}</DialogTitle>
+          <DialogTitle>Add Student to {batch?.name || "Batch"}</DialogTitle>
           <DialogDescription>
             Add a student to this batch/section.
           </DialogDescription>
