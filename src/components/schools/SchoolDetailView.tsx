@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +43,7 @@ import {
   X,
 } from "lucide-react";
 
-import type { School } from "@/types/school";
+import type { School, SchoolModules } from "@/types/school";
 
 interface SchoolDetailViewProps {
   isOpen: boolean;
@@ -160,6 +159,24 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
   // Helper to get initials from name
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`;
+  };
+
+  // Helper function to safely check module availability
+  const isModuleEnabled = (moduleName: keyof SchoolModules): boolean => {
+    if (!school.modules) return false;
+    
+    // Handle the case where modules is a string (JSON string)
+    if (typeof school.modules === 'string') {
+      try {
+        const parsedModules = JSON.parse(school.modules);
+        return !!parsedModules[moduleName];
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    // Handle the case where modules is already an object
+    return !!(school.modules as SchoolModules)[moduleName];
   };
 
   return (
@@ -476,7 +493,7 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
                         <BookOpen className="h-5 w-5 mr-2 text-primary" />
                         <p>Library Module</p>
                       </div>
-                      {school.modules?.library ? (
+                      {isModuleEnabled('library') ? (
                         <Check className="h-5 w-5 text-green-500" />
                       ) : (
                         <X className="h-5 w-5 text-red-500" />
@@ -488,7 +505,7 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
                         <Bus className="h-5 w-5 mr-2 text-primary" />
                         <p>Transport Module</p>
                       </div>
-                      {school.modules?.transport ? (
+                      {isModuleEnabled('transport') ? (
                         <Check className="h-5 w-5 text-green-500" />
                       ) : (
                         <X className="h-5 w-5 text-red-500" />
@@ -500,7 +517,7 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
                         <FileText className="h-5 w-5 mr-2 text-primary" />
                         <p>Finance Module</p>
                       </div>
-                      {school.modules?.finance ? (
+                      {isModuleEnabled('finance') ? (
                         <Check className="h-5 w-5 text-green-500" />
                       ) : (
                         <X className="h-5 w-5 text-red-500" />
@@ -512,7 +529,7 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
                         <Package className="h-5 w-5 mr-2 text-primary" />
                         <p>Inventory Module</p>
                       </div>
-                      {school.modules?.inventory ? (
+                      {isModuleEnabled('inventory') ? (
                         <Check className="h-5 w-5 text-green-500" />
                       ) : (
                         <X className="h-5 w-5 text-red-500" />
@@ -524,7 +541,7 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
                         <Users2 className="h-5 w-5 mr-2 text-primary" />
                         <p>Alumni Module</p>
                       </div>
-                      {school.modules?.alumni ? (
+                      {isModuleEnabled('alumni') ? (
                         <Check className="h-5 w-5 text-green-500" />
                       ) : (
                         <X className="h-5 w-5 text-red-500" />
@@ -536,7 +553,7 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
                         <Video className="h-5 w-5 mr-2 text-primary" />
                         <p>Online Classes Module</p>
                       </div>
-                      {school.modules?.online_classes ? (
+                      {isModuleEnabled('online_classes') ? (
                         <Check className="h-5 w-5 text-green-500" />
                       ) : (
                         <X className="h-5 w-5 text-red-500" />

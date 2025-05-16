@@ -56,9 +56,15 @@ export interface SchoolFormData {
 }
 
 export interface SchoolModules {
-  students: boolean;
-  teachers: boolean;
-  finances: boolean;
-  communications: boolean;
-  facilities: boolean;
+  students?: boolean;
+  teachers?: boolean;
+  finances?: boolean;
+  communications?: boolean;
+  facilities?: boolean;
+  library?: boolean;
+  transport?: boolean;
+  finance?: boolean;
+  inventory?: boolean;
+  alumni?: boolean;
+  online_classes?: boolean;
 }
