@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AcademicYear, CloneStructureOptions, CloneStructureResult } from '@/types/academic';
 
@@ -108,18 +107,36 @@ export async function deleteAcademicYear(id: string) {
 
 export async function setActiveAcademicYear(id: string, schoolId: string) {
   try {
+    // First, deactivate all academic years for the school
+    await supabase
+      .from('academic_years')
+      .update({ is_active: false })
+      .eq('school_id', schoolId);
+
+    // Then activate the selected year
     const { data, error } = await supabase
-      .rpc('set_active_academic_year', {
-        year_id: id,
-        school_id: schoolId
-      });
+      .from('academic_years')
+      .update({ is_active: true })
+      .eq('id', id)
+      .eq('school_id', schoolId)  // Add explicit school check
+      .select(`
+        id,
+        name,
+        start_date,
+        end_date,
+        is_active,
+        is_archived,
+        school_id,
+        created_at,
+        updated_at
+      `)
+      .single();
     
     if (error) {
       throw error;
     }
     
-    // Fetch the updated academic year
-    return await fetchAcademicYear(id);
+    return data as AcademicYear;
   } catch (error) {
     console.error('Error setting active academic year:', error);
     throw error;
