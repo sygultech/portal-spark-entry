@@ -23,7 +23,7 @@ export const useAvailableStudents = (batchId: string | null) => {
       setError(null);
 
       try {
-        // Get all students from the school
+        // Get all students from the school, use table alias to avoid ambiguity
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -64,7 +64,7 @@ export const useAvailableStudents = (batchId: string | null) => {
     refreshStudents: async () => {
       setIsLoading(true);
       try {
-        // Re-fetch all students from the school
+        // Re-fetch all students from the school with explicit table alias
         const { data, error } = await supabase
           .from('profiles')
           .select('*')

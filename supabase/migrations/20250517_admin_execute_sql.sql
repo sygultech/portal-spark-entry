@@ -1,13 +1,17 @@
 
 -- Ensure the execute_admin_sql function exists
-CREATE OR REPLACE FUNCTION public.execute_admin_sql(sql text)
+CREATE OR REPLACE FUNCTION public.execute_admin_sql(sql text, params text[] DEFAULT NULL)
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  -- Execute the SQL statement
-  EXECUTE sql;
+  -- Execute the SQL statement with proper parameter handling
+  IF params IS NULL THEN
+    EXECUTE sql;
+  ELSE
+    EXECUTE sql USING params;
+  END IF;
 END;
 $$;
 
@@ -47,15 +51,15 @@ BEGIN
     -- Add RLS policies
     ALTER TABLE public.batch_students ENABLE ROW LEVEL SECURITY;
     
-    -- School admin policies
+    -- School admin policies with qualified column references
     CREATE POLICY "School admins can view student assignments" 
     ON public.batch_students FOR SELECT 
     TO authenticated
     USING (
       EXISTS (
-        SELECT 1 FROM public.batches 
-        WHERE public.batches.id = public.batch_students.batch_id 
-        AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+        SELECT 1 FROM public.batches b
+        WHERE b.id = batch_students.batch_id 
+        AND b.school_id = (SELECT p.school_id FROM profiles p WHERE p.id = auth.uid())
       )
     );
     
@@ -64,9 +68,9 @@ BEGIN
     TO authenticated
     WITH CHECK (
       EXISTS (
-        SELECT 1 FROM public.batches 
-        WHERE public.batches.id = public.batch_students.batch_id 
-        AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+        SELECT 1 FROM public.batches b
+        WHERE b.id = batch_students.batch_id 
+        AND b.school_id = (SELECT p.school_id FROM profiles p WHERE p.id = auth.uid())
       )
     );
     
@@ -75,9 +79,9 @@ BEGIN
     TO authenticated
     USING (
       EXISTS (
-        SELECT 1 FROM public.batches 
-        WHERE public.batches.id = public.batch_students.batch_id 
-        AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+        SELECT 1 FROM public.batches b
+        WHERE b.id = batch_students.batch_id 
+        AND b.school_id = (SELECT p.school_id FROM profiles p WHERE p.id = auth.uid())
       )
     );
     
@@ -86,9 +90,9 @@ BEGIN
     TO authenticated
     USING (
       EXISTS (
-        SELECT 1 FROM public.batches 
-        WHERE public.batches.id = public.batch_students.batch_id 
-        AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+        SELECT 1 FROM public.batches b
+        WHERE b.id = batch_students.batch_id 
+        AND b.school_id = (SELECT p.school_id FROM profiles p WHERE p.id = auth.uid())
       )
     );
   END IF;

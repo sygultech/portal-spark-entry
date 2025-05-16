@@ -13,6 +13,7 @@ export interface BatchStudent {
 // Get students assigned to a batch
 export const getStudentsByBatch = async (batchId: string) => {
   try {
+    // Use the RPC function to avoid SQL column ambiguity
     const { data, error } = await supabase.rpc('get_students_by_batch', {
       batch_id: batchId
     });
@@ -74,7 +75,7 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
       student_id: studentId
     }));
     
-    // Create a custom table if it doesn't exist
+    // Create a custom table if it doesn't exist using table-qualified columns
     await supabase.functions.invoke('ensure-tables', {
       body: {
         table: 'batch_students',
@@ -94,9 +95,9 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
           TO authenticated
           USING (
             EXISTS (
-              SELECT 1 FROM public.batches 
-              WHERE public.batches.id = public.batch_students.batch_id 
-              AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+              SELECT 1 FROM public.batches b
+              WHERE b.id = batch_students.batch_id 
+              AND b.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
             )
           );
           
@@ -105,9 +106,9 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
           TO authenticated
           WITH CHECK (
             EXISTS (
-              SELECT 1 FROM public.batches 
-              WHERE public.batches.id = public.batch_students.batch_id 
-              AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+              SELECT 1 FROM public.batches b
+              WHERE b.id = batch_students.batch_id 
+              AND b.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
             )
           );
           
@@ -116,9 +117,9 @@ export const assignStudentsToBatch = async (batchId: string, studentIds: string[
           TO authenticated
           USING (
             EXISTS (
-              SELECT 1 FROM public.batches 
-              WHERE public.batches.id = public.batch_students.batch_id 
-              AND public.batches.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+              SELECT 1 FROM public.batches b
+              WHERE b.id = batch_students.batch_id 
+              AND b.school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
             )
           );
         `

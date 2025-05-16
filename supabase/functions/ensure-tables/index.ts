@@ -49,12 +49,16 @@ serve(async (req) => {
 
     // Handle CRUD operations if specified
     if (operation === 'insert' && data) {
-      // Handle insert operation
+      // Explicitly qualify all column names to avoid ambiguity
+      const columns = Object.keys(data).map(k => `${table}.${k}`).join(', ')
+      const placeholders = Object.keys(data).map((_, i) => `$${i + 1}`).join(', ')
+      const sql = `INSERT INTO public.${table} (${columns}) 
+                  VALUES (${placeholders})
+                  ON CONFLICT (${table}.batch_id, ${table}.student_id) DO NOTHING
+                  RETURNING ${table}.id`
+
       const { error } = await supabaseClient.rpc('execute_admin_sql', {
-        sql: `INSERT INTO public.${table} (${Object.keys(data).join(', ')}) 
-              VALUES (${Object.keys(data).map((k, i) => `$${i + 1}`).join(', ')})
-              ON CONFLICT (batch_id, student_id) DO NOTHING
-              RETURNING id`,
+        sql,
         params: Object.values(data)
       })
 
@@ -65,14 +69,15 @@ serve(async (req) => {
         )
       }
     } else if (operation === 'delete' && conditions) {
-      // Handle delete operation
+      // Handle delete operation with proper column name qualification
       let sql = `DELETE FROM public.${table} WHERE `
       const whereConditions = []
       const params = []
       
       let paramIndex = 1
       for (const [key, value] of Object.entries(conditions)) {
-        whereConditions.push(`${key} = $${paramIndex}`)
+        // Explicitly qualify column names to avoid ambiguity
+        whereConditions.push(`${table}.${key} = $${paramIndex}`)
         params.push(value)
         paramIndex++
       }
