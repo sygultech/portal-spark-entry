@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Users, Settings, Building, MessageSquare, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 
 const SchoolAdmin = () => {
   const { profile, isLoading } = useAuth();
+  const { school } = useSchoolSettings();
 
   if (isLoading) {
     return (
@@ -27,37 +29,37 @@ const SchoolAdmin = () => {
       title: "Student Management",
       description: "Manage students, admissions, and student records",
       icon: Users,
-      href: "#", // To be implemented
+      href: "/students", // To be implemented
     },
     {
       title: "Teacher Management",
       description: "Manage teaching staff, assignments, and schedules",
       icon: Users,
-      href: "#", // To be implemented
+      href: "/teachers", // To be implemented
     },
     {
       title: "School Settings",
       description: "Configure school profile, preferences, and system settings",
       icon: Settings,
-      href: "#", // To be implemented
+      href: "/school-settings", // To be implemented
     },
     {
       title: "Facilities",
       description: "Manage school buildings, rooms and resources",
       icon: Building,
-      href: "#", // To be implemented
+      href: "/facilities", // To be implemented
     },
     {
       title: "Communication",
       description: "Messages, announcements and notifications",
       icon: MessageSquare,
-      href: "#", // To be implemented
+      href: "/communications", // To be implemented
     },
     {
       title: "Finance",
       description: "Manage school finances, fees and accounting",
       icon: Landmark,
-      href: "#", // To be implemented
+      href: "/finance", // To be implemented
     }
   ];
 

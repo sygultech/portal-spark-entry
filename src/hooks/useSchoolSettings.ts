@@ -6,8 +6,17 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export interface SchoolSettings {
   id: string;
-  school_id: string;
-  enable_audit_log: boolean;
+  name: string;
+  domain?: string;
+  contact_number?: string;
+  region?: string;
+  status?: string;
+  admin_email?: string;
+  timezone?: string;
+  plan?: string;
+  storage_limit?: number;
+  user_limit?: number;
+  modules?: any;
   created_at: string;
   updated_at: string;
 }
@@ -33,14 +42,14 @@ export function useSchoolSettings(schoolId?: string) {
         .maybeSingle();
         
       if (error) throw error;
-      return data;
+      return data as SchoolSettings;
     },
     enabled: !!effectiveSchoolId
   });
 
   // Update school settings
   const updateSchoolMutation = useMutation({
-    mutationFn: async ({ id, settings }: { id: string, settings: Partial<any> }) => {
+    mutationFn: async ({ id, settings }: { id: string, settings: Partial<SchoolSettings> }) => {
       const { data, error } = await supabase
         .from('schools')
         .update(settings)
@@ -49,7 +58,7 @@ export function useSchoolSettings(schoolId?: string) {
         .single();
         
       if (error) throw error;
-      return data;
+      return data as SchoolSettings;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school', effectiveSchoolId] });
