@@ -3,8 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Course } from '@/types/academic';
 
 export async function fetchCourses(academicYearId?: string) {
-  let query = supabase.from('courses')
-    .select('*, school:schools(*)'); // Change to "schools" for explicit join to avoid ambiguity
+  let query = supabase.from('courses').select('*');
   
   if (academicYearId) {
     query = query.eq('academic_year_id', academicYearId);
@@ -19,7 +18,7 @@ export async function fetchCourses(academicYearId?: string) {
 export async function fetchCourse(id: string) {
   const { data, error } = await supabase
     .from('courses')
-    .select('*, school:schools(*)')
+    .select('*')
     .eq('id', id)
     .single();
 
@@ -28,35 +27,14 @@ export async function fetchCourse(id: string) {
 }
 
 export async function createCourse(course: Omit<Course, 'id' | 'created_at' | 'updated_at'>) {
-  // Add proper error handling and logging to trace what's being sent
-  try {
-    console.log("Creating course with data:", course);
-    
-    // Explicitly structure the data to avoid any ambiguity
-    const courseData = {
-      name: course.name,
-      description: course.description,
-      school_id: course.school_id,
-      academic_year_id: course.academic_year_id
-    };
-    
-    const { data, error } = await supabase
-      .from('courses')
-      .insert(courseData)
-      .select('*, school:schools(*)')
-      .single();
+  const { data, error } = await supabase
+    .from('courses')
+    .insert(course)
+    .select()
+    .single();
 
-    if (error) {
-      console.error("Error creating course:", error);
-      throw error;
-    }
-    
-    console.log("Course created successfully:", data);
-    return data as Course;
-  } catch (error) {
-    console.error("Exception in createCourse:", error);
-    throw error;
-  }
+  if (error) throw error;
+  return data as Course;
 }
 
 export async function updateCourse(id: string, course: Partial<Course>) {
@@ -64,7 +42,7 @@ export async function updateCourse(id: string, course: Partial<Course>) {
     .from('courses')
     .update(course)
     .eq('id', id)
-    .select('*, school:schools(*)')
+    .select()
     .single();
 
   if (error) throw error;
@@ -108,7 +86,7 @@ export async function fetchCourseSubjects(courseId: string) {
     .from('course_subjects')
     .select(`
       *,
-      subject:subjects (*)
+      subject:subject_id (*)
     `)
     .eq('course_id', courseId);
 

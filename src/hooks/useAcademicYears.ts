@@ -23,10 +23,9 @@ export function useAcademicYears() {
 
   // Fetch all academic years
   const academicYearsQuery = useQuery({
-    queryKey: ['academicYears', schoolId],
-    queryFn: () => fetchAcademicYears(schoolId),
-    enabled: !!schoolId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryKey: ['academicYears'],
+    queryFn: fetchAcademicYears,
+    enabled: !!schoolId
   });
 
   // Fetch a single academic year
@@ -43,7 +42,7 @@ export function useAcademicYears() {
     mutationFn: (newAcademicYear: Omit<AcademicYear, 'id' | 'created_at' | 'updated_at'>) => 
       createAcademicYear(newAcademicYear),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
       toast({
         title: "Academic Year Created",
         description: "The academic year has been created successfully."
@@ -63,7 +62,7 @@ export function useAcademicYears() {
     mutationFn: ({ id, academicYear }: { id: string, academicYear: Partial<AcademicYear> }) => 
       updateAcademicYear(id, academicYear),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
       queryClient.invalidateQueries({ queryKey: ['academicYear', id] });
       toast({
         title: "Academic Year Updated",
@@ -83,7 +82,7 @@ export function useAcademicYears() {
   const deleteAcademicYearMutation = useMutation({
     mutationFn: (id: string) => deleteAcademicYear(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
       toast({
         title: "Academic Year Deleted",
         description: "The academic year has been deleted successfully."
@@ -104,15 +103,12 @@ export function useAcademicYears() {
       if (!schoolId) throw new Error("School ID is required");
       return setActiveAcademicYear(id, schoolId);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
-      // Update the context after setting active
-      if (data) {
-        toast({
-          title: "Academic Year Activated",
-          description: `"${data.name}" has been set as the active academic year.`
-        });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      toast({
+        title: "Academic Year Activated",
+        description: "The academic year has been set as active."
+      });
     },
     onError: (error: any) => {
       toast({
@@ -126,15 +122,13 @@ export function useAcademicYears() {
   // Archive an academic year
   const archiveAcademicYearMutation = useMutation({
     mutationFn: (id: string) => archiveAcademicYear(id),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
-      
-      if (data) {
-        toast({
-          title: "Academic Year Archived",
-          description: `"${data.name}" has been archived successfully.`
-        });
-      }
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      queryClient.invalidateQueries({ queryKey: ['academicYear', id] });
+      toast({
+        title: "Academic Year Archived",
+        description: "The academic year has been archived successfully."
+      });
     },
     onError: (error: any) => {
       toast({
@@ -149,7 +143,7 @@ export function useAcademicYears() {
   const cloneStructureMutation = useMutation({
     mutationFn: (options: CloneStructureOptions) => cloneAcademicStructure(options),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
       // Invalidate other potentially affected queries
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['batches'] });
@@ -159,7 +153,7 @@ export function useAcademicYears() {
       
       toast({
         title: "Academic Structure Cloned",
-        description: `Successfully cloned academic structure with ${data.courses_cloned} courses, ${data.batches_cloned} batches, ${data.subjects_cloned} subjects, ${data.grading_systems_cloned} grading systems, and ${data.elective_groups_cloned} elective groups.`
+        description: `Cloned ${data.courses_cloned} courses, ${data.subjects_cloned} subjects, ${data.batches_cloned} batches, ${data.grading_systems_cloned} grading systems, and ${data.elective_groups_cloned} elective groups.`
       });
     },
     onError: (error: any) => {
@@ -187,7 +181,6 @@ export function useAcademicYears() {
     isDeleting: deleteAcademicYearMutation.isPending,
     isActivating: setActiveAcademicYearMutation.isPending,
     isArchiving: archiveAcademicYearMutation.isPending,
-    isCloning: cloneStructureMutation.isPending,
-    refetch: academicYearsQuery.refetch
+    isCloning: cloneStructureMutation.isPending
   };
 }

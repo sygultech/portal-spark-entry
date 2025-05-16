@@ -1,3 +1,4 @@
+
 import {
   Routes as RouterRoutes,
   Route,
@@ -97,7 +98,7 @@ const AppRoutes = () => {
       <Route 
         path="/academic" 
         element={
-          <ProtectedRoute requiredRoles={["school_admin", "super_admin"]}>
+          <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>
               <Academic />
             </AppLayout>

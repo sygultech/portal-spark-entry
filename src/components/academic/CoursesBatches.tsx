@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAcademic } from "@/contexts/AcademicContext";
@@ -145,13 +146,6 @@ const CoursesBatches = () => {
           description: `${courseForm.name} has been updated successfully.`
         });
       } else {
-        // Log what we're sending to the API for debugging
-        console.log("Creating course with:", {
-          ...courseForm,
-          school_id: profile.school_id,
-          academic_year_id: currentAcademicYear.id,
-        });
-        
         await createCourse({
           ...courseForm,
           school_id: profile.school_id,
