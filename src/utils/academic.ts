@@ -1,3 +1,4 @@
+
 import { Subject, Batch, GradingSystem, SchoolSettings } from "@/types/academic";
 
 /**
@@ -10,8 +11,8 @@ export const resolveGradingSystem = async (
   schoolSettings: SchoolSettings
 ): Promise<GradingSystem | null> => {
   // First check subject level
-  if (subject.grading_system_id) {
-    return subject.grading_system || await fetchGradingSystem(subject.grading_system_id);
+  if (subject.grading_system) {
+    return subject.grading_system;
   }
 
   // Then check batch level

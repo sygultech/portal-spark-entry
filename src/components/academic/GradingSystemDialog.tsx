@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { GradingSystem, GradeThreshold } from "@/types/academic";
@@ -40,9 +41,8 @@ interface GradingSystemDialogProps {
   system?: GradingSystem | null;
 }
 
-interface GradeThresholdWithPoints extends GradeThreshold {
-  grade_point?: number;
-}
+// Use the same GradeThreshold type from academic.ts with the optional grade_point
+type GradeThresholdWithPoints = GradeThreshold;
 
 export const GradingSystemDialog = ({
   isOpen,
@@ -56,7 +56,7 @@ export const GradingSystemDialog = ({
       description: "",
       passing_score: 33,
       thresholds: [
-        { grade: "A+", min_score: 90, max_score: 100, grade_point: 4.0 }
+        { grade: "A+", name: "Excellent", min_score: 90, max_score: 100, grade_point: 4.0 }
       ]
     }
   });
@@ -81,32 +81,32 @@ export const GradingSystemDialog = ({
     switch (type) {
       case "marks":
         return [
-          { grade: "A+", min_score: 90, max_score: 100 },
-          { grade: "A", min_score: 80, max_score: 89 },
-          { grade: "B+", min_score: 70, max_score: 79 },
-          { grade: "B", min_score: 60, max_score: 69 },
-          { grade: "C", min_score: 50, max_score: 59 },
-          { grade: "D", min_score: 33, max_score: 49 },
-          { grade: "F", min_score: 0, max_score: 32 }
+          { grade: "A+", name: "Excellent", min_score: 90, max_score: 100 },
+          { grade: "A", name: "Very Good", min_score: 80, max_score: 89 },
+          { grade: "B+", name: "Good", min_score: 70, max_score: 79 },
+          { grade: "B", name: "Above Average", min_score: 60, max_score: 69 },
+          { grade: "C", name: "Average", min_score: 50, max_score: 59 },
+          { grade: "D", name: "Pass", min_score: 33, max_score: 49 },
+          { grade: "F", name: "Fail", min_score: 0, max_score: 32 }
         ];
       case "grades":
         return [
-          { grade: "A+", min_score: 0, max_score: 0 },
-          { grade: "A", min_score: 0, max_score: 0 },
-          { grade: "B+", min_score: 0, max_score: 0 },
-          { grade: "B", min_score: 0, max_score: 0 },
-          { grade: "C", min_score: 0, max_score: 0 },
-          { grade: "F", min_score: 0, max_score: 0 }
+          { grade: "A+", name: "Excellent", min_score: 0, max_score: 0 },
+          { grade: "A", name: "Very Good", min_score: 0, max_score: 0 },
+          { grade: "B+", name: "Good", min_score: 0, max_score: 0 },
+          { grade: "B", name: "Above Average", min_score: 0, max_score: 0 },
+          { grade: "C", name: "Average", min_score: 0, max_score: 0 },
+          { grade: "F", name: "Fail", min_score: 0, max_score: 0 }
         ];
       case "hybrid":
         return [
-          { grade: "A+", min_score: 90, max_score: 100, grade_point: 4.0 },
-          { grade: "A", min_score: 80, max_score: 89, grade_point: 3.7 },
-          { grade: "B+", min_score: 70, max_score: 79, grade_point: 3.3 },
-          { grade: "B", min_score: 60, max_score: 69, grade_point: 3.0 },
-          { grade: "C+", min_score: 50, max_score: 59, grade_point: 2.7 },
-          { grade: "C", min_score: 40, max_score: 49, grade_point: 2.0 },
-          { grade: "F", min_score: 0, max_score: 39, grade_point: 0.0 }
+          { grade: "A+", name: "Excellent", min_score: 90, max_score: 100, grade_point: 4.0 },
+          { grade: "A", name: "Very Good", min_score: 80, max_score: 89, grade_point: 3.7 },
+          { grade: "B+", name: "Good", min_score: 70, max_score: 79, grade_point: 3.3 },
+          { grade: "B", name: "Above Average", min_score: 60, max_score: 69, grade_point: 3.0 },
+          { grade: "C+", name: "Slightly Above Average", min_score: 50, max_score: 59, grade_point: 2.7 },
+          { grade: "C", name: "Average", min_score: 40, max_score: 49, grade_point: 2.0 },
+          { grade: "F", name: "Fail", min_score: 0, max_score: 39, grade_point: 0.0 }
         ];
       default:
         return [];
@@ -246,10 +246,10 @@ export const GradingSystemDialog = ({
                   {form.watch("thresholds").map((threshold, index) => (
                     <div key={index} className="grid gap-2 items-start" style={{ 
                       gridTemplateColumns: type === "hybrid" 
-                        ? "2fr 1fr 1fr 1fr 40px"
+                        ? "2fr 2fr 1fr 1fr 1fr 40px"
                         : type === "grades"
-                        ? "1fr 40px"
-                        : "2fr 1fr 1fr 40px"
+                        ? "1fr 2fr 40px"
+                        : "2fr 2fr 1fr 1fr 40px"
                     }}>
                       <FormField
                         control={form.control}
@@ -259,6 +259,20 @@ export const GradingSystemDialog = ({
                           <FormItem>
                             <FormControl>
                               <Input placeholder="Grade (e.g. A+)" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name={`thresholds.${index}.name`}
+                        rules={{ required: "Description is required" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="Description (e.g. Excellent)" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -349,20 +363,32 @@ export const GradingSystemDialog = ({
                     variant="outline"
                     onClick={() => {
                       const lastThreshold = form.watch("thresholds").slice(-1)[0];
-                      const newThreshold: GradeThresholdWithPoints = type === "grades"
-                        ? { grade: "", min_score: 0, max_score: 0 }
-                        : type === "hybrid"
-                        ? {
-                            grade: "",
-                            min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
-                            max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10),
-                            grade_point: Math.max(0, (lastThreshold?.grade_point || 4.0) - 0.3)
-                          }
-                        : {
-                            grade: "",
-                            min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
-                            max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10)
-                          };
+                      let newThreshold: GradeThresholdWithPoints;
+                      
+                      if (type === "grades") {
+                        newThreshold = { 
+                          grade: "", 
+                          name: "",
+                          min_score: 0, 
+                          max_score: 0 
+                        };
+                      } else if (type === "hybrid") {
+                        newThreshold = {
+                          grade: "",
+                          name: "",
+                          min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
+                          max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10),
+                          grade_point: Math.max(0, Number((lastThreshold?.grade_point || 4.0) - 0.3).toFixed(1))
+                        };
+                      } else {
+                        newThreshold = {
+                          grade: "",
+                          name: "",
+                          min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
+                          max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10)
+                        };
+                      }
+                      
                       form.setValue("thresholds", [...form.watch("thresholds"), newThreshold]);
                     }}
                     className="w-full"
@@ -387,4 +413,4 @@ export const GradingSystemDialog = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

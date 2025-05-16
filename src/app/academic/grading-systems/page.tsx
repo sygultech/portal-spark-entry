@@ -36,8 +36,8 @@ export default function GradingSystemsPage() {
       passing_score: 33,
       school_id: "1",
       thresholds: [
-        { grade: "A+", min_score: 90, max_score: 100 },
-        { grade: "A", min_score: 80, max_score: 89 },
+        { grade: "A+", name: "Excellent", min_score: 90, max_score: 100 },
+        { grade: "A", name: "Very Good", min_score: 80, max_score: 89 },
       ],
     },
     {
@@ -48,8 +48,8 @@ export default function GradingSystemsPage() {
       passing_score: 40,
       school_id: "1",
       thresholds: [
-        { grade: "O", min_score: 90, max_score: 100 },
-        { grade: "A+", min_score: 80, max_score: 89 },
+        { grade: "O", name: "Outstanding", min_score: 90, max_score: 100 },
+        { grade: "A+", name: "Excellent", min_score: 80, max_score: 89 },
       ],
     },
   ];
@@ -197,4 +197,4 @@ export default function GradingSystemsPage() {
       />
     </div>
   );
-} 
+}

@@ -1,3 +1,4 @@
+
 import { Json } from "@/integrations/supabase/types";
 
 // Basic types for academic features
@@ -90,6 +91,7 @@ export interface GradeThreshold {
   name: string;  // descriptive name for the grade
   min_score: number;
   max_score: number;
+  grade_point?: number; // Adding grade_point as optional property to support hybrid grading
   grading_system_id?: string;
   created_at?: string;
   updated_at?: string;
