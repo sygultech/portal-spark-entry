@@ -43,22 +43,7 @@ export type Database = {
           school_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "academic_audit_logs_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "academic_audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       academic_settings: {
         Row: {
@@ -99,13 +84,6 @@ export type Database = {
             referencedRelation: "academic_years"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "academic_settings_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: true
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
         ]
       }
       academic_years: {
@@ -142,12 +120,36 @@ export type Database = {
           start_date?: string
           updated_at?: string | null
         }
+        Relationships: []
+      }
+      batch_students: {
+        Row: {
+          batch_id: string
+          created_at: string | null
+          id: string
+          joined_date: string | null
+          student_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string | null
+          id?: string
+          joined_date?: string | null
+          student_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string | null
+          id?: string
+          joined_date?: string | null
+          student_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "academic_years_school_id_fkey"
-            columns: ["school_id"]
+            foreignKeyName: "batch_students_batch_id_fkey"
+            columns: ["batch_id"]
             isOneToOne: false
-            referencedRelation: "schools"
+            referencedRelation: "batches"
             referencedColumns: ["id"]
           },
         ]
@@ -187,13 +189,6 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "batch_subjects_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -247,24 +242,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "batches_class_teacher_id_fkey"
-            columns: ["class_teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "batches_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "batches_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -341,13 +322,6 @@ export type Database = {
             referencedRelation: "academic_years"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "courses_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
         ]
       }
       elective_groups: {
@@ -405,13 +379,6 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "elective_groups_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
         ]
       }
       elective_subjects: {
@@ -455,13 +422,6 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "elective_subjects_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -547,13 +507,6 @@ export type Database = {
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grading_systems_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -689,13 +642,6 @@ export type Database = {
             referencedRelation: "student_promotions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "student_promotion_details_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       student_promotions: {
@@ -754,20 +700,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "student_promotions_promoted_by_fkey"
-            columns: ["promoted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_promotions_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "student_promotions_to_academic_year_id_fkey"
             columns: ["to_academic_year_id"]
             isOneToOne: false
@@ -805,15 +737,7 @@ export type Database = {
           school_id?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "subject_categories_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subjects: {
         Row: {
@@ -874,13 +798,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "subject_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subjects_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]

@@ -38,7 +38,7 @@ serve(async (req) => {
     // Ensure the table exists
     if (schema) {
       // Execute schema creation commands
-      const { error } = await supabaseClient.rpc('admin_execute_sql', { sql: schema })
+      const { error } = await supabaseClient.rpc('execute_admin_sql', { sql: schema })
       if (error) {
         return new Response(
           JSON.stringify({ error: `Error creating schema: ${error.message}` }),
@@ -50,7 +50,7 @@ serve(async (req) => {
     // Handle CRUD operations if specified
     if (operation === 'insert' && data) {
       // Handle insert operation
-      const { error } = await supabaseClient.rpc('admin_execute_sql', {
+      const { error } = await supabaseClient.rpc('execute_admin_sql', {
         sql: `INSERT INTO public.${table} (${Object.keys(data).join(', ')}) 
               VALUES (${Object.keys(data).map((k, i) => `$${i + 1}`).join(', ')})
               ON CONFLICT (batch_id, student_id) DO NOTHING
@@ -79,7 +79,7 @@ serve(async (req) => {
       
       sql += whereConditions.join(' AND ')
       
-      const { error } = await supabaseClient.rpc('admin_execute_sql', {
+      const { error } = await supabaseClient.rpc('execute_admin_sql', {
         sql,
         params
       })
