@@ -4,7 +4,7 @@ import { Course } from '@/types/academic';
 
 export async function fetchCourses(academicYearId?: string) {
   let query = supabase.from('courses')
-    .select('*, school:school_id(*)'); // Use aliasing to avoid ambiguity
+    .select('*, school:schools(*)'); // Change to "schools" for explicit join to avoid ambiguity
   
   if (academicYearId) {
     query = query.eq('academic_year_id', academicYearId);
@@ -19,7 +19,7 @@ export async function fetchCourses(academicYearId?: string) {
 export async function fetchCourse(id: string) {
   const { data, error } = await supabase
     .from('courses')
-    .select('*, school:school_id(*)')
+    .select('*, school:schools(*)')
     .eq('id', id)
     .single();
 
@@ -43,7 +43,7 @@ export async function createCourse(course: Omit<Course, 'id' | 'created_at' | 'u
     const { data, error } = await supabase
       .from('courses')
       .insert(courseData)
-      .select('*, school:school_id(*)')
+      .select('*, school:schools(*)')
       .single();
 
     if (error) {
@@ -64,7 +64,7 @@ export async function updateCourse(id: string, course: Partial<Course>) {
     .from('courses')
     .update(course)
     .eq('id', id)
-    .select('*, school:school_id(*)')
+    .select('*, school:schools(*)')
     .single();
 
   if (error) throw error;
@@ -108,7 +108,7 @@ export async function fetchCourseSubjects(courseId: string) {
     .from('course_subjects')
     .select(`
       *,
-      subject:subject_id (*)
+      subject:subjects (*)
     `)
     .eq('course_id', courseId);
 
