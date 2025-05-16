@@ -42,6 +42,7 @@ const Academic = () => {
   const navigate = useNavigate();
   const { school } = useSchoolSettings();
   const [activeTab, setActiveTab] = useState("academic-years");
+  const [currentAcademicYearId, setCurrentAcademicYearId] = useState<string | null>(null);
 
   // Redirect if not school_admin
   useEffect(() => {
@@ -49,6 +50,11 @@ const Academic = () => {
       navigate("/");
     }
   }, [profile, isLoading, navigate]);
+
+  // Get current academic year ID from AcademicYearSection
+  const handleCurrentAcademicYearChange = (yearId: string | null) => {
+    setCurrentAcademicYearId(yearId);
+  };
 
   if (isLoading) {
     return (
@@ -149,8 +155,27 @@ const Academic = () => {
       </div>
 
       <div className="mt-8">
-        {activeTab === "academic-years" && <AcademicYearSection />}
-        {activeTab === "courses" && <CoursesSection />}
+        {activeTab === "academic-years" && <AcademicYearSection onCurrentYearChange={handleCurrentAcademicYearChange} />}
+        {activeTab === "courses" && currentAcademicYearId ? (
+          <CoursesSection academicYearId={currentAcademicYearId} />
+        ) : activeTab === "courses" ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Courses & Batches Management</CardTitle>
+              <CardDescription>Manage your school's courses and class batches</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold">No Active Academic Year Selected</h3>
+              <p className="text-muted-foreground mt-2 max-w-md">
+                Please select or create an active academic year from the Academic Years section before managing courses.
+              </p>
+              <Button variant="outline" className="mt-4" onClick={() => setActiveTab("academic-years")}>
+                Go to Academic Years
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {activeTab === "subjects" && <SubjectsSection />}
         {activeTab === "grading" && <GradingSystemsSection />}
         {activeTab === "timetables" && (
