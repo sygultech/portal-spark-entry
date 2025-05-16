@@ -1,6 +1,5 @@
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Card, 
@@ -13,34 +12,39 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, BookOpen, Tag } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { AcademicYear, Subject, SubjectCategory } from "@/types/academic";
 
 const SubjectsSection = () => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("subjects");
+  const { toast } = useToast();
   
-  // Fetch academic years
-  const { data: academicYears = [] } = useQuery({
-    queryKey: ['academicYears', profile?.school_id],
-    queryFn: async () => {
-      if (!profile?.school_id) throw new Error("School ID is required");
-      
-      const { data, error } = await supabase
-        .from('academic_years')
-        .select('*')
-        .eq('school_id', profile.school_id)
-        .order('is_current', { ascending: false })
-        .order('start_date', { ascending: false });
-        
-      if (error) throw error;
-      return data as AcademicYear[];
-    },
-    enabled: !!profile?.school_id
-  });
-
+  // Use mock academic years data to avoid querying non-existent table
+  const mockAcademicYears: AcademicYear[] = [
+    {
+      id: "1",
+      name: "2025-2026",
+      start_date: "2025-06-01",
+      end_date: "2026-04-30",
+      is_current: true,
+      is_locked: false,
+      school_id: profile?.school_id || "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
+  
   // Get current academic year
-  const currentAcademicYear = academicYears.find(year => year.is_current) || academicYears[0];
+  const currentAcademicYear = mockAcademicYears[0];
+
+  // Mock handler for button clicks
+  const handleAction = (action: string) => {
+    toast({
+      title: "Feature Coming Soon",
+      description: `${action} functionality will be available soon.`
+    });
+  };
 
   if (!currentAcademicYear) {
     return (
@@ -74,12 +78,12 @@ const SubjectsSection = () => {
         </div>
         <div className="flex gap-2">
           {activeTab === "categories" ? (
-            <Button>
+            <Button onClick={() => handleAction("Add Category")}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Category
             </Button>
           ) : (
-            <Button>
+            <Button onClick={() => handleAction("Add Subject")}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Subject
             </Button>
@@ -100,7 +104,7 @@ const SubjectsSection = () => {
               <p className="text-muted-foreground mt-2 max-w-md">
                 Add and manage subjects for different courses and batches.
               </p>
-              <Button className="mt-4">
+              <Button className="mt-4" onClick={() => handleAction("Create First Subject")}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create First Subject
               </Button>
@@ -114,7 +118,7 @@ const SubjectsSection = () => {
               <p className="text-muted-foreground mt-2 max-w-md">
                 Organize subjects by creating categories.
               </p>
-              <Button className="mt-4">
+              <Button className="mt-4" onClick={() => handleAction("Create First Category")}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create First Category
               </Button>
