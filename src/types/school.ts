@@ -25,6 +25,36 @@ export interface Teacher {
   updated_at: string;
 }
 
+export interface School {
+  id: string;
+  name: string;
+  admin_email?: string;
+  contact_number?: string;
+  domain?: string;
+  status?: 'active' | 'suspended' | 'expired' | 'pending';
+  created_at: string;
+  updated_at: string;
+  region?: string;
+  timezone?: string;
+  plan?: string;
+  storage_limit?: number;
+  user_limit?: number;
+  modules?: SchoolModules | Json;
+}
+
+export interface SchoolFormData {
+  id?: string;
+  name: string;
+  domain?: string;
+  admin_email: string;
+  admin_first_name: string;
+  admin_last_name: string;
+  admin_password?: string;
+  contact_number?: string;
+  region?: string;
+  status?: 'active' | 'suspended' | 'expired' | 'pending' | string;
+}
+
 export interface SchoolModules {
   students: boolean;
   teachers: boolean;
