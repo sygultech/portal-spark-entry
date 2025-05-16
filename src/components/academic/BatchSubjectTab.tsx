@@ -1,5 +1,4 @@
 
-// Ensure no SelectItem has an empty string value
 import React, { useState } from 'react';
 import { useBatchSubjects } from '@/hooks/useBatchSubjects';
 import { useSubjects } from '@/hooks/useSubjects';
@@ -26,7 +25,7 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
   academicYearId 
 }) => {
   const { subjects: allSubjects, isLoading: isLoadingSubjects } = useSubjects(academicYearId);
-  const { batchSubjects, addBatchSubject, removeBatchSubject, isLoading } = useBatchSubjects(batch.id);
+  const { batchSubjects, assignSubject, removeSubject, isLoading } = useBatchSubjects(batch.id);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const { toast } = useToast();
 
@@ -46,7 +45,7 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
     }
 
     try {
-      await addBatchSubject(selectedSubjectId);
+      await assignSubject({ subjectId: selectedSubjectId, isMandatory: true });
       setSelectedSubjectId("");
       toast({
         title: "Success",
@@ -64,7 +63,7 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
 
   const handleRemoveSubject = async (batchSubjectId: string) => {
     try {
-      await removeBatchSubject(batchSubjectId);
+      await removeSubject(batchSubjectId);
       toast({
         title: "Success",
         description: "Subject removed from the batch successfully",
@@ -94,7 +93,7 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
             </SelectTrigger>
             <SelectContent>
               {availableSubjects.length === 0 ? (
-                <SelectItem value="no-subjects" disabled>No available subjects</SelectItem>
+                <SelectItem value="no-subjects-available" disabled>No available subjects</SelectItem>
               ) : (
                 availableSubjects.map(subject => (
                   <SelectItem key={subject.id} value={subject.id || "unknown-id"}>
@@ -106,7 +105,7 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
           </Select>
           <Button 
             onClick={handleAddSubject} 
-            disabled={!selectedSubjectId || selectedSubjectId === "no-subjects"}
+            disabled={!selectedSubjectId || selectedSubjectId === "no-subjects-available"}
           >
             Add Subject
           </Button>
@@ -138,7 +137,7 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {subject?.code && `Code: ${subject.code}`}
-                      {(subject?.category_id && subject?.category?.name) && ` • Category: ${subject.category.name}`}
+                      {(subject?.category_id && subject?.category?.name) && ` • Category: ${subject.category?.name}`}
                       {subject?.subject_type && ` • Type: ${subject.subject_type}`}
                     </div>
                   </div>
