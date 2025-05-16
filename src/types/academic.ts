@@ -63,6 +63,15 @@ export interface Batch {
   updated_at: string;
 }
 
+export interface BatchStudent {
+  id: string;
+  batch_id: string;
+  student_id: string;
+  roll_number?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface GradingSystem {
   id: string;
   name: string;
@@ -80,15 +89,6 @@ export interface GradeScale {
   max_score: number;
   description?: string;
   grading_system_id: string;
-}
-
-export interface BatchStudent {
-  id: string;
-  batch_id: string;
-  student_id: string;
-  roll_number?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface Elective {
