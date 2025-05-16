@@ -175,7 +175,7 @@ const Academic = () => {
               </Button>
             </CardContent>
           </Card>
-        )}
+        ) : null}
         {activeTab === "subjects" && <SubjectsSection />}
         {activeTab === "grading" && <GradingSystemsSection />}
         {activeTab === "timetables" && (
