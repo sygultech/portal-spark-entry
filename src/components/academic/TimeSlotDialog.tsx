@@ -142,11 +142,18 @@ const TimeSlotDialog = ({
                 <SelectValue placeholder="Choose a teacher assignment" />
               </SelectTrigger>
               <SelectContent>
-                {subjectTeachers.map((assignment) => (
-                  <SelectItem key={assignment.id} value={assignment.id || "unknown-id"}>
-                    {assignment.teacher?.first_name || ''} {assignment.teacher?.last_name || ''} - {assignment.batch?.name || 'Unknown Batch'}
-                  </SelectItem>
-                ))}
+                {subjectTeachers.length === 0 ? (
+                  <SelectItem value="no-assignments" disabled>No teacher assignments available</SelectItem>
+                ) : (
+                  subjectTeachers.map((assignment) => (
+                    <SelectItem 
+                      key={assignment.id} 
+                      value={assignment.id || "unknown-id"}
+                    >
+                      {assignment.teacher?.first_name || ''} {assignment.teacher?.last_name || ''} - {assignment.batch?.name || 'Unknown Batch'}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             {subjectTeachers.length === 0 && !teachersLoading && (
