@@ -1,5 +1,6 @@
+'use client';
+
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { GradingSystem } from "@/types/academic";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,14 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Star, StarOff, Pencil, Trash2, Link } from "lucide-react";
-import { GradingSystemDialog } from "./GradingSystemDialog";
-import { AssignGradingSystemDialog } from "./AssignGradingSystemDialog";
+import { Plus, Star, StarOff, Pencil, Trash2 } from "lucide-react";
+import { GradingSystemDialog } from "@/components/academic/GradingSystemDialog";
 
-export const GradingSystemsSection = () => {
-  const { profile } = useAuth();
+export default function GradingSystemsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedSystem, setSelectedSystem] = useState<GradingSystem | null>(null);
 
   // Mock data - replace with actual API calls
@@ -78,11 +76,6 @@ export const GradingSystemsSection = () => {
     console.log("Set default system:", systemId);
   };
 
-  const handleAssignToBatches = (system: GradingSystem) => {
-    setSelectedSystem(system);
-    setIsAssignDialogOpen(true);
-  };
-
   const getTypeLabel = (type: 'marks' | 'grades' | 'hybrid') => {
     switch (type) {
       case 'marks':
@@ -95,7 +88,7 @@ export const GradingSystemsSection = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto py-6 space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -177,14 +170,6 @@ export const GradingSystemsSection = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleAssignToBatches(system)}
-                        title="Assign to Batches"
-                      >
-                        <Link className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
                         onClick={() => handleEditSystem(system)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -210,14 +195,6 @@ export const GradingSystemsSection = () => {
         onClose={() => setIsDialogOpen(false)}
         system={selectedSystem}
       />
-
-      <AssignGradingSystemDialog
-        isOpen={isAssignDialogOpen}
-        onClose={() => setIsAssignDialogOpen(false)}
-        system={selectedSystem}
-      />
     </div>
   );
-};
-
-export default GradingSystemsSection;
+} 

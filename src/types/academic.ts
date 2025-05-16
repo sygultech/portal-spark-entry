@@ -8,6 +8,7 @@ export interface Subject {
   description?: string;
   category_id?: string;
   subject_type?: string;
+  grading_system_id?: string;
   grading_type?: string;
   max_marks?: number;
   weightage?: number;
@@ -24,6 +25,7 @@ export interface Subject {
     batch_id: string;
     is_mandatory: boolean;
   }>;
+  grading_system?: GradingSystem;
 }
 
 export interface SubjectCategory {
@@ -67,11 +69,13 @@ export interface Batch {
   capacity?: number;
   course_id: string;
   class_teacher_id?: string;
+  grading_system_id?: string;
   academic_year_id: string;
   school_id: string;
   is_archived: boolean;
   created_at: string;
   updated_at: string;
+  grading_system?: GradingSystem;
 }
 
 export interface BatchStudent {
@@ -83,14 +87,27 @@ export interface BatchStudent {
   updated_at: string;
 }
 
+export interface GradeThreshold {
+  id?: string;
+  grade: string;
+  name: string;  // descriptive name for the grade
+  min_score: number;
+  max_score: number;
+  grading_system_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface GradingSystem {
   id: string;
   name: string;
+  type: 'marks' | 'grades' | 'hybrid';
   description?: string;
+  passing_score: number;
   school_id: string;
-  created_at: string;
-  updated_at: string;
-  grades?: GradeScale[];
+  thresholds: GradeThreshold[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface GradeScale {
@@ -186,6 +203,14 @@ export interface AcademicSettings {
   enable_audit_log: boolean;
   student_self_enroll: boolean;
   teacher_edit_subjects: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SchoolSettings {
+  id: string;
+  school_id: string;
+  default_grading_system_id?: string;
   created_at: string;
   updated_at: string;
 }
