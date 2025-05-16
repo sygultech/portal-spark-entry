@@ -96,7 +96,10 @@ const BatchSubjectTab: React.FC<BatchSubjectTabProps> = ({
                 <SelectItem value="no-subjects-available" disabled>No available subjects</SelectItem>
               ) : (
                 availableSubjects.map(subject => (
-                  <SelectItem key={subject.id} value={subject.id || "unknown-id"}>
+                  <SelectItem 
+                    key={subject.id} 
+                    value={subject.id || "unknown-id"}
+                  >
                     {subject.name} {subject.code ? `(${subject.code})` : ''}
                   </SelectItem>
                 ))

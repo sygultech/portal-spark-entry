@@ -35,7 +35,7 @@ export function useBatchSubjects(batchId?: string) {
     enabled: !!schoolId && !!batchId
   });
 
-  const assignSubjectToBatchMutation = useMutation({
+  const assignSubjectMutation = useMutation({
     mutationFn: async ({ subjectId, isMandatory = true }: { subjectId: string; isMandatory?: boolean }) => {
       if (!batchId) throw new Error("Batch ID is required");
       
@@ -71,7 +71,7 @@ export function useBatchSubjects(batchId?: string) {
     }
   });
 
-  const removeSubjectFromBatchMutation = useMutation({
+  const removeSubjectMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('batch_subjects')
@@ -133,8 +133,8 @@ export function useBatchSubjects(batchId?: string) {
     batchSubjects: batchSubjectsQuery.data || [],
     isLoading: batchSubjectsQuery.isLoading,
     error: batchSubjectsQuery.error,
-    assignSubject: assignSubjectToBatchMutation.mutate,
-    removeSubject: removeSubjectFromBatchMutation.mutate,
+    assignSubject: assignSubjectMutation.mutate,
+    removeSubject: removeSubjectMutation.mutate,
     updateBatchSubject: updateBatchSubjectMutation.mutate
   };
 }

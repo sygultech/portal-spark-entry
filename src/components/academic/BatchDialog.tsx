@@ -194,8 +194,9 @@ const BatchDialog = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="none">No Teacher Assigned</SelectItem>
                       {teachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
+                        <SelectItem key={teacher.id} value={teacher.id || "unknown-id"}>
                           {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.email})
                         </SelectItem>
                       ))}

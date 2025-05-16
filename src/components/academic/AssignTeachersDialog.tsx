@@ -111,7 +111,7 @@ const AssignTeachersDialog = ({
                 {teachers
                   .filter(teacher => teacher.role === 'teacher')
                   .map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
+                    <SelectItem key={teacher.id} value={teacher.id || "unknown-id"}>
                       {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.email})
                     </SelectItem>
                   ))}
@@ -129,7 +129,7 @@ const AssignTeachersDialog = ({
                 {batches.map((batch) => (
                   <SelectItem 
                     key={batch.id} 
-                    value={batch.id}
+                    value={batch.id || "unknown-id"}
                     disabled={selectedTeacher ? isAlreadyAssigned(selectedTeacher, batch.id) : false}
                   >
                     {batch.name} {batch.code ? `(${batch.code})` : ''}

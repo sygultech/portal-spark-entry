@@ -117,7 +117,10 @@ const AddStudentDialog = ({
                     </FormControl>
                     <SelectContent>
                       {availableStudents.map((student) => (
-                        <SelectItem key={student.id} value={student.id || "unknown-id"}>
+                        <SelectItem 
+                          key={student.id} 
+                          value={student.id || "unknown-id"}
+                        >
                           {student.first_name || ''} {student.last_name || ''} ({student.email || 'no email'})
                         </SelectItem>
                       ))}
