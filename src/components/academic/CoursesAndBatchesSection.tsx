@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCourses } from "@/hooks/useCourses";
@@ -76,6 +75,7 @@ const CoursesAndBatchesSection = ({
   const [isBatchDetailsDialogOpen, setIsBatchDetailsDialogOpen] = useState(false);
   const [isDeleteCourseDialogOpen, setIsDeleteCourseDialogOpen] = useState(false);
   const [isDeleteBatchDialogOpen, setIsDeleteBatchDialogOpen] = useState(false);
+  const [isViewBatchDialogOpen, setIsViewBatchDialogOpen] = useState(false);
   
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
@@ -129,7 +129,7 @@ const CoursesAndBatchesSection = ({
   
   const handleViewBatchDetails = (batch: Batch) => {
     setSelectedBatch(batch);
-    setIsBatchDetailsDialogOpen(true);
+    setIsViewBatchDialogOpen(true);
   };
   
   const handleDeleteBatchClick = (batch: Batch) => {
@@ -516,6 +516,16 @@ const CoursesAndBatchesSection = ({
           isOpen={isBatchDetailsDialogOpen}
           onClose={() => setIsBatchDetailsDialogOpen(false)}
           batch={selectedBatch}
+        />
+      )}
+      
+      {/* View Batch Details Dialog */}
+      {isViewBatchDialogOpen && selectedBatch && (
+        <BatchDetailsDialog
+          isOpen={isViewBatchDialogOpen}
+          onClose={() => setIsViewBatchDialogOpen(false)}
+          batch={selectedBatch as any}  
+          academicYearId={academicYearId}
         />
       )}
       

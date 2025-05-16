@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Subject, SubjectCategory } from '@/types/academic';
 
@@ -112,7 +111,18 @@ export async function fetchSubject(id: string) {
   return data;
 }
 
-export async function createSubject(subject: Omit<Subject, 'id' | 'created_at' | 'updated_at' | 'category'>) {
+export async function createSubject(subject: {
+  name: string,
+  code?: string,
+  description?: string,
+  category_id?: string,
+  subject_type?: string,
+  grading_type?: string,
+  max_marks?: number,
+  weightage?: number,
+  academic_year_id: string,
+  school_id: string
+}) {
   const { data, error } = await supabase
     .from('subjects')
     .insert(subject)

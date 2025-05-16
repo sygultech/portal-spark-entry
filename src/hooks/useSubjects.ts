@@ -11,7 +11,7 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
   const { toast } = useToast();
   const schoolId = profile?.school_id;
   
-  const fetchSubjects = async (): Promise<Subject[]> => {
+  const fetchSubjects = async () => {
     if (!schoolId) return [];
     
     let query = supabase
@@ -37,10 +37,10 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       throw error;
     }
     
-    return data;
+    return data as Subject[];
   };
 
-  const fetchSubject = async (id: string): Promise<Subject> => {
+  const fetchSubject = async (id: string) => {
     const { data, error } = await supabase
       .from('subjects')
       .select(`
@@ -55,7 +55,7 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       throw error;
     }
     
-    return data;
+    return data as Subject;
   };
   
   const subjectsQuery = useQuery({
@@ -65,7 +65,18 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
   });
 
   const createSubjectMutation = useMutation({
-    mutationFn: async (subject: Omit<Subject, 'id' | 'created_at' | 'updated_at' | 'category'>) => {
+    mutationFn: async (subject: {
+      name: string,
+      code?: string,
+      description?: string,
+      category_id?: string,
+      subject_type?: string,
+      grading_type?: string,
+      max_marks?: number,
+      weightage?: number,
+      academic_year_id: string,
+      school_id: string
+    }) => {
       const { data, error } = await supabase
         .from('subjects')
         .insert(subject)

@@ -153,7 +153,7 @@ const BatchDetailsDialog = ({
       <AddStudentDialog
         isOpen={isAddStudentDialogOpen}
         onClose={() => setIsAddStudentDialogOpen(false)}
-        onAdd={handleAddStudent}
+        onSubmit={handleAddStudent}
         existingStudentIds={students.map(s => s.student_id)}
       />
     </Dialog>

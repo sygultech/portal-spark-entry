@@ -8,7 +8,11 @@ export interface Subject {
   code?: string;
   description?: string;
   category_id?: string;
-  academic_year_id?: string;
+  subject_type?: string; // Add this field
+  grading_type?: string; // Add this field
+  max_marks?: number;    // Add this field
+  weightage?: number;    // Add this field
+  academic_year_id: string;
   school_id: string;
   created_at: string;
   updated_at: string;

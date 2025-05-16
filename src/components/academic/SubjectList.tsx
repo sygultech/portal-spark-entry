@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useSubjects } from "@/hooks/useSubjects";
 import {
@@ -100,7 +99,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
     }
   };
 
-  const getSubjectTypeBadge = (type: string | null) => {
+  const getSubjectTypeBadge = (type: string | null | undefined) => {
     if (!type) return null;
     
     const colorMap: Record<string, string> = {
