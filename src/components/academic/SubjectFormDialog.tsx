@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,10 +31,19 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
+interface SubjectFormData {
+  name: string;
+  code: string;
+  description: string;
+  category_id: string;
+  subject_type: string;
+  is_mandatory: boolean;
+}
+
 export interface SubjectFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: SubjectFormData & { id?: string }) => void;
   academicYearId: string;
   subject?: {
     id: string;
@@ -61,7 +69,7 @@ export const SubjectFormDialog = ({
   const { profile } = useAuth();
   const { categories } = useSubjectCategories();
   
-  const form = useForm({
+  const form = useForm<SubjectFormData>({
     defaultValues: {
       name: "",
       code: "",
@@ -73,37 +81,43 @@ export const SubjectFormDialog = ({
   });
   
   useEffect(() => {
-    if (subject) {
-      form.reset({
-        name: subject.name,
-        code: subject.code || "",
-        description: subject.description || "",
-        category_id: subject.category_id || subject.category?.id || "",
-        subject_type: subject.subject_type || "",
-        is_mandatory: true
-      });
-    } else {
-      form.reset({
-        name: "",
-        code: "",
-        description: "",
-        category_id: "",
-        subject_type: "",
-        is_mandatory: true
-      });
+    if (isOpen) {
+      if (subject) {
+        form.reset({
+          name: subject.name || "",
+          code: subject.code || "",
+          description: subject.description || "",
+          category_id: subject.category_id || subject.category?.id || "",
+          subject_type: subject.subject_type || "",
+          is_mandatory: true
+        });
+      } else {
+        form.reset({
+          name: "",
+          code: "",
+          description: "",
+          category_id: "",
+          subject_type: "",
+          is_mandatory: true
+        });
+      }
     }
-  }, [subject, form]);
+  }, [subject, form, isOpen]);
   
   const subjectTypes = [
-    { value: "theory", label: "Theory" },
-    { value: "practical", label: "Practical" },
+    { value: "core", label: "Core" },
+    { value: "elective", label: "Elective" },
     { value: "activity-based", label: "Activity-Based" },
     { value: "language", label: "Language" },
     { value: "other", label: "Other" }
   ];
 
-  const handleSubmit = (data: any) => {
-    onSubmit(data);
+  const handleSubmit = (data: SubjectFormData) => {
+    if (subject) {
+      onSubmit({ ...data, id: subject.id });
+    } else {
+      onSubmit(data);
+    }
   };
 
   return (
@@ -207,9 +221,10 @@ export const SubjectFormDialog = ({
               <FormField
                 control={form.control}
                 name="subject_type"
+                rules={{ required: "Subject type is required" }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subject Nature</FormLabel>
+                    <FormLabel>Type</FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={field.onChange}
@@ -230,9 +245,6 @@ export const SubjectFormDialog = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>
-                      The nature or method of teaching this subject
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -243,7 +255,7 @@ export const SubjectFormDialog = ({
               control={form.control}
               name="is_mandatory"
               render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
@@ -251,11 +263,9 @@ export const SubjectFormDialog = ({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Make subject mandatory
-                    </FormLabel>
+                    <FormLabel>Mandatory Subject</FormLabel>
                     <FormDescription>
-                      If checked, students must complete this subject to progress. If unchecked, this will be an elective subject.
+                      Make this a mandatory subject for all students in the batch
                     </FormDescription>
                   </div>
                 </FormItem>

@@ -79,7 +79,7 @@ interface GroupedSubjects {
 const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
   const { profile } = useAuth();
   const [showArchived, setShowArchived] = useState(false);
-  const { subjects, isLoading, createSubject } = useSubjects(academicYearId, categoryId, showArchived);
+  const { subjects, isLoading, createSubject, updateSubject } = useSubjects(academicYearId, categoryId, showArchived);
   const { courses } = useCourses(academicYearId);
   const { batches } = useBatches(academicYearId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -148,7 +148,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
 
   const handleCreateSubject = async (data: any) => {
     try {
-      if (!profile?.school_id || !selectedBatchId) {
+      if (!profile?.school_id) {
         toast({
           title: "Error",
           description: "Required information missing",
@@ -157,28 +157,54 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
         return;
       }
 
-      // Create subject with batch assignment
-      await createSubject({
-        ...data,
+      const subjectData = {
+        name: data.name,
+        code: data.code,
+        description: data.description,
+        category_id: data.category_id || null,
+        subject_type: data.subject_type,
         academic_year_id: academicYearId,
-        school_id: profile.school_id,
-        batch_assignments: [{
-          batch_id: selectedBatchId,
-          is_mandatory: data.is_mandatory ?? true
-        }]
-      });
+        school_id: profile.school_id
+      };
+
+      if (selectedSubject) {
+        // Update existing subject
+        await updateSubject({
+          ...subjectData,
+          id: selectedSubject.id
+        });
+      } else {
+        // Create new subject with batch assignment
+        if (!selectedBatchId) {
+          toast({
+            title: "Error",
+            description: "Batch selection is required",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        await createSubject({
+          ...subjectData,
+          batch_assignments: [{
+            batch_id: selectedBatchId,
+            is_mandatory: data.is_mandatory ?? true
+          }]
+        });
+      }
 
       setIsSubjectFormOpen(false);
       setSelectedBatchId(null);
+      setSelectedSubject(null);
       toast({
         title: "Success",
-        description: "Subject created successfully"
+        description: selectedSubject ? "Subject updated successfully" : "Subject created successfully"
       });
     } catch (error: any) {
-      console.error("Error creating subject:", error);
+      console.error(selectedSubject ? "Error updating subject:" : "Error creating subject:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create subject",
+        description: error.message || (selectedSubject ? "Failed to update subject" : "Failed to create subject"),
         variant: "destructive"
       });
     }
@@ -186,11 +212,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
 
   const handleEditClick = (subject: Subject) => {
     setSelectedSubject(subject);
-    // TODO: Implement subject editing
-    toast({
-      title: "Coming Soon",
-      description: "Subject editing will be available soon.",
-    });
+    setIsSubjectFormOpen(true);
   };
 
   const handleArchiveClick = async (subject: Subject) => {
@@ -668,10 +690,11 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
         onClose={() => {
           setIsSubjectFormOpen(false);
           setSelectedBatchId(null);
+          setSelectedSubject(null);
         }}
         onSubmit={handleCreateSubject}
         academicYearId={academicYearId}
-        subject={null}
+        subject={selectedSubject}
       />
     </>
   );
