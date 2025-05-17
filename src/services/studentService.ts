@@ -1,5 +1,24 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Student, NewStudentFormData, StudentWithDetails, Guardian, StudentCategory, StudentDocument, DisciplinaryRecord, TransferRecord, Certificate } from '@/types/student';
+import { 
+  Student, 
+  NewStudentFormData, 
+  StudentWithDetails, 
+  Guardian, 
+  StudentCategory, 
+  StudentDocument, 
+  DisciplinaryRecord, 
+  TransferRecord, 
+  Certificate, 
+  MedicalRecord,
+  DocumentVerificationStatus,
+  IncidentSeverity,
+  IncidentStatus,
+  TransferType,
+  TransferStatus,
+  CertificateStatus,
+  DocumentType
+} from '@/types/student';
 import { toast } from '@/hooks/use-toast';
 
 // Base query for fetching student profiles with details
@@ -202,7 +221,7 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
     const documents: StudentDocument[] = documentsData.map(doc => ({
       ...doc,
       verification_status: doc.verification_status as DocumentVerificationStatus,
-      type: doc.type as DocumentType | string,
+      type: doc.type as string,
     }));
 
     // Fetch disciplinary records
