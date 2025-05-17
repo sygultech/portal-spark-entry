@@ -38,12 +38,12 @@ export interface Student {
   tc_number?: string;
   admission_date?: string;
   status: StudentStatus;
-  avatar_url?: string;
+  avatar_url?: string; // Changed from photo
   school_id: string;
   created_at?: string;
   updated_at?: string;
   guardians?: Guardian[];
-  categories?: StudentCategory[];
+  categories?: CategoryType[];
   documents?: StudentDocument[];
   disciplinary_records?: DisciplinaryRecord[];
   transfer_records?: TransferRecord[];
@@ -74,7 +74,7 @@ export interface StudentCategory {
   students?: string[];
 }
 
-export interface Category extends StudentCategory {}
+export interface CategoryType extends StudentCategory {} // Renamed to avoid confusion with Category
 
 export interface StudentDocument {
   id: string;
@@ -90,7 +90,7 @@ export interface StudentDocument {
   school_id: string;
 }
 
-export interface Document extends StudentDocument {}
+export interface DocumentType extends StudentDocument {} // Interface for documents
 
 export interface DisciplinaryRecord {
   id: string;
@@ -144,7 +144,7 @@ export interface TransferRecord {
   school_id: string;
   created_at?: string;
   updated_at?: string;
-  documents?: Document[];
+  documents?: DocumentType[];
 }
 
 export interface Certificate {
@@ -163,16 +163,16 @@ export interface Certificate {
   updated_at?: string;
 }
 
-export interface PreviousSchool {
+export interface PreviousSchoolInfo {
   name?: string;
   board?: string;
-  yearOfPassing?: string;
+  year_of_passing?: string;
   percentage?: number;
 }
 
 export interface StudentWithDetails extends Student {
   guardians?: Guardian[];
-  categories?: StudentCategory[];
+  categories?: CategoryType[];
   documents?: StudentDocument[];
   disciplinary_records?: DisciplinaryRecord[];
   transfer_records?: TransferRecord[];

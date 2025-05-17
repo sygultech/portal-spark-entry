@@ -1,3 +1,4 @@
+
 import { DisciplinaryRecord, ParentMeeting } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import {
 
 interface DisciplinaryManagerProps {
   records: DisciplinaryRecord[];
-  onCreateRecord: (record: Omit<DisciplinaryRecord, "id" | "createdAt">) => void;
+  onCreateRecord: (record: Omit<DisciplinaryRecord, "id" | "created_at">) => void;
   onUpdateStatus: (id: string, status: DisciplinaryRecord["status"]) => void;
   onAddParentMeeting: (recordId: string, meeting: { date: string; notes: string }) => void;
   onAddEvidence: (recordId: string, evidence: { type: string; file: File }) => void;
@@ -43,7 +44,7 @@ export function DisciplinaryManager({
   });
   const [newMeeting, setNewMeeting] = useState<Partial<ParentMeeting>>({
     date: new Date().toISOString().split("T")[0],
-    attendees: [],
+    attendees: "", // Changed from array to string to match backend schema
   });
 
   const incidentTypes = [
@@ -59,18 +60,20 @@ export function DisciplinaryManager({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const newRecord = {
-      studentId: formData.get("studentId") as string,
-      type: formData.get("type") as string,
+    const newDisciplinaryRecord: Omit<DisciplinaryRecord, "id" | "created_at"> = {
+      student_id: formData.get("studentId") as string,
+      incident_type: formData.get("type") as string,
       description: formData.get("description") as string,
       date: formData.get("date") as string,
       severity: formData.get("severity") as "minor" | "moderate" | "severe",
       status: "pending" as const,
-      actionTaken: formData.get("actionTaken") as string,
-      reportedBy: formData.get("reportedBy") as string,
+      action_taken: formData.get("actionTaken") as string,
+      reported_by: formData.get("reportedBy") as string,
+      school_id: "", // This will be filled by backend
+      updated_at: new Date().toISOString(),
     };
 
-    onCreateRecord(newRecord);
+    onCreateRecord(newDisciplinaryRecord);
     setIsAddDialogOpen(false);
     setSelectedFile(null);
   };
@@ -82,20 +85,16 @@ export function DisciplinaryManager({
   const handleAddMeeting = () => {
     if (!selectedRecord || !newMeeting.discussion || !newMeeting.outcome) return;
 
-    const meeting: ParentMeeting = {
-      id: Date.now().toString(),
+    const meetingData = {
       date: newMeeting.date || new Date().toISOString(),
-      attendees: newMeeting.attendees || [],
-      discussion: newMeeting.discussion,
-      outcome: newMeeting.outcome,
-      followUpDate: newMeeting.followUpDate,
+      notes: newMeeting.discussion || "", // Convert discussion to notes for the API
     };
 
-    onAddParentMeeting(selectedRecord.id, meeting);
+    onAddParentMeeting(selectedRecord.id, meetingData);
     setMeetingDialogOpen(false);
     setNewMeeting({
       date: new Date().toISOString().split("T")[0],
-      attendees: [],
+      attendees: "", // Changed from array to string
     });
   };
 
@@ -233,7 +232,7 @@ export function DisciplinaryManager({
           {records.map((record) => (
             <TableRow key={record.id}>
               <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-              <TableCell>{record.type}</TableCell>
+              <TableCell>{record.incident_type}</TableCell>
               <TableCell className="max-w-[300px] truncate">
                 {record.description}
               </TableCell>
@@ -261,7 +260,7 @@ export function DisciplinaryManager({
                   {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                 </span>
               </TableCell>
-              <TableCell>{record.reportedBy}</TableCell>
+              <TableCell>{record.reported_by}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button
@@ -320,11 +319,11 @@ export function DisciplinaryManager({
             <div>
               <Label>Attendees (comma-separated)</Label>
               <Input
-                value={newMeeting.attendees?.join(", ")}
+                value={newMeeting.attendees || ""}
                 onChange={(e) =>
                   setNewMeeting((prev) => ({
                     ...prev,
-                    attendees: e.target.value.split(",").map((s) => s.trim()),
+                    attendees: e.target.value,
                   }))
                 }
               />
@@ -354,9 +353,9 @@ export function DisciplinaryManager({
               <Label>Follow-up Date (optional)</Label>
               <Input
                 type="date"
-                value={newMeeting.followUpDate}
+                value={newMeeting.follow_up_date}
                 onChange={(e) =>
-                  setNewMeeting((prev) => ({ ...prev, followUpDate: e.target.value }))
+                  setNewMeeting((prev) => ({ ...prev, follow_up_date: e.target.value }))
                 }
               />
             </div>
@@ -371,4 +370,4 @@ export function DisciplinaryManager({
       </Dialog>
     </div>
   );
-} 
+}

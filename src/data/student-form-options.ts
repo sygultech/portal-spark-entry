@@ -80,3 +80,10 @@ export const incidentTypeOptions: Option[] = [
   { value: "Truancy", label: "Truancy" },
   { value: "Other", label: "Other" }
 ];
+
+export const studentStatusOptions: Option[] = [
+  { value: "active", label: "Active" },
+  { value: "transferred", label: "Transferred" },
+  { value: "graduated", label: "Graduated" },
+  { value: "inactive", label: "Inactive" }
+];

@@ -1,4 +1,5 @@
-import { TransferRecord, Document } from "@/types/student";
+
+import { TransferRecord, DocumentType } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +15,7 @@ interface TransferManagerProps {
   transfers: TransferRecord[];
   onCreateTransfer: (transfer: TransferRecord) => void;
   onUpdateStatus: (transferId: string, status: TransferRecord['status']) => void;
-  onAddDocument: (transferId: string, document: Document) => void;
+  onAddDocument: (transferId: string, document: DocumentType) => void;
   batches: { id: string; name: string }[];
 }
 
@@ -45,25 +46,28 @@ export function TransferManager({
 
     const transfer: TransferRecord = {
       id: Date.now().toString(),
+      student_id: "", // This will be filled by backend
       type: newTransfer.type,
       date: newTransfer.date,
-      reason: newTransfer.reason,
+      reason: newTransfer.reason || "",
       status: "pending",
-      fromBatch: newTransfer.fromBatch,
-      toBatch: newTransfer.toBatch,
-      toSchool: newTransfer.toSchool,
-      tcNumber: newTransfer.tcNumber,
+      from_batch_id: newTransfer.from_batch_id,
+      to_batch_id: newTransfer.to_batch_id,
+      to_school: newTransfer.to_school,
+      tc_number: newTransfer.tc_number,
+      school_id: "", // This will be filled by backend
       documents: [],
     };
 
     if (file) {
-      const document: Document = {
+      const document: DocumentType = {
         id: Date.now().toString(),
+        student_id: "", // This will be filled by backend
         type: "transfer_certificate",
         name: file.name,
-        file: URL.createObjectURL(file),
-        uploadDate: new Date().toISOString(),
-        verificationStatus: "pending",
+        file_path: URL.createObjectURL(file),
+        verification_status: "pending",
+        school_id: "", // This will be filled by backend
       };
       transfer.documents = [document];
     }
@@ -117,27 +121,27 @@ export function TransferManager({
                   <>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">From Batch</span>
-                      <span>{transfer.fromBatch}</span>
+                      <span>{transfer.from_batch_id}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">To Batch</span>
-                      <span>{transfer.toBatch}</span>
+                      <span>{transfer.to_batch_id}</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">To School</span>
-                    <span>{transfer.toSchool}</span>
+                    <span>{transfer.to_school}</span>
                   </div>
                 )}
                 <div>
                   <span className="text-muted-foreground">Reason</span>
                   <p className="mt-1">{transfer.reason}</p>
                 </div>
-                {transfer.tcNumber && (
+                {transfer.tc_number && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">TC Number</span>
-                    <span>{transfer.tcNumber}</span>
+                    <span>{transfer.tc_number}</span>
                   </div>
                 )}
               </div>
@@ -147,7 +151,7 @@ export function TransferManager({
                   <div className="flex gap-2">
                     {transfer.documents.map((doc) => (
                       <Button key={doc.id} variant="outline" size="sm" asChild>
-                        <a href={doc.file} target="_blank" rel="noopener noreferrer">
+                        <a href={doc.file_path} target="_blank" rel="noopener noreferrer">
                           <FileText className="w-4 h-4 mr-2" />
                           {doc.name}
                         </a>
@@ -228,9 +232,9 @@ export function TransferManager({
                 <div>
                   <Label>From Batch</Label>
                   <Select
-                    value={newTransfer.fromBatch}
+                    value={newTransfer.from_batch_id}
                     onValueChange={(value) =>
-                      setNewTransfer((prev) => ({ ...prev, fromBatch: value }))
+                      setNewTransfer((prev) => ({ ...prev, from_batch_id: value }))
                     }
                   >
                     <SelectTrigger>
@@ -248,9 +252,9 @@ export function TransferManager({
                 <div>
                   <Label>To Batch</Label>
                   <Select
-                    value={newTransfer.toBatch}
+                    value={newTransfer.to_batch_id}
                     onValueChange={(value) =>
-                      setNewTransfer((prev) => ({ ...prev, toBatch: value }))
+                      setNewTransfer((prev) => ({ ...prev, to_batch_id: value }))
                     }
                   >
                     <SelectTrigger>
@@ -271,18 +275,18 @@ export function TransferManager({
                 <div>
                   <Label>To School</Label>
                   <Input
-                    value={newTransfer.toSchool}
+                    value={newTransfer.to_school}
                     onChange={(e) =>
-                      setNewTransfer((prev) => ({ ...prev, toSchool: e.target.value }))
+                      setNewTransfer((prev) => ({ ...prev, to_school: e.target.value }))
                     }
                   />
                 </div>
                 <div>
                   <Label>TC Number</Label>
                   <Input
-                    value={newTransfer.tcNumber}
+                    value={newTransfer.tc_number}
                     onChange={(e) =>
-                      setNewTransfer((prev) => ({ ...prev, tcNumber: e.target.value }))
+                      setNewTransfer((prev) => ({ ...prev, tc_number: e.target.value }))
                     }
                   />
                 </div>
@@ -314,4 +318,4 @@ export function TransferManager({
       </Dialog>
     </div>
   );
-} 
+}
