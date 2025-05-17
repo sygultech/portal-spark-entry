@@ -1,139 +1,281 @@
-
-import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { Student, Category } from "@/types/student";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Pencil, Edit, FileText, UserX } from "lucide-react";
-import { Student } from "@/types/school";
-import { useNavigate } from "react-router-dom";
+import { Search, ChevronDown, Filter, ArrowUpDown } from "lucide-react";
+import { useState } from "react";
 
 interface StudentListProps {
   students: Student[];
-  onEdit: (student: Student) => void;
+  onSelect: (student: Student) => void;
+  categories: Category[];
+  onBatchAction: (action: string, studentIds: string[]) => void;
 }
 
-export default function StudentList({ students, onEdit }: StudentListProps) {
-  const navigate = useNavigate();
-  const [sortColumn, setSortColumn] = useState<string>("first_name");
+export function StudentList({ students, onSelect, categories, onBatchAction }: StudentListProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [batchFilter, setBatchFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<keyof Student>("admissionNo");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
+  // Get unique batches
+  const batches = Array.from(new Set(students.map((s) => s.batch))).sort();
+
+  // Filter students
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch =
+      student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.admissionNo.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory =
+      categoryFilter === "all" ||
+      categories.find((cat) => cat.id === categoryFilter)?.students.includes(student.id);
+
+    const matchesBatch = batchFilter === "all" || student.batch === batchFilter;
+
+    return matchesSearch && matchesCategory && matchesBatch;
+  });
+
+  // Sort students
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return sortDirection === "asc"
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+    return 0;
+  });
+
+  const handleSort = (field: keyof Student) => {
+    if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortColumn(column);
+      setSortField(field);
       setSortDirection("asc");
     }
   };
 
-  const sortedStudents = [...students].sort((a, b) => {
-    let aValue: any = a[sortColumn as keyof Student];
-    let bValue: any = b[sortColumn as keyof Student];
-    
-    // Handle nested sort by last_name when first_name is equal
-    if (sortColumn === "first_name" && a.first_name === b.first_name) {
-      aValue = a.last_name;
-      bValue = b.last_name;
-    }
-    
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedStudents(checked ? sortedStudents.map(s => s.id) : []);
+  };
 
-  const viewStudentProfile = (student: Student) => {
-    // This will be implemented later to navigate to student profile
-    navigate(`/students/${student.id}`);
+  const handleSelectStudent = (studentId: string, checked: boolean) => {
+    setSelectedStudents(prev =>
+      checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
+    );
   };
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[250px] cursor-pointer" onClick={() => handleSort("first_name")}>
-              <div className="flex items-center gap-1">
-                Student Name
-                {sortColumn === "first_name" && (
-                  <ChevronDown className={`h-4 w-4 transition-transform ${sortDirection === "desc" ? "transform rotate-180" : ""}`} />
-                )}
-              </div>
-            </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort("id")}>
-              <div className="flex items-center gap-1">
-                Student ID
-                {sortColumn === "id" && (
-                  <ChevronDown className={`h-4 w-4 transition-transform ${sortDirection === "desc" ? "transform rotate-180" : ""}`} />
-                )}
-              </div>
-            </TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedStudents.map((student) => (
-            <TableRow key={student.id} className="cursor-pointer hover:bg-muted/50">
-              <TableCell className="font-medium" onClick={() => viewStudentProfile(student)}>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={student.avatar_url || undefined} alt={`${student.first_name} ${student.last_name}`} />
-                    <AvatarFallback>{student.first_name[0]}{student.last_name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div>{student.first_name} {student.last_name}</div>
-                    <div className="text-sm text-muted-foreground">Grade 10 • Science</div>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell onClick={() => viewStudentProfile(student)}>S-{student.id.substring(0, 8)}</TableCell>
-              <TableCell onClick={() => viewStudentProfile(student)}>{student.email}</TableCell>
-              <TableCell onClick={() => viewStudentProfile(student)}>
-                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Active</Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <span className="sr-only">Open menu</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => viewStudentProfile(student)} className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      <span>View Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(student)} className="flex items-center gap-2">
-                      <Pencil className="h-4 w-4" />
-                      <span>Edit Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-500 flex items-center gap-2">
-                      <UserX className="h-4 w-4" />
-                      <span>Transfer Out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, admission no..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={batchFilter} onValueChange={setBatchFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Batch" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Batches</SelectItem>
+            {batches.map((batch) => (
+              <SelectItem key={batch} value={batch}>
+                {batch}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="icon">
+          <Filter className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Batch Actions */}
+      {selectedStudents.length > 0 && (
+        <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+          <span className="text-sm text-muted-foreground">
+            {selectedStudents.length} students selected
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Batch Actions
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => onBatchAction("promote", selectedStudents)}>
+                Promote Selected
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onBatchAction("transfer", selectedStudents)}>
+                Transfer Selected
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onBatchAction("print", selectedStudents)}>
+                Print Documents
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedStudents([])}
+          >
+            Clear Selection
+          </Button>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={selectedStudents.length === sortedStudents.length}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("admissionNo")}
+                  className="font-bold -ml-4"
+                >
+                  Admission No
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("firstName")}
+                  className="font-bold -ml-4"
+                >
+                  Name
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("batch")}
+                  className="font-bold -ml-4"
+                >
+                  Batch
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>Categories</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sortedStudents.map((student) => (
+              <TableRow
+                key={student.id}
+                className={selectedStudents.includes(student.id) ? "bg-muted/50" : ""}
+              >
+                <TableCell>
+                  <Checkbox
+                    checked={selectedStudents.includes(student.id)}
+                    onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
+                  />
+                </TableCell>
+                <TableCell>{student.admissionNo}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {student.photo && (
+                      <img
+                        src={student.photo}
+                        alt={student.firstName}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    )}
+                    <div>
+                      <p className="font-medium">
+                        {student.firstName} {student.lastName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {student.email}
+                      </p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>{student.batch}</TableCell>
+                <TableCell>
+                  <div className="flex gap-1 flex-wrap">
+                    {categories
+                      .filter((cat) => cat.students.includes(student.id))
+                      .map((cat) => (
+                        <Badge
+                          key={cat.id}
+                          variant="secondary"
+                          style={{
+                            backgroundColor: cat.color,
+                            color: "#fff",
+                          }}
+                        >
+                          {cat.name}
+                        </Badge>
+                      ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    <p>{student.phone}</p>
+                    <p className="text-muted-foreground">{student.email}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSelect(student)}
+                  >
+                    View Details
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

@@ -1,418 +1,474 @@
-
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Student, Guardian, PreviousSchool, Document, Category } from "@/types/student";
+import { useState } from "react";
+import { ImageUploader } from "../common/ImageUploader";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import { ScrollArea } from "../ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Plus, Trash2 } from "lucide-react";
+import { CreatableSelect } from "../ui/creatable-select";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Student } from "@/types/school";
+  nationalityOptions,
+  motherTongueOptions,
+  religionOptions,
+  casteOptions,
+  bloodGroupOptions,
+  categoryOptions,
+} from "@/data/student-form-options";
 
 interface StudentFormDialogProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
-  student: Student | null;
+  onSave: (student: Student) => void;
+  student?: Student;
 }
 
-export default function StudentFormDialog({
-  isOpen,
-  onClose,
-  onSubmit,
-  student,
-}: StudentFormDialogProps) {
-  const form = useForm({
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      email: "",
-      gender: "",
-      date_of_birth: "",
-      address: "",
-      phone_number: "",
-      batch_id: "",
-      admission_number: "",
-      admission_date: new Date().toISOString().split("T")[0],
-      guardian_name: "",
-      guardian_relation: "",
-      guardian_phone: "",
-      guardian_email: "",
-    },
-  });
+export function StudentFormDialog({ open, onClose, onSave, student }: StudentFormDialogProps) {
+  const [activeTab, setActiveTab] = useState("basic");
+  const [formData, setFormData] = useState<Student>(student || {
+    id: "",
+    admissionNo: "",
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    gender: "male",
+    address: "",
+    batch: "",
+    nationality: "",
+    motherTongue: "",
+    academicRecords: [],
+    medicalRecords: [],
+    documents: [],
+    disciplinaryRecords: [],
+    guardians: [],
+    transferRecords: []
+  } as Student);
 
-  useEffect(() => {
-    if (student) {
-      // Populate form with student data
-      form.reset({
-        first_name: student.first_name,
-        last_name: student.last_name,
-        email: student.email,
-        // Add other fields based on Student type
-        gender: "male", // Placeholder
-        date_of_birth: "", // Placeholder
-        address: "", // Placeholder
-        phone_number: "", // Placeholder
-        batch_id: "", // Placeholder
-        admission_number: `ADM-${Math.floor(Math.random() * 10000)}`, // Placeholder
-        admission_date: new Date().toISOString().split("T")[0], // Placeholder
-        guardian_name: "", // Placeholder
-        guardian_relation: "", // Placeholder
-        guardian_phone: "", // Placeholder
-        guardian_email: "", // Placeholder
-      });
-    } else {
-      // Reset form for new student
-      form.reset({
-        first_name: "",
-        last_name: "",
-        email: "",
-        gender: "",
-        date_of_birth: "",
-        address: "",
-        phone_number: "",
-        batch_id: "",
-        admission_number: `ADM-${Math.floor(Math.random() * 10000)}`,
-        admission_date: new Date().toISOString().split("T")[0],
-        guardian_name: "",
-        guardian_relation: "",
-        guardian_phone: "",
-        guardian_email: "",
-      });
-    }
-  }, [student, form]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
-  const handleSubmit = (data: any) => {
-    onSubmit(data);
+  // Add state for managing options
+  const [customNationalities, setCustomNationalities] = useState<string[]>([]);
+  const [customMotherTongues, setCustomMotherTongues] = useState<string[]>([]);
+  const [customReligions, setCustomReligions] = useState<string[]>([]);
+  const [customCastes, setCustomCastes] = useState<string[]>([]);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+
+  const handleInputChange = (field: keyof Student, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Sample data - to be replaced with real data from backend
-  const batches = [
-    { id: "1", name: "Grade 10A" },
-    { id: "2", name: "Grade 10B" },
-    { id: "3", name: "Grade 9A" },
-  ];
+  const handleGuardianChange = (index: number, field: keyof Guardian, value: any) => {
+    const newGuardians = [...formData.guardians];
+    newGuardians[index] = { ...newGuardians[index], [field]: value };
+    handleInputChange('guardians', newGuardians);
+  };
+
+  const addGuardian = () => {
+    const newGuardian: Guardian = {
+      id: Date.now().toString(),
+      relation: "",
+      firstName: "",
+      lastName: "",
+      occupation: "",
+      phone: "",
+      address: "",
+      isEmergencyContact: false,
+      canPickup: false
+    };
+    handleInputChange('guardians', [...formData.guardians, newGuardian]);
+  };
+
+  const removeGuardian = (index: number) => {
+    const newGuardians = formData.guardians.filter((_, i) => i !== index);
+    handleInputChange('guardians', newGuardians);
+  };
+
+  const handleSave = () => {
+    onSave(formData);
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-[95vw] md:max-w-[85vw] lg:max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{student ? "Edit Student" : "Add New Student"}</DialogTitle>
+          <DialogDescription>
+            {student ? "Update the student's information" : "Enter the student's information"}
+          </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <Tabs defaultValue="basic">
-              <TabsList className="grid grid-cols-4 mb-4">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="academic">Academic</TabsTrigger>
-                <TabsTrigger value="guardian">Guardian</TabsTrigger>
-                <TabsTrigger value="additional">Additional</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="first_name"
-                    rules={{ required: "First name is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="First name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="last_name"
-                    rules={{ required: "Last name is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Last name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-1">
+            <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="academic">Academic</TabsTrigger>
+            <TabsTrigger value="guardian">Guardian</TabsTrigger>
+            <TabsTrigger value="medical">Medical</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="disciplinary">Disciplinary</TabsTrigger>
+            <TabsTrigger value="additional">Additional</TabsTrigger>
+          </TabsList>
+
+          <ScrollArea className="flex-1 px-1">
+            <TabsContent value="basic" className="space-y-4 p-2 md:p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Photo</Label>
+                  <ImageUploader
+                    currentImage={formData.photo}
+                    onImageSelected={setPhotoFile}
+                    aspectRatio={1}
                   />
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    rules={{ 
-                      required: "Email is required",
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: "Invalid email address"
+                <div className="space-y-4">
+                  <div>
+                    <Label>Admission Number</Label>
+                    <Input
+                      value={formData.admissionNo}
+                      onChange={(e) => handleInputChange("admissionNo", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>First Name</Label>
+                    <Input
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Last Name</Label>
+                    <Input
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Gender</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(value) => handleInputChange("gender", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Nationality</Label>
+                  <CreatableSelect
+                    value={formData.nationality}
+                    onValueChange={(value) => handleInputChange("nationality", value)}
+                    options={[
+                      ...nationalityOptions,
+                      ...customNationalities.map(n => ({ value: n, label: n }))
+                    ]}
+                    onCreateOption={(value) => {
+                      setCustomNationalities(prev => [...prev, value]);
+                    }}
+                    placeholder="Select or enter nationality"
+                  />
+                </div>
+                <div>
+                  <Label>Mother Tongue</Label>
+                  <CreatableSelect
+                    value={formData.motherTongue}
+                    onValueChange={(value) => handleInputChange("motherTongue", value)}
+                    options={[
+                      ...motherTongueOptions,
+                      ...customMotherTongues.map(m => ({ value: m, label: m }))
+                    ]}
+                    onCreateOption={(value) => {
+                      setCustomMotherTongues(prev => [...prev, value]);
+                    }}
+                    placeholder="Select or enter mother tongue"
+                  />
+                </div>
+                <div>
+                  <Label>Religion</Label>
+                  <CreatableSelect
+                    value={formData.religion}
+                    onValueChange={(value) => handleInputChange("religion", value)}
+                    options={[
+                      ...religionOptions,
+                      ...customReligions.map(r => ({ value: r, label: r }))
+                    ]}
+                    onCreateOption={(value) => {
+                      setCustomReligions(prev => [...prev, value]);
+                    }}
+                    placeholder="Select or enter religion"
+                  />
+                </div>
+                <div>
+                  <Label>Caste</Label>
+                  <CreatableSelect
+                    value={formData.caste}
+                    onValueChange={(value) => handleInputChange("caste", value)}
+                    options={[
+                      ...casteOptions,
+                      ...customCastes.map(c => ({ value: c, label: c }))
+                    ]}
+                    onCreateOption={(value) => {
+                      setCustomCastes(prev => [...prev, value]);
+                    }}
+                    placeholder="Select or enter caste"
+                  />
+                </div>
+                <div>
+                  <Label>Blood Group</Label>
+                  <CreatableSelect
+                    value={formData.bloodGroup}
+                    onValueChange={(value) => handleInputChange("bloodGroup", value)}
+                    options={bloodGroupOptions}
+                    onCreateOption={(value) => {
+                      if (/^(A|B|AB|O)[+-]$/.test(value)) {
+                        handleInputChange("bloodGroup", value);
                       }
                     }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Email address" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="phone_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    placeholder="Select blood group"
                   />
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    rules={{ required: "Gender is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gender</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select gender" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="date_of_birth"
-                    rules={{ required: "Date of birth is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date of Birth</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                <div>
+                  <Label>Category</Label>
+                  <CreatableSelect
+                    value={formData.category}
+                    onValueChange={(value) => handleInputChange("category", value)}
+                    options={[
+                      ...categoryOptions,
+                      ...customCategories.map(c => ({ value: c, label: c }))
+                    ]}
+                    onCreateOption={(value) => {
+                      setCustomCategories(prev => [...prev, value]);
+                    }}
+                    placeholder="Select or enter category"
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </div>
+
+              <div>
+                <Label>Address</Label>
+                <Textarea
+                  value={formData.address}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
+                  className="min-h-[100px]"
                 />
-              </TabsContent>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="academic" className="space-y-4 p-2 md:p-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Previous School Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label>School Name</Label>
+                      <Input
+                        value={formData.previousSchool?.name}
+                        onChange={(e) =>
+                          handleInputChange("previousSchool", {
+                            ...formData.previousSchool,
+                            name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Board</Label>
+                      <Input
+                        value={formData.previousSchool?.board}
+                        onChange={(e) =>
+                          handleInputChange("previousSchool", {
+                            ...formData.previousSchool,
+                            board: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Year of Passing</Label>
+                      <Input
+                        value={formData.previousSchool?.yearOfPassing}
+                        onChange={(e) =>
+                          handleInputChange("previousSchool", {
+                            ...formData.previousSchool,
+                            yearOfPassing: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Percentage</Label>
+                      <Input
+                        type="number"
+                        value={formData.previousSchool?.percentage}
+                        onChange={(e) =>
+                          handleInputChange("previousSchool", {
+                            ...formData.previousSchool,
+                            percentage: parseFloat(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="guardian" className="space-y-4 p-2 md:p-4">
+              <div className="flex justify-end">
+                <Button onClick={addGuardian} size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Guardian
+                </Button>
+              </div>
               
-              <TabsContent value="academic" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="admission_number"
-                    rules={{ required: "Admission number is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Admission Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Admission number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="admission_date"
-                    rules={{ required: "Admission date is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Admission Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="batch_id"
-                  rules={{ required: "Batch is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Batch/Class</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select batch" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {batches.map((batch) => (
-                            <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-              
-              <TabsContent value="guardian" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="guardian_name"
-                    rules={{ required: "Guardian name is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Guardian Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Guardian name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="guardian_relation"
-                    rules={{ required: "Relation is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Relation</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select relation" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="father">Father</SelectItem>
-                            <SelectItem value="mother">Mother</SelectItem>
-                            <SelectItem value="guardian">Guardian</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="guardian_phone"
-                    rules={{ required: "Guardian phone is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Guardian Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Guardian phone" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="guardian_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Guardian Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Guardian email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="additional" className="space-y-4">
-                <div className="text-center p-10 text-muted-foreground">
-                  <p>Additional fields will be implemented when backend is ready.</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {student ? "Update Student" : "Add Student"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              {formData.guardians.map((guardian, index) => (
+                <Card key={guardian.id} className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-2"
+                    onClick={() => removeGuardian(index)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <CardHeader>
+                    <CardTitle>Guardian {index + 1}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Relation</Label>
+                        <Input
+                          value={guardian.relation}
+                          onChange={(e) => handleGuardianChange(index, "relation", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>First Name</Label>
+                        <Input
+                          value={guardian.firstName}
+                          onChange={(e) => handleGuardianChange(index, "firstName", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Last Name</Label>
+                        <Input
+                          value={guardian.lastName}
+                          onChange={(e) => handleGuardianChange(index, "lastName", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Occupation</Label>
+                        <Input
+                          value={guardian.occupation}
+                          onChange={(e) => handleGuardianChange(index, "occupation", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Phone</Label>
+                        <Input
+                          value={guardian.phone}
+                          onChange={(e) => handleGuardianChange(index, "phone", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input
+                          value={guardian.email}
+                          onChange={(e) => handleGuardianChange(index, "email", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Address</Label>
+                      <Textarea
+                        value={guardian.address}
+                        onChange={(e) => handleGuardianChange(index, "address", e.target.value)}
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={guardian.isEmergencyContact}
+                          onChange={(e) =>
+                            handleGuardianChange(index, "isEmergencyContact", e.target.checked)
+                          }
+                        />
+                        Emergency Contact
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={guardian.canPickup}
+                          onChange={(e) =>
+                            handleGuardianChange(index, "canPickup", e.target.checked)
+                          }
+                        />
+                        Can Pickup Student
+                      </label>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </TabsContent>
+
+            <TabsContent value="medical" className="space-y-4 p-4">
+              {/* Medical Records UI will be implemented here */}
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-4 p-4">
+              {/* Documents UI will be implemented here */}
+            </TabsContent>
+
+            <TabsContent value="disciplinary" className="space-y-4 p-4">
+              {/* Disciplinary Records UI will be implemented here */}
+            </TabsContent>
+
+            <TabsContent value="additional" className="space-y-4 p-4">
+              {/* Additional Information UI will be implemented here */}
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+
+        <DialogFooter className="mt-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>Save</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

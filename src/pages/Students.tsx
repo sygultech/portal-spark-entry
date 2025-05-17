@@ -1,216 +1,417 @@
-
 import { useState } from "react";
-import { useStudents } from "@/hooks/useStudents";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { UserPlus, FileUp, Download, Filter, Search } from "lucide-react";
-import StudentList from "@/components/students/StudentList";
-import StudentImportDialog from "@/components/students/StudentImportDialog";
-import StudentFormDialog from "@/components/students/StudentFormDialog";
-import StudentFilters from "@/components/students/StudentFilters";
-import { Student } from "@/types/school";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StudentList } from "@/components/students/StudentList";
+import { StudentFormDialog } from "@/components/students/StudentFormDialog";
+import { StudentProfile } from "@/components/students/StudentProfile";
+import { DocumentManager } from "@/components/students/DocumentManager";
+import { TransferManager } from "@/components/students/TransferManager";
+import { DisciplinaryManager } from "@/components/students/DisciplinaryManager";
+import { CertificateManager } from "@/components/students/CertificateManager";
+import { CategoryManager } from "@/components/students/CategoryManager";
+import { MedicalManager } from "@/components/students/MedicalManager";
+import { QuickActions } from "@/components/students/QuickActions";
+import { Student, Document, TransferRecord, DisciplinaryRecord, Certificate, Category, MedicalRecord } from "@/types/student";
+import { FileText, GraduationCap, Shield, Tag, UserPlus, Heart, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Students() {
-  const { students, isLoading, error } = useStudents();
-  const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("list");
+  const [formOpen, setFormOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [disciplinaryRecords, setDisciplinaryRecords] = useState<DisciplinaryRecord[]>([]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
+  // Sample data - Replace with actual data from your backend
+  const [students, setStudents] = useState<Student[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [transfers, setTransfers] = useState<TransferRecord[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const handleAddStudent = () => {
-    setSelectedStudent(null);
-    setShowAddStudentDialog(true);
-  };
+  // Sample certificate templates
+  const certificateTemplates = [
+    {
+      id: "1",
+      name: "Transfer Certificate",
+      description: "Official transfer certificate for students leaving the school",
+      fields: [
+        { name: "reason", type: "text" as const, required: true, label: "Reason for Transfer" },
+        { name: "last_attended_date", type: "date" as const, required: true, label: "Last Date Attended" },
+        { name: "conduct", type: "text" as const, required: true, label: "Conduct" },
+      ],
+    },
+    {
+      id: "2",
+      name: "Character Certificate",
+      description: "Certificate attesting to the student's character and conduct",
+      fields: [
+        { name: "period_from", type: "date" as const, required: true, label: "Period From" },
+        { name: "period_to", type: "date" as const, required: true, label: "Period To" },
+        { name: "character", type: "text" as const, required: true, label: "Character Description" },
+      ],
+    },
+  ];
 
-  const handleEditStudent = (student: Student) => {
+  // Sample batches
+  const batches = [
+    { id: "1", name: "Grade 10A" },
+    { id: "2", name: "Grade 10B" },
+    { id: "3", name: "Grade 9A" },
+  ];
+
+  const handleStudentSelect = (student: Student) => {
     setSelectedStudent(student);
-    setShowAddStudentDialog(true);
+    setActiveTab("profile");
   };
 
-  const handleStudentSubmit = (data: any) => {
-    // This will be implemented when backend is ready
-    toast({
-      title: selectedStudent ? "Student Updated" : "Student Added",
-      description: `Student ${data.first_name} ${data.last_name} has been ${selectedStudent ? 'updated' : 'added'} successfully.`,
-    });
-    setShowAddStudentDialog(false);
+  const handleCreateStudent = (student: Student) => {
+    setStudents((prev) => [...prev, student]);
+    setFormOpen(false);
+    toast.success("Student added successfully");
   };
 
-  const handleImportSubmit = (data: any) => {
-    // This will be implemented when backend is ready
-    toast({
-      title: "Students Imported",
-      description: `${data.length} students have been imported successfully.`,
-    });
-    setShowImportDialog(false);
+  const handleUpdateStudent = (student: Student) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === student.id ? student : s))
+    );
+    setSelectedStudent(student);
+    toast.success("Student updated successfully");
   };
 
-  const filteredStudents = students.filter((student) => {
-    // Basic search
-    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-    if (searchQuery && !fullName.includes(searchQuery.toLowerCase())) {
-      return false;
+  const handleBatchAction = (action: string, studentIds: string[]) => {
+    switch (action) {
+      case "promote":
+        toast.success(`${studentIds.length} students promoted`);
+        break;
+      case "transfer":
+        toast.success(`${studentIds.length} students marked for transfer`);
+        break;
+      case "print":
+        toast.success("Generating documents...");
+        break;
+      default:
+        break;
     }
-    
-    // Filter handling will be expanded when backend is implemented
-    return true;
-  });
+  };
+
+  const handleBulkImport = () => {
+    setBulkImportOpen(true);
+  };
+
+  const handleExportData = () => {
+    toast.success("Exporting student data...");
+  };
+
+  // Document management handlers
+  const handleUploadDocument = (document: Document) => {
+    setDocuments((prev) => [...prev, document]);
+    toast.success("Document uploaded successfully");
+  };
+
+  const handleDeleteDocument = (documentId: string) => {
+    setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+    toast.success("Document deleted successfully");
+  };
+
+  const handleVerifyDocument = (
+    documentId: string,
+    status: "verified" | "rejected",
+    verifiedBy: string
+  ) => {
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === documentId
+          ? {
+              ...doc,
+              verificationStatus: status,
+              verifiedBy,
+              verificationDate: new Date().toISOString(),
+            }
+          : doc
+      )
+    );
+    toast.success(`Document ${status}`);
+  };
+
+  // Transfer management handlers
+  const handleCreateTransfer = (transfer: TransferRecord) => {
+    setTransfers((prev) => [...prev, transfer]);
+    toast.success("Transfer request created");
+  };
+
+  const handleUpdateTransferStatus = (
+    transferId: string,
+    status: TransferRecord["status"]
+  ) => {
+    setTransfers((prev) =>
+      prev.map((transfer) =>
+        transfer.id === transferId ? { ...transfer, status } : transfer
+      )
+    );
+    toast.success(`Transfer status updated to ${status}`);
+  };
+
+  // Category management handlers
+  const handleCreateCategory = (category: Category) => {
+    setCategories((prev) => [...prev, category]);
+    toast.success("Category created successfully");
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Students</h1>
-          <Breadcrumb className="mt-1">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/school-admin">Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/students">Students</BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      {/* Header with Quick Actions */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Students Management</h1>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={handleAddStudent} className="flex items-center gap-1">
-            <UserPlus className="h-4 w-4" />
-            <span>Add Student</span>
-          </Button>
-          <Button variant="outline" onClick={() => setShowImportDialog(true)} className="flex items-center gap-1">
-            <FileUp className="h-4 w-4" />
-            <span>Import</span>
-          </Button>
-          <Button variant="secondary" className="flex items-center gap-1">
-            <Download className="h-4 w-4" />
-            <span>Export</span>
-          </Button>
-        </div>
+        
+        <QuickActions
+          onAddStudent={() => setFormOpen(true)}
+          onBulkImport={handleBulkImport}
+          onExportData={handleExportData}
+          totalStudents={students.length}
+          activeStudents={students.filter(s => !s.transferRecords?.some(t => t.status === "completed")).length}
+          pendingAdmissions={0} // Replace with actual count
+        />
       </div>
 
-      {/* Tabs Section */}
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">All Students</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="transferred">Transferred</TabsTrigger>
-          <TabsTrigger value="graduated">Graduated</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="bg-muted">
+          <TabsTrigger value="list">List View</TabsTrigger>
+          {selectedStudent && <TabsTrigger value="profile">Profile</TabsTrigger>}
+          <TabsTrigger value="medical">
+            <Heart className="w-4 h-4 mr-2" />
+            Medical
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileText className="w-4 h-4 mr-2" />
+            Documents
+          </TabsTrigger>
+          <TabsTrigger value="disciplinary">
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Disciplinary
+          </TabsTrigger>
+          <TabsTrigger value="transfers">
+            <GraduationCap className="w-4 h-4 mr-2" />
+            Transfers
+          </TabsTrigger>
+          <TabsTrigger value="certificates">Certificates</TabsTrigger>
+          <TabsTrigger value="categories">
+            <Tag className="w-4 h-4 mr-2" />
+            Categories
+          </TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="all">
-          <Card>
-            <CardContent className="p-6">
-              {/* Search and Filter Bar */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search students by name, ID, or admission number..."
-                    className="pl-9"
-                    value={searchQuery}
-                    onChange={handleSearch}
-                  />
-                </div>
-                <Button
-                  variant={showFilters ? "default" : "outline"}
-                  className="flex items-center gap-1"
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <Filter className="h-4 w-4" />
-                  <span>Filters</span>
-                </Button>
-              </div>
 
-              {/* Filters Section */}
-              {showFilters && (
-                <StudentFilters 
-                  activeFilters={activeFilters}
-                  onFilterChange={setActiveFilters}
-                  className="mb-6"
-                />
-              )}
+        <TabsContent value="list" className="space-y-4">
+          <StudentList
+            students={students}
+            onSelect={handleStudentSelect}
+            categories={categories}
+            onBatchAction={handleBatchAction}
+          />
+        </TabsContent>
 
-              {/* Students List */}
-              {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                </div>
-              ) : error ? (
-                <div className="text-center p-8 text-red-500">
-                  <p>Failed to load students. Please try again later.</p>
-                </div>
-              ) : filteredStudents.length === 0 ? (
-                <div className="text-center p-8 text-muted-foreground">
-                  {searchQuery ? 
-                    <p>No students found matching your search criteria.</p> : 
-                    <p>No students have been added yet.</p>
-                  }
-                </div>
-              ) : (
-                <StudentList 
-                  students={filteredStudents}
-                  onEdit={handleEditStudent}
-                />
-              )}
-            </CardContent>
-          </Card>
+        {selectedStudent && (
+          <TabsContent value="profile">
+            <StudentProfile student={selectedStudent} onEdit={() => setFormOpen(true)} />
+          </TabsContent>
+        )}
+
+        <TabsContent value="medical">
+          <MedicalManager
+            records={medicalRecords}
+            onAddRecord={(record) => {
+              const newRecord = {
+                ...record,
+                id: Date.now().toString(),
+                lastUpdated: new Date().toISOString(),
+              };
+              setMedicalRecords((prev) => [...prev, newRecord]);
+              toast.success("Medical record added successfully");
+            }}
+            onUpdateRecord={(id, record) => {
+              setMedicalRecords((prev) =>
+                prev.map((r) =>
+                  r.id === id
+                    ? { ...r, ...record, lastUpdated: new Date().toISOString() }
+                    : r
+                )
+              );
+              toast.success("Medical record updated successfully");
+            }}
+            onDeleteRecord={(id) => {
+              setMedicalRecords((prev) => prev.filter((r) => r.id !== id));
+              toast.success("Medical record deleted successfully");
+            }}
+          />
         </TabsContent>
-        
-        <TabsContent value="active">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">Active students will be shown here.</p>
-            </CardContent>
-          </Card>
+
+        <TabsContent value="documents">
+          <DocumentManager
+            documents={documents}
+            onUpload={handleUploadDocument}
+            onDelete={handleDeleteDocument}
+            onVerify={handleVerifyDocument}
+          />
         </TabsContent>
-        
-        <TabsContent value="transferred">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">Transferred students will be shown here.</p>
-            </CardContent>
-          </Card>
+
+        <TabsContent value="disciplinary">
+          <DisciplinaryManager
+            records={disciplinaryRecords}
+            onCreateRecord={(record) => {
+              const newRecord = {
+                ...record,
+                id: Date.now().toString(),
+                createdAt: new Date().toISOString(),
+              };
+              setDisciplinaryRecords((prev) => [...prev, newRecord]);
+              toast.success("Disciplinary record created successfully");
+            }}
+            onUpdateStatus={(id, status) => {
+              setDisciplinaryRecords((prev) =>
+                prev.map((r) => (r.id === id ? { ...r, status } : r))
+              );
+              toast.success("Status updated successfully");
+            }}
+            onAddParentMeeting={(recordId, meeting) => {
+              setDisciplinaryRecords((prev) =>
+                prev.map((r) =>
+                  r.id === recordId
+                    ? {
+                        ...r,
+                        parentMeetings: [
+                          ...(r.parentMeetings || []),
+                          { ...meeting, id: Date.now().toString() },
+                        ],
+                      }
+                    : r
+                )
+              );
+              toast.success("Parent meeting added successfully");
+            }}
+            onAddEvidence={(recordId, evidence) => {
+              setDisciplinaryRecords((prev) =>
+                prev.map((r) =>
+                  r.id === recordId
+                    ? {
+                        ...r,
+                        evidence: [
+                          ...(r.evidence || []),
+                          {
+                            ...evidence,
+                            id: Date.now().toString(),
+                            uploadedAt: new Date().toISOString(),
+                            file: URL.createObjectURL(evidence.file),
+                          },
+                        ],
+                      }
+                    : r
+                )
+              );
+              toast.success("Evidence added successfully");
+            }}
+          />
         </TabsContent>
-        
-        <TabsContent value="graduated">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">Graduated students will be shown here.</p>
-            </CardContent>
-          </Card>
+
+        <TabsContent value="transfers">
+          <TransferManager
+            transfers={transfers}
+            onCreateTransfer={handleCreateTransfer}
+            onUpdateStatus={handleUpdateTransferStatus}
+            onAddDocument={(transferId: string, document: Document) => {
+              setTransfers(prev =>
+                prev.map(transfer =>
+                  transfer.id === transferId
+                    ? { ...transfer, documents: [...(transfer.documents || []), document] }
+                    : transfer
+                )
+              );
+              handleUploadDocument(document);
+            }}
+            batches={batches}
+          />
+        </TabsContent>
+
+        <TabsContent value="certificates">
+          <CertificateManager
+            certificates={certificates}
+            templates={certificateTemplates}
+            onCreateCertificate={(cert) => {
+              setCertificates((prev) => [...prev, cert]);
+              toast.success("Certificate created");
+            }}
+            onUpdateStatus={(certId, status) => {
+              setCertificates((prev) =>
+                prev.map((cert) =>
+                  cert.id === certId ? { ...cert, status } : cert
+                )
+              );
+              toast.success(`Certificate ${status}`);
+            }}
+            onRevoke={(certId) => {
+              setCertificates((prev) =>
+                prev.map((cert) =>
+                  cert.id === certId ? { ...cert, status: "revoked" } : cert
+                )
+              );
+              toast.success("Certificate revoked");
+            }}
+            currentUser="Admin" // Replace with actual user
+          />
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoryManager
+            categories={categories}
+            onCreateCategory={handleCreateCategory}
+            onUpdateCategory={(categoryId, category) => {
+              setCategories((prev) =>
+                prev.map((cat) =>
+                  cat.id === categoryId ? { ...cat, ...category } : cat
+                )
+              );
+              toast.success("Category updated");
+            }}
+            onDeleteCategory={(categoryId) => {
+              setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
+              toast.success("Category deleted");
+            }}
+            onAssignStudents={(categoryId, studentIds) => {
+              setCategories((prev) =>
+                prev.map((cat) =>
+                  cat.id === categoryId
+                    ? { ...cat, students: [...cat.students, ...studentIds] }
+                    : cat
+                )
+              );
+              toast.success(`${studentIds.length} students assigned to category`);
+            }}
+            onRemoveStudent={(categoryId, studentId) => {
+              setCategories((prev) =>
+                prev.map((cat) =>
+                  cat.id === categoryId
+                    ? {
+                        ...cat,
+                        students: cat.students.filter((id) => id !== studentId),
+                      }
+                    : cat
+                )
+              );
+              toast.success("Student removed from category");
+            }}
+            students={students.map((s) => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }))}
+          />
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs */}
-      {showAddStudentDialog && (
-        <StudentFormDialog
-          isOpen={showAddStudentDialog}
-          onClose={() => setShowAddStudentDialog(false)}
-          onSubmit={handleStudentSubmit}
-          student={selectedStudent}
-        />
-      )}
-
-      {showImportDialog && (
-        <StudentImportDialog
-          isOpen={showImportDialog}
-          onClose={() => setShowImportDialog(false)}
-          onImport={handleImportSubmit}
-        />
-      )}
+      <StudentFormDialog
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        onSave={selectedStudent ? handleUpdateStudent : handleCreateStudent}
+        student={selectedStudent}
+      />
     </div>
   );
 }
