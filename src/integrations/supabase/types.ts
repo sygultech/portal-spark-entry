@@ -643,12 +643,14 @@ export type Database = {
       subjects: {
         Row: {
           academic_year_id: string
+          archived_at: string | null
           category_id: string | null
           code: string | null
           created_at: string
           description: string | null
           grading_system_id: string | null
           id: string
+          is_archived: boolean | null
           name: string
           school_id: string
           subject_type: string | null
@@ -656,12 +658,14 @@ export type Database = {
         }
         Insert: {
           academic_year_id: string
+          archived_at?: string | null
           category_id?: string | null
           code?: string | null
           created_at?: string
           description?: string | null
           grading_system_id?: string | null
           id?: string
+          is_archived?: boolean | null
           name: string
           school_id: string
           subject_type?: string | null
@@ -669,12 +673,14 @@ export type Database = {
         }
         Update: {
           academic_year_id?: string
+          archived_at?: string | null
           category_id?: string | null
           code?: string | null
           created_at?: string
           description?: string | null
           grading_system_id?: string | null
           id?: string
+          is_archived?: boolean | null
           name?: string
           school_id?: string
           subject_type?: string | null
