@@ -1,3 +1,4 @@
+
 import { Certificate } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,13 +61,14 @@ export function CertificateManager({
     const certificate: Certificate = {
       id: Date.now().toString(),
       type: selectedTemplate.name,
-      templateId: selectedTemplate.id,
-      issuedTo: "", // This should be set to the current student's ID
-      issuedDate: new Date().toISOString(),
-      serialNumber: `CERT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      template_id: selectedTemplate.id,
+      student_id: "", // This should be set to the current student's ID
+      issued_date: new Date().toISOString(),
+      serial_number: `CERT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
       status: "draft",
-      issuedBy: currentUser,
+      issued_by: currentUser,
       data: formData,
+      school_id: ""
     };
 
     onCreateCertificate(certificate);
@@ -108,33 +110,33 @@ export function CertificateManager({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Serial Number</span>
-                  <span>{certificate.serialNumber}</span>
+                  <span>{certificate.serial_number}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Issued Date</span>
-                  <span>{new Date(certificate.issuedDate).toLocaleDateString()}</span>
+                  <span>{new Date(certificate.issued_date).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Issued By</span>
-                  <span>{certificate.issuedBy}</span>
+                  <span>{certificate.issued_by}</span>
                 </div>
-                {certificate.validUntil && (
+                {certificate.valid_until && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Valid Until</span>
-                    <span>{new Date(certificate.validUntil).toLocaleDateString()}</span>
+                    <span>{new Date(certificate.valid_until).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
 
               <div className="mt-4 space-y-2">
                 <p className="text-sm text-muted-foreground">Certificate Data</p>
-                <div className="border rounded p-2 space-y-1">
-                  {Object.entries(certificate.data).map(([key, value]) => (
+                <div className="border rounded-lg p-2 space-y-1">
+                  {certificate.data && Object.entries(certificate.data).map(([key, value]) => (
                     <div key={key} className="flex justify-between text-sm">
                       <span className="text-muted-foreground capitalize">
                         {key.replace(/_/g, " ")}
                       </span>
-                      <span>{value}</span>
+                      <span>{String(value)}</span>
                     </div>
                   ))}
                 </div>
@@ -249,4 +251,4 @@ export function CertificateManager({
       </Dialog>
     </div>
   );
-} 
+}

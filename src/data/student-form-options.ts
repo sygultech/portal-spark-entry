@@ -56,4 +56,27 @@ export const categoryOptions: Option[] = [
   { value: "ST", label: "ST" },
   { value: "EWS", label: "EWS" },
   // Add more categories as needed
-]; 
+];
+
+export const documentTypeOptions: Option[] = [
+  { value: "Birth Certificate", label: "Birth Certificate" },
+  { value: "Previous School Records", label: "Previous School Records" },
+  { value: "Medical Records", label: "Medical Records" },
+  { value: "Immunization Records", label: "Immunization Records" },
+  { value: "Parent ID", label: "Parent ID" },
+  { value: "Address Proof", label: "Address Proof" },
+  { value: "Transfer Certificate", label: "Transfer Certificate" },
+  { value: "Other", label: "Other" }
+];
+
+export const incidentTypeOptions: Option[] = [
+  { value: "Bullying", label: "Bullying" },
+  { value: "Cheating", label: "Cheating" },
+  { value: "Disruption", label: "Classroom Disruption" },
+  { value: "Vandalism", label: "Vandalism" },
+  { value: "Fighting", label: "Fighting" },
+  { value: "Insubordination", label: "Insubordination" },
+  { value: "Tardiness", label: "Excessive Tardiness" },
+  { value: "Truancy", label: "Truancy" },
+  { value: "Other", label: "Other" }
+];

@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,21 +40,18 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
   const [activeTab, setActiveTab] = useState("basic");
   const [formData, setFormData] = useState<Student>(student || {
     id: "",
-    admissionNo: "",
-    firstName: "",
-    lastName: "",
-    dateOfBirth: "",
+    admission_number: "",
+    first_name: "",
+    last_name: "",
+    date_of_birth: "",
     gender: "male",
     address: "",
-    batch: "",
+    batch_id: "",
     nationality: "",
-    motherTongue: "",
-    academicRecords: [],
-    medicalRecords: [],
-    documents: [],
-    disciplinaryRecords: [],
-    guardians: [],
-    transferRecords: []
+    mother_tongue: "",
+    status: "active",
+    school_id: "",
+    guardians: []
   } as Student);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -70,6 +68,8 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
   };
 
   const handleGuardianChange = (index: number, field: keyof Guardian, value: any) => {
+    if (!formData.guardians) return;
+    
     const newGuardians = [...formData.guardians];
     newGuardians[index] = { ...newGuardians[index], [field]: value };
     handleInputChange('guardians', newGuardians);
@@ -78,19 +78,24 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
   const addGuardian = () => {
     const newGuardian: Guardian = {
       id: Date.now().toString(),
+      first_name: "",
+      last_name: "",
       relation: "",
-      firstName: "",
-      lastName: "",
       occupation: "",
       phone: "",
       address: "",
-      isEmergencyContact: false,
-      canPickup: false
+      is_emergency_contact: false,
+      can_pickup: false,
+      school_id: formData.school_id
     };
-    handleInputChange('guardians', [...formData.guardians, newGuardian]);
+    
+    const guardians = formData.guardians || [];
+    handleInputChange('guardians', [...guardians, newGuardian]);
   };
 
   const removeGuardian = (index: number) => {
+    if (!formData.guardians) return;
+    
     const newGuardians = formData.guardians.filter((_, i) => i !== index);
     handleInputChange('guardians', newGuardians);
   };
@@ -127,7 +132,7 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                 <div className="space-y-2">
                   <Label>Photo</Label>
                   <ImageUploader
-                    currentImage={formData.photo}
+                    currentImage={formData.avatar_url}
                     onImageSelected={setPhotoFile}
                     aspectRatio={1}
                   />
@@ -136,22 +141,22 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                   <div>
                     <Label>Admission Number</Label>
                     <Input
-                      value={formData.admissionNo}
-                      onChange={(e) => handleInputChange("admissionNo", e.target.value)}
+                      value={formData.admission_number}
+                      onChange={(e) => handleInputChange("admission_number", e.target.value)}
                     />
                   </div>
                   <div>
                     <Label>First Name</Label>
                     <Input
-                      value={formData.firstName}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      value={formData.first_name}
+                      onChange={(e) => handleInputChange("first_name", e.target.value)}
                     />
                   </div>
                   <div>
                     <Label>Last Name</Label>
                     <Input
-                      value={formData.lastName}
-                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      value={formData.last_name}
+                      onChange={(e) => handleInputChange("last_name", e.target.value)}
                     />
                   </div>
                 </div>
@@ -162,8 +167,8 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                   <Label>Date of Birth</Label>
                   <Input
                     type="date"
-                    value={formData.dateOfBirth}
-                    onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                    value={formData.date_of_birth}
+                    onChange={(e) => handleInputChange("date_of_birth", e.target.value)}
                   />
                 </div>
                 <div>
@@ -200,8 +205,8 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                 <div>
                   <Label>Mother Tongue</Label>
                   <CreatableSelect
-                    value={formData.motherTongue}
-                    onValueChange={(value) => handleInputChange("motherTongue", value)}
+                    value={formData.mother_tongue}
+                    onValueChange={(value) => handleInputChange("mother_tongue", value)}
                     options={[
                       ...motherTongueOptions,
                       ...customMotherTongues.map(m => ({ value: m, label: m }))
@@ -245,12 +250,12 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                 <div>
                   <Label>Blood Group</Label>
                   <CreatableSelect
-                    value={formData.bloodGroup}
-                    onValueChange={(value) => handleInputChange("bloodGroup", value)}
+                    value={formData.blood_group}
+                    onValueChange={(value) => handleInputChange("blood_group", value)}
                     options={bloodGroupOptions}
                     onCreateOption={(value) => {
                       if (/^(A|B|AB|O)[+-]$/.test(value)) {
-                        handleInputChange("bloodGroup", value);
+                        handleInputChange("blood_group", value);
                       }
                     }}
                     placeholder="Select blood group"
@@ -293,36 +298,27 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                     <div>
                       <Label>School Name</Label>
                       <Input
-                        value={formData.previousSchool?.name}
+                        value={formData.previous_school_name}
                         onChange={(e) =>
-                          handleInputChange("previousSchool", {
-                            ...formData.previousSchool,
-                            name: e.target.value,
-                          })
+                          handleInputChange("previous_school_name", e.target.value)
                         }
                       />
                     </div>
                     <div>
                       <Label>Board</Label>
                       <Input
-                        value={formData.previousSchool?.board}
+                        value={formData.previous_school_board}
                         onChange={(e) =>
-                          handleInputChange("previousSchool", {
-                            ...formData.previousSchool,
-                            board: e.target.value,
-                          })
+                          handleInputChange("previous_school_board", e.target.value)
                         }
                       />
                     </div>
                     <div>
                       <Label>Year of Passing</Label>
                       <Input
-                        value={formData.previousSchool?.yearOfPassing}
+                        value={formData.previous_school_year}
                         onChange={(e) =>
-                          handleInputChange("previousSchool", {
-                            ...formData.previousSchool,
-                            yearOfPassing: e.target.value,
-                          })
+                          handleInputChange("previous_school_year", e.target.value)
                         }
                       />
                     </div>
@@ -330,12 +326,9 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                       <Label>Percentage</Label>
                       <Input
                         type="number"
-                        value={formData.previousSchool?.percentage}
+                        value={formData.previous_school_percentage}
                         onChange={(e) =>
-                          handleInputChange("previousSchool", {
-                            ...formData.previousSchool,
-                            percentage: parseFloat(e.target.value),
-                          })
+                          handleInputChange("previous_school_percentage", parseFloat(e.target.value))
                         }
                       />
                     </div>
@@ -352,7 +345,7 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                 </Button>
               </div>
               
-              {formData.guardians.map((guardian, index) => (
+              {formData.guardians && formData.guardians.map((guardian, index) => (
                 <Card key={guardian.id} className="relative">
                   <Button
                     variant="ghost"
@@ -377,15 +370,15 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                       <div>
                         <Label>First Name</Label>
                         <Input
-                          value={guardian.firstName}
-                          onChange={(e) => handleGuardianChange(index, "firstName", e.target.value)}
+                          value={guardian.first_name}
+                          onChange={(e) => handleGuardianChange(index, "first_name", e.target.value)}
                         />
                       </div>
                       <div>
                         <Label>Last Name</Label>
                         <Input
-                          value={guardian.lastName}
-                          onChange={(e) => handleGuardianChange(index, "lastName", e.target.value)}
+                          value={guardian.last_name}
+                          onChange={(e) => handleGuardianChange(index, "last_name", e.target.value)}
                         />
                       </div>
                       <div>
@@ -422,9 +415,9 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={guardian.isEmergencyContact}
+                          checked={guardian.is_emergency_contact}
                           onChange={(e) =>
-                            handleGuardianChange(index, "isEmergencyContact", e.target.checked)
+                            handleGuardianChange(index, "is_emergency_contact", e.target.checked)
                           }
                         />
                         Emergency Contact
@@ -432,9 +425,9 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={guardian.canPickup}
+                          checked={guardian.can_pickup}
                           onChange={(e) =>
-                            handleGuardianChange(index, "canPickup", e.target.checked)
+                            handleGuardianChange(index, "can_pickup", e.target.checked)
                           }
                         />
                         Can Pickup Student

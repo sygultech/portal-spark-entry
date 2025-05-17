@@ -1,4 +1,5 @@
-import { Category } from "@/types/student";
+
+import { StudentCategory } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,9 +10,9 @@ import { Plus, Users } from "lucide-react";
 import { useState } from "react";
 
 interface CategoryManagerProps {
-  categories: Category[];
-  onCreateCategory: (category: Category) => void;
-  onUpdateCategory: (categoryId: string, category: Partial<Category>) => void;
+  categories: StudentCategory[];
+  onCreateCategory: (category: StudentCategory) => void;
+  onUpdateCategory: (categoryId: string, category: Partial<StudentCategory>) => void;
   onDeleteCategory: (categoryId: string) => void;
   onAssignStudents: (categoryId: string, studentIds: string[]) => void;
   onRemoveStudent: (categoryId: string, studentId: string) => void;
@@ -29,12 +30,12 @@ export function CategoryManager({
 }: CategoryManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [newCategory, setNewCategory] = useState<Partial<Category>>({
+  const [selectedCategory, setSelectedCategory] = useState<StudentCategory | null>(null);
+  const [newCategory, setNewCategory] = useState<Partial<StudentCategory>>({
     name: "",
     description: "",
     color: "#000000",
-    students: [],
+    students: []
   });
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,12 +43,13 @@ export function CategoryManager({
   const handleCreate = () => {
     if (!newCategory.name) return;
 
-    const category: Category = {
+    const category: StudentCategory = {
       id: Date.now().toString(),
       name: newCategory.name,
       description: newCategory.description || "",
       color: newCategory.color || "#000000",
-      students: [],
+      school_id: "",
+      students: []
     };
 
     onCreateCategory(category);
@@ -56,7 +58,7 @@ export function CategoryManager({
       name: "",
       description: "",
       color: "#000000",
-      students: [],
+      students: []
     });
   };
 
@@ -71,7 +73,7 @@ export function CategoryManager({
   const filteredStudents = students.filter(
     (student) =>
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !selectedCategory?.students.includes(student.id)
+      !selectedCategory?.students?.includes(student.id)
   );
 
   return (
@@ -119,11 +121,11 @@ export function CategoryManager({
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-muted-foreground">
-                    Students ({category.students.length})
+                    Students ({category.students?.length || 0})
                   </p>
                 </div>
                 <div className="space-y-1">
-                  {category.students.map((studentId) => {
+                  {category.students?.map((studentId) => {
                     const student = students.find((s) => s.id === studentId);
                     return (
                       student && (
@@ -283,4 +285,4 @@ export function CategoryManager({
       </Dialog>
     </div>
   );
-} 
+}

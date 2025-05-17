@@ -9,6 +9,7 @@ export type IncidentStatus = 'pending' | 'resolved' | 'escalated';
 export type TransferType = 'internal' | 'external';
 export type TransferStatus = 'pending' | 'approved' | 'rejected' | 'completed';
 export type CertificateStatus = 'draft' | 'issued' | 'revoked';
+export type DocumentType = 'Birth Certificate' | 'Previous School Records' | 'Medical Records' | 'Immunization Records' | 'Parent ID' | 'Address Proof' | 'Transfer Certificate' | 'Other';
 
 export interface Student {
   id: string;
@@ -41,6 +42,12 @@ export interface Student {
   school_id: string;
   created_at?: string;
   updated_at?: string;
+  guardians?: Guardian[];
+  categories?: StudentCategory[];
+  documents?: StudentDocument[];
+  disciplinary_records?: DisciplinaryRecord[];
+  transfer_records?: TransferRecord[];
+  certificates?: Certificate[];
 }
 
 export interface Guardian {
@@ -64,7 +71,10 @@ export interface StudentCategory {
   description?: string;
   color?: string;
   school_id: string;
+  students?: string[];
 }
+
+export interface Category extends StudentCategory {}
 
 export interface StudentDocument {
   id: string;
@@ -80,6 +90,8 @@ export interface StudentDocument {
   school_id: string;
 }
 
+export interface Document extends StudentDocument {}
+
 export interface DisciplinaryRecord {
   id: string;
   student_id: string;
@@ -93,6 +105,8 @@ export interface DisciplinaryRecord {
   school_id: string;
   created_at?: string;
   updated_at?: string;
+  parent_meetings?: ParentMeeting[];
+  evidence?: DisciplinaryEvidence[];
 }
 
 export interface ParentMeeting {
@@ -113,6 +127,7 @@ export interface DisciplinaryEvidence {
   file_path: string;
   uploaded_at?: string;
   school_id: string;
+  file?: File;
 }
 
 export interface TransferRecord {
@@ -129,6 +144,7 @@ export interface TransferRecord {
   school_id: string;
   created_at?: string;
   updated_at?: string;
+  documents?: Document[];
 }
 
 export interface Certificate {
@@ -145,6 +161,13 @@ export interface Certificate {
   school_id: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface PreviousSchool {
+  name?: string;
+  board?: string;
+  yearOfPassing?: string;
+  percentage?: number;
 }
 
 export interface StudentWithDetails extends Student {

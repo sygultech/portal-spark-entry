@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -27,11 +28,11 @@ import {
 } from "@/components/ui/select";
 import { Plus, FileText, CheckCircle, XCircle, Trash2, Download } from "lucide-react";
 import { useState } from "react";
-import { Document, DocumentType } from "@/types/student";
+import { StudentDocument, DocumentType, DocumentVerificationStatus } from "@/types/student";
 
 interface DocumentManagerProps {
-  documents: Document[];
-  onUpload: (document: Omit<Document, "id" | "uploadDate">) => void;
+  documents: StudentDocument[];
+  onUpload: (document: Omit<StudentDocument, "id" | "upload_date">) => void;
   onDelete: (id: string) => void;
   onVerify: (id: string, status: "verified" | "rejected", verifiedBy: string) => void;
 }
@@ -59,19 +60,20 @@ export function DocumentManager({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const type = formData.get("type");
+    const type = formData.get("type") as string;
     
     if (!type || !documentTypes.includes(type as DocumentType)) {
       return;
     }
     
-    const newDocument = {
-      studentId: formData.get("studentId") as string,
-      type: type as DocumentType,
+    const newDocument: Omit<StudentDocument, "id" | "upload_date"> = {
+      student_id: formData.get("studentId") as string,
+      type: type as string,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
-      file: selectedFile,
-      verificationStatus: "pending" as const,
+      file_path: selectedFile ? URL.createObjectURL(selectedFile) : "",
+      verification_status: "pending" as DocumentVerificationStatus,
+      school_id: ""
     };
 
     onUpload(newDocument);
@@ -177,13 +179,13 @@ export function DocumentManager({
         <Card className="p-4">
           <h3 className="font-semibold mb-2">Pending Verification</h3>
           <p className="text-2xl font-bold">
-            {documents.filter((d) => d.verificationStatus === "pending").length}
+            {documents.filter((d) => d.verification_status === "pending").length}
           </p>
         </Card>
         <Card className="p-4">
           <h3 className="font-semibold mb-2">Verified Documents</h3>
           <p className="text-2xl font-bold">
-            {documents.filter((d) => d.verificationStatus === "verified").length}
+            {documents.filter((d) => d.verification_status === "verified").length}
           </p>
         </Card>
       </div>
@@ -204,25 +206,25 @@ export function DocumentManager({
             <TableRow key={doc.id}>
               <TableCell className="font-medium">{doc.type}</TableCell>
               <TableCell>{doc.name}</TableCell>
-              <TableCell>{new Date(doc.uploadDate).toLocaleDateString()}</TableCell>
+              <TableCell>{doc.upload_date ? new Date(doc.upload_date).toLocaleDateString() : "-"}</TableCell>
               <TableCell>
                 <span
                   className={`px-2 py-1 rounded-full text-sm ${
-                    doc.verificationStatus === "verified"
+                    doc.verification_status === "verified"
                       ? "bg-green-100 text-green-800"
-                      : doc.verificationStatus === "rejected"
+                      : doc.verification_status === "rejected"
                       ? "bg-red-100 text-red-800"
                       : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
-                  {doc.verificationStatus.charAt(0).toUpperCase() +
-                    doc.verificationStatus.slice(1)}
+                  {doc.verification_status.charAt(0).toUpperCase() +
+                    doc.verification_status.slice(1)}
                 </span>
               </TableCell>
-              <TableCell>{doc.verifiedBy || "-"}</TableCell>
+              <TableCell>{doc.verified_by || "-"}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {doc.verificationStatus === "pending" && (
+                  {doc.verification_status === "pending" && (
                     <>
                       <Button
                         variant="ghost"
@@ -258,4 +260,4 @@ export function DocumentManager({
       </Table>
     </div>
   );
-} 
+}
