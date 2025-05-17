@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -20,24 +21,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, FileEdit, Trash2 } from "lucide-react";
 import { useState } from "react";
-
-interface MedicalRecord {
-  id: string;
-  studentId: string;
-  condition: string;
-  diagnosis: string;
-  medication: string;
-  startDate: string;
-  endDate?: string;
-  status: "active" | "resolved" | "ongoing";
-  notes: string;
-  attachments?: string[];
-  lastUpdated: string;
-}
+import { MedicalRecord, MedicalRecordStatus } from "@/types/student";
 
 interface MedicalManagerProps {
   records: MedicalRecord[];
-  onAddRecord: (record: Omit<MedicalRecord, "id" | "lastUpdated">) => void;
+  onAddRecord: (record: Omit<MedicalRecord, "id" | "last_updated">) => void;
   onUpdateRecord: (id: string, record: Partial<MedicalRecord>) => void;
   onDeleteRecord: (id: string) => void;
 }
@@ -55,14 +43,15 @@ export function MedicalManager({
     const formData = new FormData(e.currentTarget);
     
     const newRecord = {
-      studentId: formData.get("studentId") as string,
+      student_id: formData.get("student_id") as string,
       condition: formData.get("condition") as string,
       diagnosis: formData.get("diagnosis") as string,
       medication: formData.get("medication") as string,
-      startDate: formData.get("startDate") as string,
-      endDate: formData.get("endDate") as string,
-      status: formData.get("status") as "active" | "resolved" | "ongoing",
+      start_date: formData.get("start_date") as string,
+      end_date: formData.get("end_date") as string,
+      status: formData.get("status") as MedicalRecordStatus,
       notes: formData.get("notes") as string,
+      school_id: "", // Will be set by the service
     };
 
     onAddRecord(newRecord);
@@ -113,19 +102,19 @@ export function MedicalManager({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
+                  <Label htmlFor="start_date">Start Date</Label>
                   <Input
-                    id="startDate"
-                    name="startDate"
+                    id="start_date"
+                    name="start_date"
                     type="date"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
+                  <Label htmlFor="end_date">End Date</Label>
                   <Input
-                    id="endDate"
-                    name="endDate"
+                    id="end_date"
+                    name="end_date"
                     type="date"
                   />
                 </div>
@@ -152,6 +141,7 @@ export function MedicalManager({
                   className="min-h-[100px]"
                 />
               </div>
+              <input type="hidden" name="student_id" value="" />
               <div className="flex justify-end gap-2">
                 <Button
                   type="button"
@@ -206,7 +196,7 @@ export function MedicalManager({
               <TableCell>{record.condition}</TableCell>
               <TableCell>{record.diagnosis}</TableCell>
               <TableCell>{record.medication}</TableCell>
-              <TableCell>{new Date(record.startDate).toLocaleDateString()}</TableCell>
+              <TableCell>{new Date(record.start_date).toLocaleDateString()}</TableCell>
               <TableCell>
                 <span className={`px-2 py-1 rounded-full text-sm ${
                   record.status === "active"
@@ -215,10 +205,10 @@ export function MedicalManager({
                     ? "bg-gray-100 text-gray-800"
                     : "bg-yellow-100 text-yellow-800"
                 }`}>
-                  {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                  {record.status?.charAt(0).toUpperCase() + record.status?.slice(1)}
                 </span>
               </TableCell>
-              <TableCell>{new Date(record.lastUpdated).toLocaleDateString()}</TableCell>
+              <TableCell>{new Date(record.last_updated).toLocaleDateString()}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button
@@ -245,4 +235,4 @@ export function MedicalManager({
       </Table>
     </div>
   );
-} 
+}

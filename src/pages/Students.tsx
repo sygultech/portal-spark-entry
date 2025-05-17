@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -238,8 +237,7 @@ export default function Students() {
               const newRecord: MedicalRecord = {
                 ...record,
                 id: Date.now().toString(),
-                student_id: record.student_id || "",
-                school_id: "",
+                school_id: record.school_id || "",
                 last_updated: new Date().toISOString(),
               };
               setMedicalRecords((prev) => [...prev, newRecord]);

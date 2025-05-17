@@ -198,6 +198,13 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
 
     if (documentsError) throw documentsError;
 
+    // Cast types to match our type definitions
+    const documents: StudentDocument[] = documentsData.map(doc => ({
+      ...doc,
+      verification_status: doc.verification_status as DocumentVerificationStatus,
+      type: doc.type as DocumentType | string,
+    }));
+
     // Fetch disciplinary records
     const { data: disciplinaryData, error: disciplinaryError } = await supabase
       .from('disciplinary_records')
@@ -205,6 +212,13 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       .eq('student_id', studentId);
 
     if (disciplinaryError) throw disciplinaryError;
+
+    // Cast types to match our type definitions
+    const disciplinaryRecords: DisciplinaryRecord[] = disciplinaryData.map(record => ({
+      ...record,
+      severity: record.severity as IncidentSeverity,
+      status: record.status as IncidentStatus,
+    }));
 
     // Fetch transfer records
     const { data: transferData, error: transferError } = await supabase
@@ -214,6 +228,13 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
 
     if (transferError) throw transferError;
 
+    // Cast types to match our type definitions
+    const transferRecords: TransferRecord[] = transferData.map(record => ({
+      ...record,
+      type: record.type as TransferType,
+      status: record.status as TransferStatus,
+    }));
+
     // Fetch certificates
     const { data: certificatesData, error: certificatesError } = await supabase
       .from('certificates')
@@ -222,14 +243,20 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
 
     if (certificatesError) throw certificatesError;
 
+    // Cast types to match our type definitions
+    const certificates: Certificate[] = certificatesData.map(cert => ({
+      ...cert,
+      status: cert.status as CertificateStatus,
+    }));
+
     return {
       ...student,
       guardians,
       categories,
-      documents: documentsData,
-      disciplinary_records: disciplinaryData,
-      transfer_records: transferData,
-      certificates: certificatesData
+      documents,
+      disciplinary_records: disciplinaryRecords,
+      transfer_records: transferRecords,
+      certificates
     };
   } catch (error) {
     console.error('Error fetching student details:', error);
