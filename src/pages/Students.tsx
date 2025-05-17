@@ -21,7 +21,8 @@ import {
   StudentCategory, 
   MedicalRecord, 
   DisciplinaryEvidence,
-  ParentMeeting
+  ParentMeeting,
+  MedicalRecordStatus
 } from "@/types/student";
 import { FileText, GraduationCap, Shield, Tag, UserPlus, Heart, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -234,10 +235,12 @@ export default function Students() {
           <MedicalManager
             records={medicalRecords}
             onAddRecord={(record) => {
-              const newRecord = {
+              const newRecord: MedicalRecord = {
                 ...record,
                 id: Date.now().toString(),
-                lastUpdated: new Date().toISOString(),
+                student_id: record.student_id || "",
+                school_id: "",
+                last_updated: new Date().toISOString(),
               };
               setMedicalRecords((prev) => [...prev, newRecord]);
               toast.success("Medical record added successfully");
@@ -246,7 +249,7 @@ export default function Students() {
               setMedicalRecords((prev) =>
                 prev.map((r) =>
                   r.id === id
-                    ? { ...r, ...record, lastUpdated: new Date().toISOString() }
+                    ? { ...r, ...record, last_updated: new Date().toISOString() }
                     : r
                 )
               );

@@ -150,6 +150,18 @@ export function DisciplinaryManager({
     }
   };
 
+  // Helper function to get badge variant based on severity
+  const getSeverityVariant = (severity: IncidentSeverity) => {
+    switch (severity) {
+      case "severe":
+        return "destructive";
+      case "moderate":
+        return "secondary";  // Changed from 'warning' to 'secondary'
+      default:
+        return "outline";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -189,13 +201,7 @@ export function DisciplinaryManager({
                       {record.status}
                     </Badge>
                     <Badge
-                      variant={
-                        record.severity === "severe"
-                          ? "destructive"
-                          : record.severity === "moderate"
-                          ? "warning"
-                          : "outline"
-                      }
+                      variant={getSeverityVariant(record.severity)}
                     >
                       {record.severity}
                     </Badge>
@@ -434,13 +440,7 @@ export function DisciplinaryManager({
                       <div>
                         <p className="text-muted-foreground text-sm">Severity</p>
                         <Badge
-                          variant={
-                            selectedRecord.severity === "severe"
-                              ? "destructive"
-                              : selectedRecord.severity === "moderate"
-                              ? "warning"
-                              : "outline"
-                          }
+                          variant={getSeverityVariant(selectedRecord.severity)}
                         >
                           {selectedRecord.severity}
                         </Badge>

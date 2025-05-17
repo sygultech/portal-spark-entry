@@ -1,6 +1,5 @@
 
-import { User } from "./user";
-
+// Define basic types
 export type StudentStatus = 'active' | 'transferred' | 'graduated' | 'inactive';
 export type Gender = 'male' | 'female' | 'other';
 export type DocumentVerificationStatus = 'pending' | 'verified' | 'rejected';
@@ -10,6 +9,7 @@ export type TransferType = 'internal' | 'external';
 export type TransferStatus = 'pending' | 'approved' | 'rejected' | 'completed';
 export type CertificateStatus = 'draft' | 'issued' | 'revoked';
 export type DocumentType = 'Birth Certificate' | 'Previous School Records' | 'Medical Records' | 'Immunization Records' | 'Parent ID' | 'Address Proof' | 'Transfer Certificate' | 'Other';
+export type MedicalRecordStatus = 'active' | 'resolved' | 'ongoing';
 
 // Student aliases for camelCase to snake_case conversion
 export interface StudentDisplayNames {
@@ -95,7 +95,7 @@ export interface StudentDocument {
   id: string;
   student_id: string;
   name: string;
-  type: string;
+  type: DocumentType | string;
   description?: string;
   file_path: string;
   upload_date?: string;
@@ -257,5 +257,11 @@ export interface MedicalRecord {
   doctor_contact?: string;
   notes?: string;
   school_id: string;
-  lastUpdated?: string;
+  last_updated?: string;
+  diagnosis?: string;
+  medication?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: MedicalRecordStatus;
+  attachments?: string[];
 }
