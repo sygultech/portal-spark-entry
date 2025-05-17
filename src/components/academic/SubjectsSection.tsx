@@ -15,10 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen } from "lucide-react";
 import SubjectCategoryList from "./SubjectCategoryList";
 import VerticalSubjectManager from "./VerticalSubjectManager";
+import SubjectList from "./SubjectList";
 
 const SubjectsSection = () => {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>("subjects");
+  const [activeTab, setActiveTab] = useState<string>("all-subjects");
   const { academicYears, isLoading: academicYearsLoading } = useAcademicYears();
   const { categories, isLoading: categoriesLoading } = useSubjectCategories();
 
@@ -71,13 +72,18 @@ const SubjectsSection = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="subjects" onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-            <TabsTrigger value="subjects">Subjects</TabsTrigger>
+        <Tabs defaultValue="all-subjects" onValueChange={setActiveTab}>
+          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+            <TabsTrigger value="all-subjects">All Subjects</TabsTrigger>
+            <TabsTrigger value="batch-subjects">Batch Subjects</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="subjects" className="space-y-4">
+          <TabsContent value="all-subjects" className="space-y-4">
+            <SubjectList academicYearId={currentAcademicYear.id} />
+          </TabsContent>
+
+          <TabsContent value="batch-subjects" className="space-y-4">
             <VerticalSubjectManager academicYearId={currentAcademicYear.id} />
           </TabsContent>
           

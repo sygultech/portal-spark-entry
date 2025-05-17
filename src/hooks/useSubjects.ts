@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Subject } from '@/types/academic';
 import { useToast } from '@/hooks/use-toast';
 
-export function useSubjects(academicYearId?: string, categoryId?: string) {
+export function useSubjects(academicYearId?: string, categoryId?: string, includeArchived: boolean = false) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -25,6 +25,10 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
         )
       `)
       .eq('school_id', schoolId);
+    
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
+    }
     
     if (academicYearId) {
       query = query.eq('academic_year_id', academicYearId);
@@ -68,7 +72,7 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
   };
   
   const subjectsQuery = useQuery({
-    queryKey: ['subjects', schoolId, academicYearId, categoryId],
+    queryKey: ['subjects', schoolId, academicYearId, categoryId, includeArchived],
     queryFn: fetchSubjects,
     enabled: !!schoolId
   });
@@ -149,7 +153,7 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       return await fetchSubject(newSubject.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId, academicYearId, categoryId] });
+      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId, academicYearId, categoryId, includeArchived] });
     }
   });
 
@@ -185,7 +189,7 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       return data as Subject;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId, academicYearId, categoryId] });
+      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId, academicYearId, categoryId, includeArchived] });
     }
   });
 
@@ -229,7 +233,7 @@ export function useSubjects(academicYearId?: string, categoryId?: string) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId, academicYearId, categoryId] });
+      queryClient.invalidateQueries({ queryKey: ['subjects', schoolId, academicYearId, categoryId, includeArchived] });
     }
   });
 
