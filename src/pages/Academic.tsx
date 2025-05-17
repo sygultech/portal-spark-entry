@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -29,13 +28,15 @@ import {
   ArrowUpRight,
   Calendar,
   Clock,
-  FileText
+  FileText,
+  Layers
 } from "lucide-react";
 import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 import AcademicYearSection from "@/components/academic/AcademicYearSection";
 import CoursesSection from "@/components/academic/CoursesSection";
 import SubjectsSection from "@/components/academic/SubjectsSection";
 import GradingSystemsSection from "@/components/academic/GradingSystemsSection";
+import ElectiveGroupsSection from "@/components/academic/ElectiveGroupsSection";
 
 const Academic = () => {
   const { profile, isLoading } = useAuth();
@@ -82,6 +83,12 @@ const Academic = () => {
       label: "Subjects",
       icon: BookOpen,
       description: "Manage subjects and categories"
+    },
+    {
+      id: "elective-groups",
+      label: "Elective Groups",
+      icon: Layers,
+      description: "Manage elective subject groups"
     },
     {
       id: "timetables",
@@ -177,6 +184,7 @@ const Academic = () => {
           </Card>
         ) : null}
         {activeTab === "subjects" && <SubjectsSection />}
+        {activeTab === "elective-groups" && <ElectiveGroupsSection />}
         {activeTab === "grading" && <GradingSystemsSection />}
         {activeTab === "timetables" && (
           <Card>
