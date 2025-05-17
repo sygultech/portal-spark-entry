@@ -16,11 +16,6 @@ export const resolveGradingSystem = async (
     return subject.grading_system;
   }
   
-  if (subject.grading_system_id) {
-    const system = await fetchGradingSystem(subject.grading_system_id);
-    if (system) return system;
-  }
-
   // Then check batch level
   if (batch.grading_system) {
     return batch.grading_system;
@@ -56,7 +51,11 @@ export const fetchGradingSystem = async (id: string): Promise<GradingSystem | nu
       return null;
     }
     
-    return data as GradingSystem;
+    // Transform data to match GradingSystem interface
+    return {
+      ...data,
+      thresholds: data.thresholds || []
+    } as GradingSystem;
   } catch (error) {
     console.error('Error fetching grading system:', error);
     return null;

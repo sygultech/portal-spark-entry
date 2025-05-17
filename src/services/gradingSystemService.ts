@@ -15,7 +15,11 @@ export async function fetchGradingSystems(schoolId: string) {
     throw error;
   }
   
-  return data as GradingSystem[];
+  // Transform data to match GradingSystem interface structure
+  return data.map(system => ({
+    ...system,
+    thresholds: system.grade_thresholds || []
+  })) as GradingSystem[];
 }
 
 // Fetch a single grading system by ID
@@ -31,7 +35,11 @@ export async function fetchGradingSystem(id: string) {
     throw error;
   }
   
-  return data as GradingSystem;
+  // Transform data to match GradingSystem interface structure
+  return {
+    ...data,
+    thresholds: data.grade_thresholds || []
+  } as GradingSystem;
 }
 
 // Create a new grading system with thresholds
