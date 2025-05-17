@@ -1,24 +1,21 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { GradingSystem, GradeThreshold } from "@/types/academic";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -26,107 +23,140 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Info } from "lucide-react";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import { GradingSystem } from "@/types/academic";
+import { Trash2, Plus, ArrowUpDown } from "lucide-react";
+
+const thresholdSchema = z.object({
+  id: z.string().optional(),
+  grade: z.string().min(1, "Grade is required"),
+  name: z.string().min(1, "Description is required"),
+  min_score: z.coerce.number().min(0, "Min score must be ≥ 0").max(100, "Min score must be ≤ 100"),
+  max_score: z.coerce.number().min(0, "Max score must be ≥ 0").max(100, "Max score must be ≤ 100"),
+  grade_point: z.coerce.number().min(0).optional(),
+});
+
+const formSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  type: z.enum(["marks", "grades", "hybrid"], {
+    required_error: "Please select a grading system type",
+  }),
+  description: z.string().optional(),
+  passing_score: z.coerce.number().min(0, "Passing score must be ≥ 0").max(100, "Passing score must be ≤ 100"),
+  thresholds: z.array(thresholdSchema)
+    .min(1, "At least one threshold is required")
+    .refine((thresholds) => {
+      // Check for overlapping ranges
+      const sorted = [...thresholds].sort((a, b) => a.min_score - b.min_score);
+      for (let i = 0; i < sorted.length - 1; i++) {
+        if (sorted[i].max_score > sorted[i + 1].min_score) {
+          return false;
+        }
+      }
+      return true;
+    }, "Threshold ranges cannot overlap")
+    .refine((thresholds) => {
+      // Check that min < max for each threshold
+      return thresholds.every(t => t.min_score < t.max_score);
+    }, "Min score must be less than max score for each threshold")
+    .refine((thresholds) => {
+      // Check if thresholds cover the full range 0-100
+      const sorted = [...thresholds].sort((a, b) => a.min_score - b.min_score);
+      return sorted[0].min_score === 0 && sorted[sorted.length - 1].max_score === 100;
+    }, "Thresholds must cover the full range from 0 to 100"),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface GradingSystemDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  system?: GradingSystem | null;
+  system: GradingSystem | null;
+  onSubmit: (data: FormValues) => void;
 }
 
-// Use the same GradeThreshold type from academic.ts with the optional grade_point
-type GradeThresholdWithPoints = GradeThreshold;
-
-export const GradingSystemDialog = ({
+export const GradingSystemDialog: React.FC<GradingSystemDialogProps> = ({
   isOpen,
   onClose,
-  system
-}: GradingSystemDialogProps) => {
-  const form = useForm<GradingSystem & { thresholds: GradeThresholdWithPoints[] }>({
-    defaultValues: {
-      name: "",
-      type: "marks",
-      description: "",
-      passing_score: 33,
-      thresholds: [
-        { grade: "A+", name: "Excellent", min_score: 90, max_score: 100, grade_point: 4.0 }
-      ]
-    }
+  system,
+  onSubmit,
+}) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const defaultValues: FormValues = {
+    name: "",
+    type: "marks",
+    description: "",
+    passing_score: 33,
+    thresholds: [
+      { grade: "A", name: "Excellent", min_score: 0, max_score: 100 },
+    ],
+  };
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues,
   });
 
-  const type = form.watch("type");
+  const { fields, append, remove, move } = useFieldArray({
+    control: form.control,
+    name: "thresholds",
+  });
 
+  // Reset form when dialog opens with system data or default values
   useEffect(() => {
-    if (system) {
-      form.reset(system);
-    } else {
-      form.reset({
-        name: "",
-        type: "marks",
-        description: "",
-        passing_score: 33,
-        thresholds: getDefaultThresholds("marks")
-      });
-    }
-  }, [system, form]);
+    if (isOpen) {
+      if (system) {
+        // Format thresholds data from the server
+        const formattedThresholds = system.thresholds?.map(threshold => ({
+          id: threshold.id,
+          grade: threshold.grade,
+          name: threshold.name,
+          min_score: threshold.min_score,
+          max_score: threshold.max_score,
+          grade_point: threshold.grade_point || undefined,
+        })) || [];
 
-  const getDefaultThresholds = (type: string): GradeThresholdWithPoints[] => {
-    switch (type) {
-      case "marks":
-        return [
-          { grade: "A+", name: "Excellent", min_score: 90, max_score: 100 },
-          { grade: "A", name: "Very Good", min_score: 80, max_score: 89 },
-          { grade: "B+", name: "Good", min_score: 70, max_score: 79 },
-          { grade: "B", name: "Above Average", min_score: 60, max_score: 69 },
-          { grade: "C", name: "Average", min_score: 50, max_score: 59 },
-          { grade: "D", name: "Pass", min_score: 33, max_score: 49 },
-          { grade: "F", name: "Fail", min_score: 0, max_score: 32 }
-        ];
-      case "grades":
-        return [
-          { grade: "A+", name: "Excellent", min_score: 0, max_score: 0 },
-          { grade: "A", name: "Very Good", min_score: 0, max_score: 0 },
-          { grade: "B+", name: "Good", min_score: 0, max_score: 0 },
-          { grade: "B", name: "Above Average", min_score: 0, max_score: 0 },
-          { grade: "C", name: "Average", min_score: 0, max_score: 0 },
-          { grade: "F", name: "Fail", min_score: 0, max_score: 0 }
-        ];
-      case "hybrid":
-        return [
-          { grade: "A+", name: "Excellent", min_score: 90, max_score: 100, grade_point: 4.0 },
-          { grade: "A", name: "Very Good", min_score: 80, max_score: 89, grade_point: 3.7 },
-          { grade: "B+", name: "Good", min_score: 70, max_score: 79, grade_point: 3.3 },
-          { grade: "B", name: "Above Average", min_score: 60, max_score: 69, grade_point: 3.0 },
-          { grade: "C+", name: "Slightly Above Average", min_score: 50, max_score: 59, grade_point: 2.7 },
-          { grade: "C", name: "Average", min_score: 40, max_score: 49, grade_point: 2.0 },
-          { grade: "F", name: "Fail", min_score: 0, max_score: 39, grade_point: 0.0 }
-        ];
-      default:
-        return [];
+        form.reset({
+          name: system.name,
+          type: system.type,
+          description: system.description || "",
+          passing_score: system.passing_score,
+          thresholds: formattedThresholds.length > 0
+            ? formattedThresholds
+            : defaultValues.thresholds,
+        });
+      } else {
+        form.reset(defaultValues);
+      }
     }
+  }, [isOpen, system, form]);
+
+  const addThreshold = () => {
+    append({ grade: "", name: "", min_score: 0, max_score: 0 });
   };
 
-  const handleTypeChange = (newType: string) => {
-    form.setValue("thresholds", getDefaultThresholds(newType));
-    if (newType === "grades") {
-      form.setValue("passing_score", 0); // Not applicable for grade-based
-    }
+  const sortThresholdsByScore = () => {
+    const values = form.getValues("thresholds");
+    const sorted = [...values].sort((a, b) => a.min_score - b.min_score);
+    
+    // Update the form with sorted values
+    form.setValue("thresholds", sorted);
   };
 
-  const onSubmit = (data: GradingSystem) => {
-    console.log("Form data:", data);
-    onClose();
+  const handleFormSubmit: SubmitHandler<FormValues> = async (data) => {
+    setIsSubmitting(true);
+    try {
+      await onSubmit(data);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {system ? "Edit Grading System" : "Create Grading System"}
@@ -134,277 +164,244 @@ export const GradingSystemDialog = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="basic">Basic Details</TabsTrigger>
-                <TabsTrigger value="thresholds">Grade Thresholds</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="basic" className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  rules={{ required: "Name is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Standard Grading" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="type"
-                  rules={{ required: "Type is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        Type
-                        <HoverCard>
-                          <HoverCardTrigger>
-                            <Info className="h-4 w-4 text-muted-foreground" />
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-80">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold">Grading Types:</h4>
-                              <div>
-                                <span className="font-medium">Marks Based:</span> Uses numerical scores (0-100) and converts to grades
-                              </div>
-                              <div>
-                                <span className="font-medium">Grade Based:</span> Direct grade assignments without numerical scores
-                              </div>
-                              <div>
-                                <span className="font-medium">Hybrid:</span> Uses both marks and grade points (for GPA)
-                              </div>
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                      </FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleTypeChange(value);
-                        }}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="marks">Marks Based</SelectItem>
-                          <SelectItem value="grades">Grade Based</SelectItem>
-                          <SelectItem value="hybrid">Hybrid (Marks & Grade Points)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Brief description of the grading system" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {type !== "grades" && (
-                  <FormField
-                    control={form.control}
-                    name="passing_score"
-                    rules={{ required: "Passing score is required" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Passing Score (%)</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Standard Grading" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      A unique name for this grading system
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </TabsContent>
+              />
 
-              <TabsContent value="thresholds" className="space-y-4">
-                <div className="space-y-4">
-                  {form.watch("thresholds").map((threshold, index) => (
-                    <div key={index} className="grid gap-2 items-start" style={{ 
-                      gridTemplateColumns: type === "hybrid" 
-                        ? "2fr 2fr 1fr 1fr 1fr 40px"
-                        : type === "grades"
-                        ? "1fr 2fr 40px"
-                        : "2fr 2fr 1fr 1fr 40px"
-                    }}>
-                      <FormField
-                        control={form.control}
-                        name={`thresholds.${index}.grade`}
-                        rules={{ required: "Grade is required" }}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="Grade (e.g. A+)" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select grading type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="marks">Marks Based</SelectItem>
+                        <SelectItem value="grades">Grade Based</SelectItem>
+                        <SelectItem value="hybrid">Hybrid (Marks & Grades)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      How grades are calculated and displayed
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="A description of this grading system"
+                        {...field}
                       />
-                      
-                      <FormField
-                        control={form.control}
-                        name={`thresholds.${index}.name`}
-                        rules={{ required: "Description is required" }}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="Description (e.g. Excellent)" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    </FormControl>
+                    <FormDescription>
+                      Optional details about this grading system
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-                      {type !== "grades" && (
-                        <>
-                          <FormField
-                            control={form.control}
-                            name={`thresholds.${index}.min_score`}
-                            rules={{ required: "Min score is required" }}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    placeholder="Min Score"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`thresholds.${index}.max_score`}
-                            rules={{ required: "Max score is required" }}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    placeholder="Max Score"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </>
-                      )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="passing_score"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Passing Score (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="0" max="100" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Minimum score needed to pass (0-100)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-                      {type === "hybrid" && (
-                        <FormField
-                          control={form.control}
-                          name={`thresholds.${index}.grade_point`}
-                          rules={{ required: "Grade point is required" }}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  placeholder="Points"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      <div className="flex items-end">
-                        {form.watch("thresholds").length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const newThresholds = [...form.watch("thresholds")];
-                              newThresholds.splice(index, 1);
-                              form.setValue("thresholds", newThresholds);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">Grade Thresholds</h3>
+                <div className="flex space-x-2">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      const lastThreshold = form.watch("thresholds").slice(-1)[0];
-                      let newThreshold: GradeThresholdWithPoints;
-                      
-                      if (type === "grades") {
-                        newThreshold = { 
-                          grade: "", 
-                          name: "",
-                          min_score: 0, 
-                          max_score: 0 
-                        };
-                      } else if (type === "hybrid") {
-                        newThreshold = {
-                          grade: "",
-                          name: "",
-                          min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
-                          max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10),
-                          grade_point: Math.max(0, Number((lastThreshold?.grade_point || 4.0) - 0.3))
-                        };
-                      } else {
-                        newThreshold = {
-                          grade: "",
-                          name: "",
-                          min_score: Math.max(0, (lastThreshold?.min_score || 90) - 10),
-                          max_score: Math.max(0, (lastThreshold?.max_score || 100) - 10)
-                        };
-                      }
-                      
-                      form.setValue("thresholds", [...form.watch("thresholds"), newThreshold]);
-                    }}
-                    className="w-full"
+                    size="sm"
+                    onClick={sortThresholdsByScore}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Grade Threshold
+                    <ArrowUpDown className="h-4 w-4 mr-1" />
+                    Sort by Score
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addThreshold}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Threshold
                   </Button>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+
+              <div className="space-y-4">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 rounded-md border"
+                  >
+                    <FormField
+                      control={form.control}
+                      name={`thresholds.${index}.grade`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Grade</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. A+" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`thresholds.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. Excellent" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`thresholds.${index}.min_score`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Min Score</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" max="100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`thresholds.${index}.max_score`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Score</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" max="100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {(form.watch("type") === "grades" || form.watch("type") === "hybrid") && (
+                      <FormField
+                        control={form.control}
+                        name={`thresholds.${index}.grade_point`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Grade Point</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0"
+                                step="0.01" 
+                                {...field}
+                                value={field.value === undefined ? '' : field.value}
+                                onChange={(e) => {
+                                  const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                  field.onChange(value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    <div className="flex items-end md:col-span-5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => fields.length > 1 && remove(index)}
+                        disabled={fields.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {form.formState.errors.thresholds?.root && (
+                  <p className="text-sm font-medium text-destructive mt-2">
+                    {form.formState.errors.thresholds.root.message}
+                  </p>
+                )}
+              </div>
+            </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">
-                {system ? "Save Changes" : "Create System"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : system
+                  ? "Update Grading System"
+                  : "Create Grading System"}
               </Button>
             </DialogFooter>
           </form>

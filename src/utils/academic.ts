@@ -1,5 +1,6 @@
 
 import { Subject, Batch, GradingSystem, SchoolSettings } from "@/types/academic";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Resolves the appropriate grading system based on the hierarchy:
@@ -14,10 +15,20 @@ export const resolveGradingSystem = async (
   if (subject.grading_system) {
     return subject.grading_system;
   }
+  
+  if (subject.grading_system_id) {
+    const system = await fetchGradingSystem(subject.grading_system_id);
+    if (system) return system;
+  }
 
   // Then check batch level
   if (batch.grading_system) {
     return batch.grading_system;
+  }
+  
+  if (batch.grading_system_id) {
+    const system = await fetchGradingSystem(batch.grading_system_id);
+    if (system) return system;
   }
 
   // Finally fall back to school default
@@ -28,20 +39,26 @@ export const resolveGradingSystem = async (
   return null;
 };
 
-// Helper function to fetch grading system (implementation depends on your data layer)
-const fetchGradingSystem = async (id: string): Promise<GradingSystem | null> => {
-  // This is a placeholder - implement according to your data access layer
+// Helper function to fetch grading system
+export const fetchGradingSystem = async (id: string): Promise<GradingSystem | null> => {
   try {
-    // Implementation would depend on your data access layer
-    // Example implementation:
-    // const response = await fetch(`/api/grading-systems/${id}`);
-    // const data = await response.json();
-    // return data;
+    const { data, error } = await supabase
+      .from('grading_systems')
+      .select(`
+        *,
+        thresholds:grade_thresholds(*)
+      `)
+      .eq('id', id)
+      .single();
     
-    // For now, return null as this needs to be implemented
-    return null;
+    if (error) {
+      console.error('Error fetching grading system:', error);
+      return null;
+    }
+    
+    return data as GradingSystem;
   } catch (error) {
     console.error('Error fetching grading system:', error);
     return null;
   }
-}; 
+};

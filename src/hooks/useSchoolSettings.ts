@@ -17,6 +17,7 @@ export interface SchoolSettings {
   storage_limit?: number;
   user_limit?: number;
   modules?: any;
+  default_grading_system_id?: string;
   created_at: string;
   updated_at: string;
 }

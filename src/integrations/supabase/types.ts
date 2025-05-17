@@ -145,6 +145,7 @@ export type Database = {
           code: string | null
           course_id: string
           created_at: string
+          grading_system_id: string | null
           id: string
           is_archived: boolean | null
           name: string
@@ -158,6 +159,7 @@ export type Database = {
           code?: string | null
           course_id: string
           created_at?: string
+          grading_system_id?: string | null
           id?: string
           is_archived?: boolean | null
           name: string
@@ -171,6 +173,7 @@ export type Database = {
           code?: string | null
           course_id?: string
           created_at?: string
+          grading_system_id?: string | null
           id?: string
           is_archived?: boolean | null
           name?: string
@@ -197,6 +200,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_grading_system_id_fkey"
+            columns: ["grading_system_id"]
+            isOneToOne: false
+            referencedRelation: "grading_systems"
             referencedColumns: ["id"]
           },
           {
@@ -304,6 +314,91 @@ export type Database = {
           },
         ]
       }
+      grade_thresholds: {
+        Row: {
+          created_at: string
+          grade: string
+          grade_point: number | null
+          grading_system_id: string
+          id: string
+          max_score: number
+          min_score: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade: string
+          grade_point?: number | null
+          grading_system_id: string
+          id?: string
+          max_score: number
+          min_score: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string
+          grade_point?: number | null
+          grading_system_id?: string
+          id?: string
+          max_score?: number
+          min_score?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_thresholds_grading_system_id_fkey"
+            columns: ["grading_system_id"]
+            isOneToOne: false
+            referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grading_systems: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          passing_score: number
+          school_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          passing_score: number
+          school_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          passing_score?: number
+          school_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grading_systems_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -353,6 +448,7 @@ export type Database = {
           admin_email: string | null
           contact_number: string | null
           created_at: string
+          default_grading_system_id: string | null
           domain: string | null
           id: string
           modules: Json | null
@@ -369,6 +465,7 @@ export type Database = {
           admin_email?: string | null
           contact_number?: string | null
           created_at?: string
+          default_grading_system_id?: string | null
           domain?: string | null
           id?: string
           modules?: Json | null
@@ -385,6 +482,7 @@ export type Database = {
           admin_email?: string | null
           contact_number?: string | null
           created_at?: string
+          default_grading_system_id?: string | null
           domain?: string | null
           id?: string
           modules?: Json | null
@@ -397,7 +495,15 @@ export type Database = {
           updated_at?: string
           user_limit?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schools_default_grading_system_id_fkey"
+            columns: ["default_grading_system_id"]
+            isOneToOne: false
+            referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subject_categories: {
         Row: {
@@ -541,6 +647,7 @@ export type Database = {
           code: string | null
           created_at: string
           description: string | null
+          grading_system_id: string | null
           id: string
           name: string
           school_id: string
@@ -553,6 +660,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           description?: string | null
+          grading_system_id?: string | null
           id?: string
           name: string
           school_id: string
@@ -565,6 +673,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           description?: string | null
+          grading_system_id?: string | null
           id?: string
           name?: string
           school_id?: string
@@ -584,6 +693,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "subject_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subjects_grading_system_id_fkey"
+            columns: ["grading_system_id"]
+            isOneToOne: false
+            referencedRelation: "grading_systems"
             referencedColumns: ["id"]
           },
           {
