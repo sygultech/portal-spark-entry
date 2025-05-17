@@ -186,9 +186,10 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
 
   const handleEditClick = (subject: Subject) => {
     setSelectedSubject(subject);
+    // TODO: Implement subject editing
     toast({
-      title: "Info",
-      description: "To edit subjects, please use the Batch Subjects view.",
+      title: "Coming Soon",
+      description: "Subject editing will be available soon.",
     });
   };
 
@@ -360,7 +361,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
             <GraduationCap className="h-12 w-12 text-muted-foreground" />,
             "No Courses Found",
             "Create courses first to start managing subjects.",
-            <Alert variant="info" className="max-w-md mt-4">
+            <Alert className="max-w-md mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Go to Course Management to create your first course.
@@ -381,7 +382,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
             <Users2 className="h-12 w-12 text-muted-foreground" />,
             "No Batches Found",
             "Create batches within courses to start managing subjects.",
-            <Alert variant="info" className="max-w-md mt-4">
+            <Alert className="max-w-md mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Go to Course Management to create batches for your courses.

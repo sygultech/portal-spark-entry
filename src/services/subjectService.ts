@@ -71,12 +71,17 @@ export async function fetchSubjects(schoolId: string, academicYearId?: string, c
     .from('subjects')
     .select(`
       *,
-      category:subject_categories(id, name)
+      category:subject_categories(id, name),
+      batch_assignments:batch_subjects(
+        id,
+        batch_id,
+        is_mandatory
+      )
     `)
     .eq('school_id', schoolId);
   
   if (!includeArchived) {
-    query = query.eq('is_archived', false);
+    query = query.is('is_archived', false);
   }
   
   if (academicYearId) {
@@ -225,9 +230,13 @@ export async function getSubjectDependencies(subjectId: string): Promise<Subject
 export async function archiveSubject(id: string) {
   const { error } = await supabase
     .from('subjects')
-    .update({ is_archived: true, archived_at: new Date().toISOString() })
+    .update({
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } as Partial<Subject>)
     .eq('id', id);
-
+  
   if (error) throw error;
 }
 

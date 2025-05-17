@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen } from "lucide-react";
 import SubjectCategoryList from "./SubjectCategoryList";
-import VerticalSubjectManager from "./VerticalSubjectManager";
 import SubjectList from "./SubjectList";
 
 const SubjectsSection = () => {
@@ -47,15 +46,14 @@ const SubjectsSection = () => {
           <CardTitle>Subject Management</CardTitle>
           <CardDescription>Manage subjects and categories</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-          <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold">No Academic Year Available</h3>
-          <p className="text-muted-foreground mt-2 max-w-md">
-            You need to create an academic year before managing subjects.
-          </p>
-          <Button className="mt-4" onClick={() => document.getElementById('academic-years')?.click()}>
-            Create Academic Year
-          </Button>
+        <CardContent className="flex items-center justify-center py-10 text-center">
+          <div>
+            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Active Academic Year</h3>
+            <p className="text-sm text-muted-foreground">
+              Please set an active academic year to manage subjects.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -73,18 +71,13 @@ const SubjectsSection = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="all-subjects" onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
             <TabsTrigger value="all-subjects">All Subjects</TabsTrigger>
-            <TabsTrigger value="batch-subjects">Batch Subjects</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
           
           <TabsContent value="all-subjects" className="space-y-4">
             <SubjectList academicYearId={currentAcademicYear.id} />
-          </TabsContent>
-
-          <TabsContent value="batch-subjects" className="space-y-4">
-            <VerticalSubjectManager academicYearId={currentAcademicYear.id} />
           </TabsContent>
           
           <TabsContent value="categories">

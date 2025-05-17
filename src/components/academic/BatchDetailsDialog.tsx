@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext"; 
 import { useBatchStudents } from "@/hooks/useBatches";
@@ -12,10 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BookOpen } from "lucide-react";
+import { Users } from "lucide-react";
 import AddStudentDialog from "./AddStudentDialog";
 import { Batch } from "@/types/academic";
-import BatchSubjectTab from "./BatchSubjectTab";
 
 interface BatchDetailsDialogProps {
   isOpen: boolean;
@@ -35,7 +33,6 @@ const BatchDetailsDialog = ({
   const { profile } = useAuth();
   const { students, isLoading, addStudent, removeStudent, ensureTable } = useBatchStudents(batch?.id);
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("students");
 
   const handleAddStudent = async (studentId: string, rollNumber?: string) => {
     if (!batch) return;
@@ -80,70 +77,53 @@ const BatchDetailsDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="students" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="students" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Students
-            </TabsTrigger>
-            <TabsTrigger value="subjects" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Subjects
-            </TabsTrigger>
-          </TabsList>
+        <div className="space-y-4 pt-4">
+          <div className="flex justify-end">
+            <Button onClick={() => setIsAddStudentDialogOpen(true)}>
+              Add Student
+            </Button>
+          </div>
           
-          <TabsContent value="students" className="space-y-4 pt-4">
-            <div className="flex justify-end">
-              <Button onClick={() => setIsAddStudentDialogOpen(true)}>
-                Add Student
-              </Button>
-            </div>
-            
-            {/* Students content */}
-            <div className="rounded-md border">
-              {isLoading ? (
-                <div className="p-8 text-center">Loading students...</div>
-              ) : students.length === 0 ? (
-                <div className="p-8 text-center">
-                  No students enrolled in this batch yet.
-                </div>
-              ) : (
-                <div className="relative w-full overflow-auto">
-                  <table className="w-full caption-bottom text-sm">
-                    <thead>
-                      <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium">Roll No</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium">Name</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium">Email</th>
-                        <th className="h-12 px-4 text-right align-middle font-medium">Actions</th>
+          {/* Students content */}
+          <div className="rounded-md border">
+            {isLoading ? (
+              <div className="p-8 text-center">Loading students...</div>
+            ) : students.length === 0 ? (
+              <div className="p-8 text-center">
+                No students enrolled in this batch yet.
+              </div>
+            ) : (
+              <div className="relative w-full overflow-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead>
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                      <th className="h-12 px-4 text-left align-middle font-medium">Roll No</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium">Name</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium">Email</th>
+                      <th className="h-12 px-4 text-right align-middle font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((student) => (
+                      <tr key={student.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <td className="p-4 align-middle">{student.roll_number || "-"}</td>
+                        <td className="p-4 align-middle">
+                          {student.student?.first_name} {student.student?.last_name}
+                        </td>
+                        <td className="p-4 align-middle">{student.student?.email}</td>
+                        <td className="p-4 text-right align-middle">
+                          <Button variant="ghost" size="sm" onClick={() => handleRemoveStudent(student.id)}>
+                            Remove
+                          </Button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {students.map((student) => (
-                        <tr key={student.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                          <td className="p-4 align-middle">{student.roll_number || "-"}</td>
-                          <td className="p-4 align-middle">
-                            {student.student?.first_name} {student.student?.last_name}
-                          </td>
-                          <td className="p-4 align-middle">{student.student?.email}</td>
-                          <td className="p-4 text-right align-middle">
-                            <Button variant="ghost" size="sm" onClick={() => handleRemoveStudent(student.id)}>
-                              Remove
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="subjects" className="pt-4">
-            <BatchSubjectTab batch={batch} academicYearId={academicYearId} />
-          </TabsContent>
-        </Tabs>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
         
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose}>Close</Button>
