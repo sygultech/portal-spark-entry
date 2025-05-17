@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -81,4 +82,4 @@ export function QuickActions({
       </div>
     </div>
   );
-} 
+}

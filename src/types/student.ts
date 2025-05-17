@@ -1,181 +1,207 @@
+
+import { User } from "./user";
+
+export type StudentStatus = 'active' | 'transferred' | 'graduated' | 'inactive';
+export type Gender = 'male' | 'female' | 'other';
+export type DocumentVerificationStatus = 'pending' | 'verified' | 'rejected';
+export type IncidentSeverity = 'minor' | 'moderate' | 'severe';
+export type IncidentStatus = 'pending' | 'resolved' | 'escalated';
+export type TransferType = 'internal' | 'external';
+export type TransferStatus = 'pending' | 'approved' | 'rejected' | 'completed';
+export type CertificateStatus = 'draft' | 'issued' | 'revoked';
+
 export interface Student {
   id: string;
-  admissionNo: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  gender: 'male' | 'female' | 'other';
+  admission_number: string;
+  first_name: string;
+  last_name: string;
   email?: string;
-  phone?: string;
-  address: string;
-  batch: string;
-  
-  // Enhanced fields
-  nationality: string;
-  caste?: string;
+  date_of_birth?: string;
+  gender?: Gender;
+  address?: string;
+  batch_id?: string;
+  batch_name?: string;
+  course_name?: string;
+  academic_year?: string;
+  nationality?: string;
+  mother_tongue?: string;
+  blood_group?: string;
   religion?: string;
-  motherTongue: string;
-  bloodGroup?: string;
+  caste?: string;
   category?: string;
-  photo?: string;
-
-  // Academic
-  previousSchool?: PreviousSchool;
-  academicRecords: AcademicRecord[];
-  
-  // Medical
-  medicalRecords: MedicalRecord[];
-  
-  // Documents
-  documents: Document[];
-  
-  // Disciplinary
-  disciplinaryRecords: DisciplinaryRecord[];
-  
-  // Guardians
-  guardians: Guardian[];
-  
-  // Transfer
-  transferRecords: TransferRecord[];
-}
-
-export interface PreviousSchool {
-  name: string;
-  board: string;
-  yearOfPassing: string;
-  percentage: number;
-  tcNumber?: string;
-}
-
-export interface AcademicRecord {
-  id: string;
-  year: string;
-  term: string;
-  subjects: SubjectGrade[];
-  attendance: number;
-  remarks?: string;
-}
-
-export interface SubjectGrade {
-  subject: string;
-  marks: number;
-  grade: string;
-  remarks?: string;
-}
-
-export interface MedicalRecord {
-  id: string;
-  studentId: string;
-  condition: string;
-  diagnosis: string;
-  medication: string;
-  startDate: string;
-  endDate?: string;
-  status: "active" | "resolved" | "ongoing";
-  notes: string;
-  attachments?: string[];
-  lastUpdated: string;
-}
-
-export type DocumentType =
-  | "Birth Certificate"
-  | "Previous School Records"
-  | "Medical Records"
-  | "Immunization Records"
-  | "Parent ID"
-  | "Address Proof"
-  | "Transfer Certificate"
-  | "Other";
-
-export interface Document {
-  id: string;
-  studentId: string;
-  type: DocumentType;
-  name: string;
-  description: string;
-  file: File | string;
-  uploadDate: string;
-  verificationStatus: "pending" | "verified" | "rejected";
-  verifiedBy?: string;
-  verificationDate?: string;
+  phone?: string;
+  previous_school_name?: string;
+  previous_school_board?: string;
+  previous_school_year?: string;
+  previous_school_percentage?: number;
+  tc_number?: string;
+  admission_date?: string;
+  status: StudentStatus;
+  avatar_url?: string;
+  school_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Guardian {
   id: string;
+  first_name: string;
+  last_name?: string;
   relation: string;
-  firstName: string;
-  lastName: string;
-  occupation: string;
+  occupation?: string;
   email?: string;
   phone: string;
-  address: string;
-  isEmergencyContact: boolean;
-  canPickup: boolean;
+  address?: string;
+  is_emergency_contact?: boolean;
+  can_pickup?: boolean;
+  is_primary?: boolean;
+  school_id: string;
 }
 
-export interface DisciplinaryRecord {
-  id: string;
-  studentId: string;
-  type: string;
-  description: string;
-  date: string;
-  severity: "minor" | "moderate" | "severe";
-  status: "pending" | "resolved";
-  actionTaken: string;
-  reportedBy: string;
-  createdAt: string;
-  parentMeetings?: Array<{
-    id: string;
-    date: string;
-    notes: string;
-  }>;
-  evidence?: Array<{
-    id: string;
-    type: string;
-    file: string;
-    uploadedAt: string;
-  }>;
-}
-
-export interface ParentMeeting {
-  id: string;
-  date: string;
-  attendees: string[];
-  discussion: string;
-  outcome: string;
-  followUpDate?: string;
-}
-
-export interface TransferRecord {
-  id: string;
-  type: 'internal' | 'external';
-  date: string;
-  fromBatch?: string;
-  toBatch?: string;
-  toSchool?: string;
-  reason: string;
-  tcNumber?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
-  documents?: Document[];
-}
-
-export interface Category {
+export interface StudentCategory {
   id: string;
   name: string;
   description?: string;
   color?: string;
-  students: string[]; // Student IDs
+  school_id: string;
+}
+
+export interface StudentDocument {
+  id: string;
+  student_id: string;
+  name: string;
+  type: string;
+  description?: string;
+  file_path: string;
+  upload_date?: string;
+  verification_status: DocumentVerificationStatus;
+  verified_by?: string;
+  verification_date?: string;
+  school_id: string;
+}
+
+export interface DisciplinaryRecord {
+  id: string;
+  student_id: string;
+  incident_type: string;
+  description: string;
+  date: string;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  action_taken?: string;
+  reported_by: string;
+  school_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ParentMeeting {
+  id: string;
+  disciplinary_record_id: string;
+  date: string;
+  attendees: string;
+  discussion: string;
+  outcome?: string;
+  follow_up_date?: string;
+  school_id: string;
+}
+
+export interface DisciplinaryEvidence {
+  id: string;
+  disciplinary_record_id: string;
+  type: string;
+  file_path: string;
+  uploaded_at?: string;
+  school_id: string;
+}
+
+export interface TransferRecord {
+  id: string;
+  student_id: string;
+  type: TransferType;
+  date: string;
+  from_batch_id?: string;
+  to_batch_id?: string;
+  to_school?: string;
+  reason: string;
+  tc_number?: string;
+  status: TransferStatus;
+  school_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Certificate {
   id: string;
+  student_id: string;
   type: string;
-  templateId: string;
-  issuedTo: string; // Student ID
-  issuedDate: string;
-  validUntil?: string;
-  serialNumber: string;
-  status: 'draft' | 'issued' | 'revoked';
-  issuedBy: string;
-  data: Record<string, any>; // Template data
-} 
+  template_id: string;
+  issued_date: string;
+  valid_until?: string;
+  serial_number: string;
+  status: CertificateStatus;
+  issued_by: string;
+  data?: any;
+  school_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface StudentWithDetails extends Student {
+  guardians?: Guardian[];
+  categories?: StudentCategory[];
+  documents?: StudentDocument[];
+  disciplinary_records?: DisciplinaryRecord[];
+  transfer_records?: TransferRecord[];
+  certificates?: Certificate[];
+}
+
+export interface NewStudentFormData {
+  email: string;
+  first_name: string;
+  last_name: string;
+  admission_number?: string;
+  batch_id?: string;
+  date_of_birth?: string;
+  gender?: Gender;
+  address?: string;
+  nationality?: string;
+  mother_tongue?: string;
+  blood_group?: string;
+  religion?: string;
+  caste?: string;
+  category?: string;
+  phone?: string;
+  previous_school_name?: string;
+  previous_school_board?: string;
+  previous_school_year?: string;
+  previous_school_percentage?: number;
+  guardians?: {
+    first_name: string;
+    last_name?: string;
+    relation: string;
+    occupation?: string;
+    email?: string;
+    phone: string;
+    address?: string;
+    is_emergency_contact?: boolean;
+    can_pickup?: boolean;
+    is_primary?: boolean;
+  }[];
+  avatar?: File;
+  documents?: {
+    name: string;
+    type: string;
+    description?: string;
+    file: File;
+  }[];
+}
+
+export interface StudentFilter {
+  search?: string;
+  batch_id?: string;
+  status?: StudentStatus;
+  category_id?: string;
+  academic_year_id?: string;
+  course_id?: string;
+}

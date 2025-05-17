@@ -218,6 +218,69 @@ export type Database = {
           },
         ]
       }
+      certificates: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          issued_by: string
+          issued_date: string
+          school_id: string
+          serial_number: string
+          status: string
+          student_id: string
+          template_id: string
+          type: string
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          issued_by: string
+          issued_date?: string
+          school_id: string
+          serial_number: string
+          status?: string
+          student_id: string
+          template_id: string
+          type: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          issued_by?: string
+          issued_date?: string
+          school_id?: string
+          serial_number?: string
+          status?: string
+          student_id?: string
+          template_id?: string
+          type?: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           academic_year_id: string
@@ -314,6 +377,108 @@ export type Database = {
           },
         ]
       }
+      disciplinary_evidence: {
+        Row: {
+          disciplinary_record_id: string
+          file_path: string
+          id: string
+          school_id: string
+          type: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          disciplinary_record_id: string
+          file_path: string
+          id?: string
+          school_id: string
+          type: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          disciplinary_record_id?: string
+          file_path?: string
+          id?: string
+          school_id?: string
+          type?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disciplinary_evidence_disciplinary_record_id_fkey"
+            columns: ["disciplinary_record_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinary_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disciplinary_evidence_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disciplinary_records: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          incident_type: string
+          reported_by: string
+          school_id: string
+          severity: string
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          date: string
+          description: string
+          id?: string
+          incident_type: string
+          reported_by: string
+          school_id: string
+          severity: string
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          incident_type?: string
+          reported_by?: string
+          school_id?: string
+          severity?: string
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disciplinary_records_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disciplinary_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grade_thresholds: {
         Row: {
           created_at: string
@@ -392,6 +557,116 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "grading_systems_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guardians: {
+        Row: {
+          address: string | null
+          can_pickup: boolean | null
+          created_at: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_emergency_contact: boolean | null
+          last_name: string | null
+          occupation: string | null
+          phone: string
+          relation: string
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          can_pickup?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_emergency_contact?: boolean | null
+          last_name?: string | null
+          occupation?: string | null
+          phone: string
+          relation: string
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          can_pickup?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_emergency_contact?: boolean | null
+          last_name?: string | null
+          occupation?: string | null
+          phone?: string
+          relation?: string
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardians_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_meetings: {
+        Row: {
+          attendees: string
+          created_at: string | null
+          date: string
+          disciplinary_record_id: string
+          discussion: string
+          follow_up_date: string | null
+          id: string
+          outcome: string | null
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          attendees: string
+          created_at?: string | null
+          date: string
+          disciplinary_record_id: string
+          discussion: string
+          follow_up_date?: string | null
+          id?: string
+          outcome?: string | null
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          attendees?: string
+          created_at?: string | null
+          date?: string
+          disciplinary_record_id?: string
+          discussion?: string
+          follow_up_date?: string | null
+          id?: string
+          outcome?: string | null
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_meetings_disciplinary_record_id_fkey"
+            columns: ["disciplinary_record_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinary_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_meetings_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -501,6 +776,278 @@ export type Database = {
             columns: ["default_grading_system_id"]
             isOneToOne: false
             referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_categories_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_category_assignments: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          id: string
+          student_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          id?: string
+          student_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_category_assignments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "student_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_category_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_details: {
+        Row: {
+          address: string | null
+          admission_date: string | null
+          admission_number: string
+          batch_id: string | null
+          blood_group: string | null
+          caste: string | null
+          category: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          gender: string | null
+          id: string
+          mother_tongue: string | null
+          nationality: string | null
+          phone: string | null
+          previous_school_board: string | null
+          previous_school_name: string | null
+          previous_school_percentage: number | null
+          previous_school_year: string | null
+          religion: string | null
+          school_id: string
+          status: string | null
+          tc_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          admission_date?: string | null
+          admission_number: string
+          batch_id?: string | null
+          blood_group?: string | null
+          caste?: string | null
+          category?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          gender?: string | null
+          id: string
+          mother_tongue?: string | null
+          nationality?: string | null
+          phone?: string | null
+          previous_school_board?: string | null
+          previous_school_name?: string | null
+          previous_school_percentage?: number | null
+          previous_school_year?: string | null
+          religion?: string | null
+          school_id: string
+          status?: string | null
+          tc_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          admission_date?: string | null
+          admission_number?: string
+          batch_id?: string | null
+          blood_group?: string | null
+          caste?: string | null
+          category?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          gender?: string | null
+          id?: string
+          mother_tongue?: string | null
+          nationality?: string | null
+          phone?: string | null
+          previous_school_board?: string | null
+          previous_school_name?: string | null
+          previous_school_percentage?: number | null
+          previous_school_year?: string | null
+          religion?: string | null
+          school_id?: string
+          status?: string | null
+          tc_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_details_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_details_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_documents: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          file_path: string
+          id: string
+          name: string
+          school_id: string
+          student_id: string
+          type: string
+          updated_at: string | null
+          upload_date: string | null
+          verification_date: string | null
+          verification_status: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          file_path: string
+          id?: string
+          name: string
+          school_id: string
+          student_id: string
+          type: string
+          updated_at?: string | null
+          upload_date?: string | null
+          verification_date?: string | null
+          verification_status?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          file_path?: string
+          id?: string
+          name?: string
+          school_id?: string
+          student_id?: string
+          type?: string
+          updated_at?: string | null
+          upload_date?: string | null
+          verification_date?: string | null
+          verification_status?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_documents_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_documents_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_guardians: {
+        Row: {
+          created_at: string | null
+          guardian_id: string
+          id: string
+          is_primary: boolean | null
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          guardian_id: string
+          id?: string
+          is_primary?: boolean | null
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          guardian_id?: string
+          id?: string
+          is_primary?: boolean | null
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_guardians_guardian_id_fkey"
+            columns: ["guardian_id"]
+            isOneToOne: false
+            referencedRelation: "guardians"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_guardians_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_details"
             referencedColumns: ["id"]
           },
         ]
@@ -717,6 +1264,83 @@ export type Database = {
           },
         ]
       }
+      transfer_records: {
+        Row: {
+          created_at: string | null
+          date: string
+          from_batch_id: string | null
+          id: string
+          reason: string
+          school_id: string
+          status: string
+          student_id: string
+          tc_number: string | null
+          to_batch_id: string | null
+          to_school: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          from_batch_id?: string | null
+          id?: string
+          reason: string
+          school_id: string
+          status?: string
+          student_id: string
+          tc_number?: string | null
+          to_batch_id?: string | null
+          to_school?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          from_batch_id?: string | null
+          id?: string
+          reason?: string
+          school_id?: string
+          status?: string
+          student_id?: string
+          tc_number?: string | null
+          to_batch_id?: string | null
+          to_school?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_records_from_batch_id_fkey"
+            columns: ["from_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfer_records_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfer_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfer_records_to_batch_id_fkey"
+            columns: ["to_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -757,6 +1381,10 @@ export type Database = {
       execute_admin_sql: {
         Args: { sql: string }
         Returns: Json
+      }
+      generate_admission_number: {
+        Args: { p_school_id: string }
+        Returns: string
       }
       get_auth_user_details: {
         Args: { p_user_id: string }
