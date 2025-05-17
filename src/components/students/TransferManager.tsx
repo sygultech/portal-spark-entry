@@ -1,5 +1,5 @@
 
-import { TransferRecord, DocumentType } from "@/types/student";
+import { TransferRecord, StudentDocument } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +15,7 @@ interface TransferManagerProps {
   transfers: TransferRecord[];
   onCreateTransfer: (transfer: TransferRecord) => void;
   onUpdateStatus: (transferId: string, status: TransferRecord['status']) => void;
-  onAddDocument: (transferId: string, document: DocumentType) => void;
+  onAddDocument: (transferId: string, document: StudentDocument) => void;
   batches: { id: string; name: string }[];
 }
 
@@ -60,7 +60,7 @@ export function TransferManager({
     };
 
     if (file) {
-      const document: DocumentType = {
+      const document: StudentDocument = {
         id: Date.now().toString(),
         student_id: "", // This will be filled by backend
         type: "transfer_certificate",

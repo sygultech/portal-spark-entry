@@ -1,4 +1,5 @@
-import { Student, Category } from "@/types/student";
+
+import { Student, StudentCategory } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +18,7 @@ import { useState } from "react";
 interface StudentListProps {
   students: Student[];
   onSelect: (student: Student) => void;
-  categories: Category[];
+  categories: StudentCategory[];
   onBatchAction: (action: string, studentIds: string[]) => void;
 }
 
@@ -25,25 +26,25 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [batchFilter, setBatchFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<keyof Student>("admissionNo");
+  const [sortField, setSortField] = useState<keyof Student>("admission_number");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   // Get unique batches
-  const batches = Array.from(new Set(students.map((s) => s.batch))).sort();
+  const batches = Array.from(new Set(students.map((s) => s.batch_name))).filter(Boolean).sort();
 
   // Filter students
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
-      student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.admissionNo.toLowerCase().includes(searchTerm.toLowerCase());
+      student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCategory =
       categoryFilter === "all" ||
-      categories.find((cat) => cat.id === categoryFilter)?.students.includes(student.id);
+      categories.find((cat) => cat.id === categoryFilter)?.students?.includes(student.id);
 
-    const matchesBatch = batchFilter === "all" || student.batch === batchFilter;
+    const matchesBatch = batchFilter === "all" || student.batch_name === batchFilter;
 
     return matchesSearch && matchesCategory && matchesBatch;
   });
@@ -173,7 +174,7 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
               <TableHead>
                 <Button
                   variant="ghost"
-                  onClick={() => handleSort("admissionNo")}
+                  onClick={() => handleSort("admission_number")}
                   className="font-bold -ml-4"
                 >
                   Admission No
@@ -183,7 +184,7 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
               <TableHead>
                 <Button
                   variant="ghost"
-                  onClick={() => handleSort("firstName")}
+                  onClick={() => handleSort("first_name")}
                   className="font-bold -ml-4"
                 >
                   Name
@@ -193,7 +194,7 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
               <TableHead>
                 <Button
                   variant="ghost"
-                  onClick={() => handleSort("batch")}
+                  onClick={() => handleSort("batch_name")}
                   className="font-bold -ml-4"
                 >
                   Batch
@@ -217,19 +218,19 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
                     onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
                   />
                 </TableCell>
-                <TableCell>{student.admissionNo}</TableCell>
+                <TableCell>{student.admission_number}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {student.photo && (
+                    {student.avatar_url && (
                       <img
-                        src={student.photo}
-                        alt={student.firstName}
+                        src={student.avatar_url}
+                        alt={student.first_name}
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     )}
                     <div>
                       <p className="font-medium">
-                        {student.firstName} {student.lastName}
+                        {student.first_name} {student.last_name}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {student.email}
@@ -237,11 +238,11 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>{student.batch}</TableCell>
+                <TableCell>{student.batch_name}</TableCell>
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
                     {categories
-                      .filter((cat) => cat.students.includes(student.id))
+                      .filter((cat) => cat.students?.includes(student.id))
                       .map((cat) => (
                         <Badge
                           key={cat.id}

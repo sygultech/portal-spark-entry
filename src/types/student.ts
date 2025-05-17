@@ -11,6 +11,21 @@ export type TransferStatus = 'pending' | 'approved' | 'rejected' | 'completed';
 export type CertificateStatus = 'draft' | 'issued' | 'revoked';
 export type DocumentType = 'Birth Certificate' | 'Previous School Records' | 'Medical Records' | 'Immunization Records' | 'Parent ID' | 'Address Proof' | 'Transfer Certificate' | 'Other';
 
+// Student aliases for camelCase to snake_case conversion
+export interface StudentDisplayNames {
+  admissionNo: string; // maps to admission_number
+  firstName: string; // maps to first_name
+  lastName: string; // maps to last_name
+  dateOfBirth: string; // maps to date_of_birth
+  bloodGroup: string; // maps to blood_group
+  motherTongue: string; // maps to mother_tongue
+  photo: string; // maps to avatar_url
+  disciplinaryRecords: DisciplinaryRecord[]; // maps to disciplinary_records
+  transferRecords: TransferRecord[]; // maps to transfer_records
+  batch: string; // maps to batch_name
+  academicRecords: any[]; // added for StudentProfile component
+}
+
 export interface Student {
   id: string;
   admission_number: string;
@@ -38,12 +53,12 @@ export interface Student {
   tc_number?: string;
   admission_date?: string;
   status: StudentStatus;
-  avatar_url?: string; // Changed from photo
+  avatar_url?: string;
   school_id: string;
   created_at?: string;
   updated_at?: string;
   guardians?: Guardian[];
-  categories?: CategoryType[];
+  categories?: StudentCategory[];
   documents?: StudentDocument[];
   disciplinary_records?: DisciplinaryRecord[];
   transfer_records?: TransferRecord[];
@@ -74,7 +89,7 @@ export interface StudentCategory {
   students?: string[];
 }
 
-export interface CategoryType extends StudentCategory {} // Renamed to avoid confusion with Category
+export type Category = StudentCategory; // Type alias for backward compatibility
 
 export interface StudentDocument {
   id: string;
@@ -90,7 +105,8 @@ export interface StudentDocument {
   school_id: string;
 }
 
-export interface DocumentType extends StudentDocument {} // Interface for documents
+// Alias for Document to avoid conflicts with DOM Document type
+export type Document = StudentDocument;
 
 export interface DisciplinaryRecord {
   id: string;
@@ -144,7 +160,7 @@ export interface TransferRecord {
   school_id: string;
   created_at?: string;
   updated_at?: string;
-  documents?: DocumentType[];
+  documents?: StudentDocument[];
 }
 
 export interface Certificate {
@@ -172,7 +188,7 @@ export interface PreviousSchoolInfo {
 
 export interface StudentWithDetails extends Student {
   guardians?: Guardian[];
-  categories?: CategoryType[];
+  categories?: StudentCategory[];
   documents?: StudentDocument[];
   disciplinary_records?: DisciplinaryRecord[];
   transfer_records?: TransferRecord[];
@@ -227,4 +243,19 @@ export interface StudentFilter {
   category_id?: string;
   academic_year_id?: string;
   course_id?: string;
+}
+
+export interface MedicalRecord {
+  id: string;
+  student_id: string;
+  condition?: string;
+  medications?: string;
+  allergies?: string;
+  blood_group?: string;
+  emergency_contact?: string;
+  doctor_name?: string;
+  doctor_contact?: string;
+  notes?: string;
+  school_id: string;
+  lastUpdated?: string;
 }

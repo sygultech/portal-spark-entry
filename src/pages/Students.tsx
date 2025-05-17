@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +12,17 @@ import { CertificateManager } from "@/components/students/CertificateManager";
 import { CategoryManager } from "@/components/students/CategoryManager";
 import { MedicalManager } from "@/components/students/MedicalManager";
 import { QuickActions } from "@/components/students/QuickActions";
-import { Student, Document, TransferRecord, DisciplinaryRecord, Certificate, Category, MedicalRecord } from "@/types/student";
+import { 
+  Student, 
+  StudentDocument, 
+  TransferRecord, 
+  DisciplinaryRecord, 
+  Certificate, 
+  StudentCategory, 
+  MedicalRecord, 
+  DisciplinaryEvidence,
+  ParentMeeting
+} from "@/types/student";
 import { FileText, GraduationCap, Shield, Tag, UserPlus, Heart, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,10 +36,10 @@ export default function Students() {
 
   // Sample data - Replace with actual data from your backend
   const [students, setStudents] = useState<Student[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<StudentCategory[]>([]);
 
   // Sample certificate templates
   const certificateTemplates = [
@@ -105,7 +116,7 @@ export default function Students() {
   };
 
   // Document management handlers
-  const handleUploadDocument = (document: Document) => {
+  const handleUploadDocument = (document: StudentDocument) => {
     setDocuments((prev) => [...prev, document]);
     toast.success("Document uploaded successfully");
   };
@@ -125,9 +136,9 @@ export default function Students() {
         doc.id === documentId
           ? {
               ...doc,
-              verificationStatus: status,
-              verifiedBy,
-              verificationDate: new Date().toISOString(),
+              verification_status: status,
+              verified_by: verifiedBy,
+              verification_date: new Date().toISOString(),
             }
           : doc
       )
@@ -154,7 +165,7 @@ export default function Students() {
   };
 
   // Category management handlers
-  const handleCreateCategory = (category: Category) => {
+  const handleCreateCategory = (category: StudentCategory) => {
     setCategories((prev) => [...prev, category]);
     toast.success("Category created successfully");
   };
@@ -172,7 +183,7 @@ export default function Students() {
           onBulkImport={handleBulkImport}
           onExportData={handleExportData}
           totalStudents={students.length}
-          activeStudents={students.filter(s => !s.transferRecords?.some(t => t.status === "completed")).length}
+          activeStudents={students.filter(s => !s.transfer_records?.some(t => t.status === "completed")).length}
           pendingAdmissions={0} // Replace with actual count
         />
       </div>
@@ -261,10 +272,18 @@ export default function Students() {
           <DisciplinaryManager
             records={disciplinaryRecords}
             onCreateRecord={(record) => {
-              const newRecord = {
-                ...record,
+              const newRecord: DisciplinaryRecord = {
                 id: Date.now().toString(),
-                createdAt: new Date().toISOString(),
+                student_id: "",
+                incident_type: record.incident_type,
+                description: record.description,
+                date: record.date,
+                severity: record.severity,
+                status: "pending",
+                action_taken: record.action_taken,
+                reported_by: record.reported_by,
+                school_id: "",
+                created_at: new Date().toISOString(),
               };
               setDisciplinaryRecords((prev) => [...prev, newRecord]);
               toast.success("Disciplinary record created successfully");
@@ -276,14 +295,23 @@ export default function Students() {
               toast.success("Status updated successfully");
             }}
             onAddParentMeeting={(recordId, meeting) => {
+              const parentMeeting: ParentMeeting = {
+                id: Date.now().toString(),
+                disciplinary_record_id: recordId,
+                date: meeting.date,
+                attendees: meeting.attendees,
+                discussion: meeting.notes,
+                school_id: "",
+              };
+              
               setDisciplinaryRecords((prev) =>
                 prev.map((r) =>
                   r.id === recordId
                     ? {
                         ...r,
-                        parentMeetings: [
-                          ...(r.parentMeetings || []),
-                          { ...meeting, id: Date.now().toString() },
+                        parent_meetings: [
+                          ...(r.parent_meetings || []),
+                          parentMeeting
                         ],
                       }
                     : r
@@ -292,6 +320,15 @@ export default function Students() {
               toast.success("Parent meeting added successfully");
             }}
             onAddEvidence={(recordId, evidence) => {
+              const newEvidence: DisciplinaryEvidence = {
+                id: Date.now().toString(),
+                disciplinary_record_id: recordId,
+                type: evidence.type,
+                file_path: URL.createObjectURL(evidence.file),
+                uploaded_at: new Date().toISOString(),
+                school_id: "",
+              };
+              
               setDisciplinaryRecords((prev) =>
                 prev.map((r) =>
                   r.id === recordId
@@ -299,12 +336,7 @@ export default function Students() {
                         ...r,
                         evidence: [
                           ...(r.evidence || []),
-                          {
-                            ...evidence,
-                            id: Date.now().toString(),
-                            uploadedAt: new Date().toISOString(),
-                            file: URL.createObjectURL(evidence.file),
-                          },
+                          newEvidence
                         ],
                       }
                     : r
@@ -320,7 +352,7 @@ export default function Students() {
             transfers={transfers}
             onCreateTransfer={handleCreateTransfer}
             onUpdateStatus={handleUpdateTransferStatus}
-            onAddDocument={(transferId: string, document: Document) => {
+            onAddDocument={(transferId: string, document: StudentDocument) => {
               setTransfers(prev =>
                 prev.map(transfer =>
                   transfer.id === transferId
@@ -382,7 +414,7 @@ export default function Students() {
               setCategories((prev) =>
                 prev.map((cat) =>
                   cat.id === categoryId
-                    ? { ...cat, students: [...cat.students, ...studentIds] }
+                    ? { ...cat, students: [...(cat.students || []), ...studentIds] }
                     : cat
                 )
               );
@@ -394,14 +426,14 @@ export default function Students() {
                   cat.id === categoryId
                     ? {
                         ...cat,
-                        students: cat.students.filter((id) => id !== studentId),
+                        students: cat.students?.filter((id) => id !== studentId),
                       }
                     : cat
                 )
               );
               toast.success("Student removed from category");
             }}
-            students={students.map((s) => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }))}
+            students={students.map((s) => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))}
           />
         </TabsContent>
       </Tabs>

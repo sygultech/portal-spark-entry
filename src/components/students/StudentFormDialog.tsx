@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Student, Guardian, PreviousSchool, Document, Category } from "@/types/student";
+import { Student, Guardian, StudentDocument, StudentCategory, PreviousSchoolInfo } from "@/types/student";
 import { useState } from "react";
 import { ImageUploader } from "../common/ImageUploader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";

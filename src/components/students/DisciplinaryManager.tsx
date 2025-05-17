@@ -1,29 +1,37 @@
 
-import { DisciplinaryRecord, ParentMeeting } from "@/types/student";
+import { 
+  DisciplinaryRecord, 
+  IncidentSeverity, 
+  IncidentStatus, 
+  ParentMeeting,
+  DisciplinaryEvidence 
+} from "@/types/student";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Plus, Shield, Users, FileEdit, Trash2, UserRound } from "lucide-react";
-import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { incidentTypeOptions } from "@/data/student-form-options";
+import { CalendarDays, File, FileText, Plus, Shield, Users } from "lucide-react";
 
 interface DisciplinaryManagerProps {
   records: DisciplinaryRecord[];
   onCreateRecord: (record: Omit<DisciplinaryRecord, "id" | "created_at">) => void;
-  onUpdateStatus: (id: string, status: DisciplinaryRecord["status"]) => void;
-  onAddParentMeeting: (recordId: string, meeting: { date: string; notes: string }) => void;
+  onUpdateStatus: (recordId: string, status: IncidentStatus) => void;
+  onAddParentMeeting: (recordId: string, meeting: { date: string; notes: string; attendees: string }) => void;
   onAddEvidence: (recordId: string, evidence: { type: string; file: File }) => void;
 }
 
@@ -34,338 +42,619 @@ export function DisciplinaryManager({
   onAddParentMeeting,
   onAddEvidence,
 }: DisciplinaryManagerProps) {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<DisciplinaryRecord | null>(null);
-  const [newRecord, setNewRecord] = useState<Partial<DisciplinaryRecord>>({
-    status: "pending",
+  const [formTab, setFormTab] = useState("details");
+
+  // Form states
+  const [newRecord, setNewRecord] = useState<{
+    incident_type: string;
+    description: string;
+    date: string;
+    severity: IncidentSeverity;
+    action_taken?: string;
+    reported_by: string;
+  }>({
+    incident_type: "",
+    description: "",
     date: new Date().toISOString().split("T")[0],
+    severity: "minor",
+    action_taken: "",
+    reported_by: "",
   });
+
   const [newMeeting, setNewMeeting] = useState<Partial<ParentMeeting>>({
     date: new Date().toISOString().split("T")[0],
-    attendees: "", // Changed from array to string to match backend schema
+    attendees: "",
+    discussion: "",
+    outcome: "",
+    follow_up_date: "",
   });
 
-  const incidentTypes = [
-    "Behavioral",
-    "Academic Dishonesty",
-    "Attendance",
-    "Bullying",
-    "Vandalism",
-    "Other",
-  ];
+  const [newEvidence, setNewEvidence] = useState<{
+    type: string;
+    file: File | null;
+  }>({
+    type: "",
+    file: null,
+  });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  const handleCreateRecord = () => {
+    if (!newRecord.incident_type || !newRecord.description || !newRecord.date) return;
     
-    const newDisciplinaryRecord: Omit<DisciplinaryRecord, "id" | "created_at"> = {
-      student_id: formData.get("studentId") as string,
-      incident_type: formData.get("type") as string,
-      description: formData.get("description") as string,
-      date: formData.get("date") as string,
-      severity: formData.get("severity") as "minor" | "moderate" | "severe",
-      status: "pending" as const,
-      action_taken: formData.get("actionTaken") as string,
-      reported_by: formData.get("reportedBy") as string,
-      school_id: "", // This will be filled by backend
-      updated_at: new Date().toISOString(),
-    };
-
-    onCreateRecord(newDisciplinaryRecord);
-    setIsAddDialogOpen(false);
-    setSelectedFile(null);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedFile(e.target.files?.[0] || null);
+    onCreateRecord({
+      student_id: "",  // Will be set by the backend
+      incident_type: newRecord.incident_type,
+      description: newRecord.description,
+      date: newRecord.date,
+      severity: newRecord.severity,
+      status: "pending",
+      action_taken: newRecord.action_taken,
+      reported_by: newRecord.reported_by,
+      school_id: "", // Will be set by the backend
+    });
+    
+    setIsOpen(false);
+    setNewRecord({
+      incident_type: "",
+      description: "",
+      date: new Date().toISOString().split("T")[0],
+      severity: "minor",
+      action_taken: "",
+      reported_by: "",
+    });
   };
 
   const handleAddMeeting = () => {
-    if (!selectedRecord || !newMeeting.discussion || !newMeeting.outcome) return;
+    if (!selectedRecord) return;
+    if (!newMeeting.date || !newMeeting.attendees || !newMeeting.discussion) return;
 
-    const meetingData = {
-      date: newMeeting.date || new Date().toISOString(),
-      notes: newMeeting.discussion || "", // Convert discussion to notes for the API
-    };
-
-    onAddParentMeeting(selectedRecord.id, meetingData);
-    setMeetingDialogOpen(false);
+    onAddParentMeeting(selectedRecord.id, {
+      date: newMeeting.date,
+      attendees: newMeeting.attendees,
+      notes: newMeeting.discussion || ""
+    });
+    
     setNewMeeting({
       date: new Date().toISOString().split("T")[0],
-      attendees: "", // Changed from array to string
+      attendees: "",
+      discussion: "",
+      outcome: "",
+      follow_up_date: "",
     });
+    setFormTab("details");
+  };
+
+  const handleAddEvidence = () => {
+    if (!selectedRecord || !newEvidence.file || !newEvidence.type) return;
+
+    onAddEvidence(selectedRecord.id, {
+      type: newEvidence.type,
+      file: newEvidence.file,
+    });
+
+    setNewEvidence({
+      type: "",
+      file: null,
+    });
+    setFormTab("details");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setNewEvidence({
+        ...newEvidence,
+        file: files[0],
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Disciplinary Records</h2>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Record
+        <Button onClick={() => setIsOpen(true)}>
+          <Shield className="h-4 w-4 mr-2" />
+          New Record
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        {records.length === 0 ? (
+          <div className="text-center p-8 border rounded-md bg-muted/10">
+            <p className="text-muted-foreground">No disciplinary records found.</p>
+            <Button onClick={() => setIsOpen(true)} variant="outline" className="mt-2">
+              Create New Record
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add Disciplinary Record</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Incident Type</Label>
-                  <Select name="type" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select incident type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {incidentTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          </div>
+        ) : (
+          records.map((record) => (
+            <Card key={record.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {record.incident_type}
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      variant={
+                        record.status === "resolved"
+                          ? "default"
+                          : record.status === "escalated"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      {record.status}
+                    </Badge>
+                    <Badge
+                      variant={
+                        record.severity === "severe"
+                          ? "destructive"
+                          : record.severity === "moderate"
+                          ? "warning"
+                          : "outline"
+                      }
+                    >
+                      {record.severity}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date of Incident</Label>
-                  <Input
-                    id="date"
-                    name="date"
-                    type="date"
-                    required
-                  />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-muted-foreground text-sm">Description</p>
+                    <p>{record.description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-muted-foreground text-sm">Date</p>
+                      <p>{new Date(record.date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Reported By</p>
+                      <p>{record.reported_by}</p>
+                    </div>
+                  </div>
+
+                  {record.action_taken && (
+                    <div>
+                      <p className="text-muted-foreground text-sm">Action Taken</p>
+                      <p>{record.action_taken}</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRecord(record);
+                        setFormTab("meetings");
+                      }}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      {record.parent_meetings && record.parent_meetings.length > 0
+                        ? `${record.parent_meetings.length} Meeting${
+                            record.parent_meetings.length > 1 ? "s" : ""
+                          }`
+                        : "Add Meeting"}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRecord(record);
+                        setFormTab("evidence");
+                      }}
+                    >
+                      <File className="h-4 w-4 mr-2" />
+                      {record.evidence && record.evidence.length > 0
+                        ? `${record.evidence.length} Evidence`
+                        : "Add Evidence"}
+                    </Button>
+
+                    {record.status === "pending" && (
+                      <div className="flex ml-auto gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onUpdateStatus(record.id, "resolved")}
+                        >
+                          Mark as Resolved
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => onUpdateStatus(record.id, "escalated")}
+                        >
+                          Escalate
+                        </Button>
+                      </div>
+                    )}
+
+                    {record.status === "escalated" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-auto"
+                        onClick={() => onUpdateStatus(record.id, "resolved")}
+                      >
+                        Mark as Resolved
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="severity">Severity</Label>
-                  <Select name="severity" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select severity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="minor">Minor</SelectItem>
-                      <SelectItem value="moderate">Moderate</SelectItem>
-                      <SelectItem value="severe">Severe</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reportedBy">Reported By</Label>
-                  <Input
-                    id="reportedBy"
-                    name="reportedBy"
-                    placeholder="Enter reporter's name"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  placeholder="Describe the incident"
-                  className="min-h-[100px]"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="actionTaken">Action Taken</Label>
-                <Textarea
-                  id="actionTaken"
-                  name="actionTaken"
-                  placeholder="Describe the action taken"
-                  className="min-h-[100px]"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Save Record</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4">
-          <h3 className="font-semibold mb-2">Total Incidents</h3>
-          <p className="text-2xl font-bold">{records.length}</p>
-        </Card>
-        <Card className="p-4">
-          <h3 className="font-semibold mb-2">Pending Resolution</h3>
-          <p className="text-2xl font-bold">
-            {records.filter((r) => r.status === "pending").length}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <h3 className="font-semibold mb-2">Severe Incidents</h3>
-          <p className="text-2xl font-bold">
-            {records.filter((r) => r.severity === "severe").length}
-          </p>
-        </Card>
-      </div>
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Severity</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Reported By</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {records.map((record) => (
-            <TableRow key={record.id}>
-              <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-              <TableCell>{record.incident_type}</TableCell>
-              <TableCell className="max-w-[300px] truncate">
-                {record.description}
-              </TableCell>
-              <TableCell>
-                <span
-                  className={`px-2 py-1 rounded-full text-sm ${
-                    record.severity === "severe"
-                      ? "bg-red-100 text-red-800"
-                      : record.severity === "moderate"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-blue-100 text-blue-800"
-                  }`}
-                >
-                  {record.severity.charAt(0).toUpperCase() + record.severity.slice(1)}
-                </span>
-              </TableCell>
-              <TableCell>
-                <span
-                  className={`px-2 py-1 rounded-full text-sm ${
-                    record.status === "resolved"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                </span>
-              </TableCell>
-              <TableCell>{record.reported_by}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      // Implement edit functionality
-                    }}
-                  >
-                    <FileEdit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setSelectedRecord(record);
-                      setMeetingDialogOpen(true);
-                    }}
-                  >
-                    <UserRound className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      // Implement delete functionality
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-
-      {/* Parent Meeting Dialog */}
-      <Dialog open={meetingDialogOpen} onOpenChange={setMeetingDialogOpen}>
-        <DialogContent>
+      {/* New Record Dialog */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Parent Meeting</DialogTitle>
+            <DialogTitle>New Disciplinary Record</DialogTitle>
+            <DialogDescription>
+              Create a new disciplinary record for a student.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Date</Label>
+              <Label htmlFor="incident_type">Incident Type</Label>
+              <Select
+                value={newRecord.incident_type}
+                onValueChange={(val) =>
+                  setNewRecord({ ...newRecord, incident_type: val })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select incident type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {incidentTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="date">Date</Label>
               <Input
+                id="date"
                 type="date"
-                value={newMeeting.date}
+                value={newRecord.date}
                 onChange={(e) =>
-                  setNewMeeting((prev) => ({ ...prev, date: e.target.value }))
+                  setNewRecord({ ...newRecord, date: e.target.value })
                 }
               />
             </div>
 
             <div>
-              <Label>Attendees (comma-separated)</Label>
-              <Input
-                value={newMeeting.attendees || ""}
-                onChange={(e) =>
-                  setNewMeeting((prev) => ({
-                    ...prev,
-                    attendees: e.target.value,
-                  }))
+              <Label htmlFor="severity">Severity</Label>
+              <Select
+                value={newRecord.severity}
+                onValueChange={(val: IncidentSeverity) =>
+                  setNewRecord({ ...newRecord, severity: val })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="minor">Minor</SelectItem>
+                  <SelectItem value="moderate">Moderate</SelectItem>
+                  <SelectItem value="severe">Severe</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <Label>Discussion</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
-                value={newMeeting.discussion}
+                id="description"
+                value={newRecord.description}
                 onChange={(e) =>
-                  setNewMeeting((prev) => ({ ...prev, discussion: e.target.value }))
+                  setNewRecord({ ...newRecord, description: e.target.value })
                 }
+                rows={4}
               />
             </div>
 
             <div>
-              <Label>Outcome</Label>
+              <Label htmlFor="action_taken">Action Taken (Optional)</Label>
               <Textarea
-                value={newMeeting.outcome}
+                id="action_taken"
+                value={newRecord.action_taken}
                 onChange={(e) =>
-                  setNewMeeting((prev) => ({ ...prev, outcome: e.target.value }))
+                  setNewRecord({ ...newRecord, action_taken: e.target.value })
                 }
+                rows={2}
+                placeholder="Describe any immediate actions taken"
               />
             </div>
 
             <div>
-              <Label>Follow-up Date (optional)</Label>
+              <Label htmlFor="reported_by">Reported By</Label>
               <Input
-                type="date"
-                value={newMeeting.follow_up_date}
+                id="reported_by"
+                value={newRecord.reported_by}
                 onChange={(e) =>
-                  setNewMeeting((prev) => ({ ...prev, follow_up_date: e.target.value }))
+                  setNewRecord({ ...newRecord, reported_by: e.target.value })
                 }
+                placeholder="Name of the person reporting"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMeetingDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddMeeting}>Add Meeting</Button>
+            <Button onClick={handleCreateRecord}>Create Record</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Details Dialog */}
+      <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Disciplinary Record Details</DialogTitle>
+          </DialogHeader>
+
+          <Tabs value={formTab} onValueChange={setFormTab}>
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="meetings">Parent Meetings</TabsTrigger>
+              <TabsTrigger value="evidence">Evidence</TabsTrigger>
+            </TabsList>
+
+            {selectedRecord && (
+              <>
+                <TabsContent value="details" className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold">Incident Information</h3>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <div>
+                        <p className="text-muted-foreground text-sm">Incident Type</p>
+                        <p>{selectedRecord.incident_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">Date</p>
+                        <p>{new Date(selectedRecord.date).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">Severity</p>
+                        <Badge
+                          variant={
+                            selectedRecord.severity === "severe"
+                              ? "destructive"
+                              : selectedRecord.severity === "moderate"
+                              ? "warning"
+                              : "outline"
+                          }
+                        >
+                          {selectedRecord.severity}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">Status</p>
+                        <Badge
+                          variant={
+                            selectedRecord.status === "resolved"
+                              ? "default"
+                              : selectedRecord.status === "escalated"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
+                          {selectedRecord.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-muted-foreground text-sm">Description</p>
+                    <p className="mt-1">{selectedRecord.description}</p>
+                  </div>
+
+                  {selectedRecord.action_taken && (
+                    <div>
+                      <p className="text-muted-foreground text-sm">Action Taken</p>
+                      <p className="mt-1">{selectedRecord.action_taken}</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="meetings" className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold">Add Parent Meeting</h3>
+                    <div className="space-y-4 mt-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="meeting-date">Meeting Date</Label>
+                          <Input
+                            id="meeting-date"
+                            type="date"
+                            value={newMeeting.date}
+                            onChange={(e) =>
+                              setNewMeeting({ ...newMeeting, date: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="meeting-followup">Follow-up Date (Optional)</Label>
+                          <Input
+                            id="meeting-followup"
+                            type="date"
+                            value={newMeeting.follow_up_date}
+                            onChange={(e) =>
+                              setNewMeeting({ ...newMeeting, follow_up_date: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="meeting-attendees">Attendees</Label>
+                        <Input
+                          id="meeting-attendees"
+                          placeholder="Names of attendees"
+                          value={newMeeting.attendees}
+                          onChange={(e) =>
+                            setNewMeeting({ ...newMeeting, attendees: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="meeting-discussion">Discussion</Label>
+                        <Textarea
+                          id="meeting-discussion"
+                          placeholder="Summary of discussion"
+                          value={newMeeting.discussion}
+                          onChange={(e) =>
+                            setNewMeeting({ ...newMeeting, discussion: e.target.value })
+                          }
+                          rows={3}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="meeting-outcome">Outcome (Optional)</Label>
+                        <Textarea
+                          id="meeting-outcome"
+                          placeholder="Result and decisions"
+                          value={newMeeting.outcome}
+                          onChange={(e) =>
+                            setNewMeeting({ ...newMeeting, outcome: e.target.value })
+                          }
+                          rows={2}
+                        />
+                      </div>
+
+                      <Button onClick={handleAddMeeting}>Add Meeting</Button>
+                    </div>
+                  </div>
+
+                  {selectedRecord.parent_meetings && selectedRecord.parent_meetings.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Meeting History</h3>
+                      <div className="space-y-4">
+                        {selectedRecord.parent_meetings.map((meeting) => (
+                          <Card key={meeting.id}>
+                            <CardHeader className="py-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <CalendarDays className="h-4 w-4 mr-2" />
+                                  <span>
+                                    {new Date(meeting.date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                {meeting.follow_up_date && (
+                                  <Badge variant="outline">
+                                    Follow-up: {new Date(meeting.follow_up_date).toLocaleDateString()}
+                                  </Badge>
+                                )}
+                              </div>
+                            </CardHeader>
+                            <CardContent className="py-2">
+                              <p className="text-muted-foreground text-sm">Attendees</p>
+                              <p className="mb-2">{meeting.attendees}</p>
+                              <p className="text-muted-foreground text-sm">Discussion</p>
+                              <p className="mb-2">{meeting.discussion}</p>
+                              {meeting.outcome && (
+                                <>
+                                  <p className="text-muted-foreground text-sm">Outcome</p>
+                                  <p>{meeting.outcome}</p>
+                                </>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="evidence" className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold">Add Evidence</h3>
+                    <div className="space-y-4 mt-2">
+                      <div>
+                        <Label htmlFor="evidence-type">Type</Label>
+                        <Input
+                          id="evidence-type"
+                          placeholder="E.g., Photo, Video, Document, Statement"
+                          value={newEvidence.type}
+                          onChange={(e) =>
+                            setNewEvidence({ ...newEvidence, type: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="evidence-file">File</Label>
+                        <Input
+                          id="evidence-file"
+                          type="file"
+                          onChange={handleFileChange}
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleAddEvidence}
+                        disabled={!newEvidence.type || !newEvidence.file}
+                      >
+                        Upload Evidence
+                      </Button>
+                    </div>
+                  </div>
+
+                  {selectedRecord.evidence && selectedRecord.evidence.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Evidence Files</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedRecord.evidence.map((item) => (
+                          <Card key={item.id}>
+                            <CardContent className="p-4 flex items-center justify-between">
+                              <div className="flex items-center">
+                                <FileText className="h-8 w-8 mr-3" />
+                                <div>
+                                  <p className="font-medium">{item.type}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {item.uploaded_at && new Date(item.uploaded_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm" asChild>
+                                <a
+                                  href={item.file_path}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  View
+                                </a>
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              </>
+            )}
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,4 +1,5 @@
-import { Student, Document, DisciplinaryRecord, TransferRecord, Certificate } from "@/types/student";
+
+import { Student, StudentDocument, DisciplinaryRecord, TransferRecord, Certificate, Guardian } from "@/types/student";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,21 +21,21 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
             <Avatar className="w-24 h-24">
-              <AvatarImage src={student.photo} />
-              <AvatarFallback>{student.firstName[0]}{student.lastName[0]}</AvatarFallback>
+              <AvatarImage src={student.avatar_url} />
+              <AvatarFallback>{student.first_name[0]}{student.last_name?.[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold">{student.firstName} {student.lastName}</h2>
-                  <p className="text-muted-foreground">Admission No: {student.admissionNo}</p>
+                  <h2 className="text-2xl font-bold">{student.first_name} {student.last_name}</h2>
+                  <p className="text-muted-foreground">Admission No: {student.admission_number}</p>
                 </div>
                 <Button onClick={onEdit}>Edit Profile</Button>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Batch</p>
-                  <p>{student.batch}</p>
+                  <p>{student.batch_name}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Category</p>
@@ -42,11 +43,11 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Date of Birth</p>
-                  <p>{new Date(student.dateOfBirth).toLocaleDateString()}</p>
+                  <p>{student.date_of_birth && new Date(student.date_of_birth).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Blood Group</p>
-                  <p>{student.bloodGroup}</p>
+                  <p>{student.blood_group}</p>
                 </div>
               </div>
             </div>
@@ -112,7 +113,7 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Mother Tongue</dt>
-                        <dd>{student.motherTongue}</dd>
+                        <dd>{student.mother_tongue}</dd>
                       </div>
                     </dl>
                   </CardContent>
@@ -143,32 +144,10 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
             </TabsContent>
 
             <TabsContent value="academic" className="space-y-4">
-              {student.academicRecords.map((record) => (
-                <Card key={record.id}>
-                  <CardHeader>
-                    <CardTitle>{record.year} - {record.term}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-4 gap-4">
-                        {record.subjects.map((subject, index) => (
-                          <div key={index} className="p-4 border rounded-lg">
-                            <p className="font-medium">{subject.subject}</p>
-                            <p className="text-2xl font-bold">{subject.grade}</p>
-                            <p className="text-sm text-muted-foreground">Marks: {subject.marks}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <p>Attendance: {record.attendance}%</p>
-                        {record.remarks && (
-                          <p className="text-muted-foreground">Remarks: {record.remarks}</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {/* Display a message when no academic records available */}
+              <div className="text-center py-8 text-muted-foreground">
+                No academic records available.
+              </div>
             </TabsContent>
 
             <TabsContent value="attendance" className="space-y-4">
@@ -184,17 +163,17 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {student.documents.map((doc) => (
+                {student.documents?.map((doc) => (
                   <Card key={doc.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle>{doc.name}</CardTitle>
                         <Badge variant={
-                          doc.verificationStatus === 'verified' ? 'success' :
-                          doc.verificationStatus === 'rejected' ? 'destructive' :
+                          doc.verification_status === 'verified' ? 'success' :
+                          doc.verification_status === 'rejected' ? 'destructive' :
                           'secondary'
                         }>
-                          {doc.verificationStatus}
+                          {doc.verification_status}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -206,17 +185,17 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Uploaded</dt>
-                          <dd>{new Date(doc.uploadDate).toLocaleDateString()}</dd>
+                          <dd>{doc.upload_date && new Date(doc.upload_date).toLocaleDateString()}</dd>
                         </div>
-                        {doc.verificationStatus === 'verified' && (
+                        {doc.verification_status === 'verified' && (
                           <>
                             <div className="flex justify-between">
                               <dt className="text-muted-foreground">Verified By</dt>
-                              <dd>{doc.verifiedBy}</dd>
+                              <dd>{doc.verified_by}</dd>
                             </div>
                             <div className="flex justify-between">
                               <dt className="text-muted-foreground">Verified On</dt>
-                              <dd>{new Date(doc.verificationDate!).toLocaleDateString()}</dd>
+                              <dd>{doc.verification_date && new Date(doc.verification_date).toLocaleDateString()}</dd>
                             </div>
                           </>
                         )}
@@ -239,11 +218,11 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                 </Button>
               </div>
 
-              {student.disciplinaryRecords.map((record) => (
+              {student.disciplinary_records?.map((record) => (
                 <Card key={record.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>{record.incidentType}</CardTitle>
+                      <CardTitle>{record.incident_type}</CardTitle>
                       <Badge variant={
                         record.status === 'resolved' ? 'success' : 'secondary'
                       }>
@@ -267,7 +246,7 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Action Taken</dt>
-                        <dd className="mt-1">{record.action}</dd>
+                        <dd className="mt-1">{record.action_taken}</dd>
                       </div>
                     </dl>
                   </CardContent>
@@ -285,11 +264,11 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
 
             <TabsContent value="guardians" className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {student.guardians.map((guardian) => (
+                {student.guardians?.map((guardian) => (
                   <Card key={guardian.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle>{guardian.firstName} {guardian.lastName}</CardTitle>
+                        <CardTitle>{guardian.first_name} {guardian.last_name}</CardTitle>
                         <Badge>{guardian.relation}</Badge>
                       </div>
                     </CardHeader>
@@ -313,10 +292,10 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                         </div>
                       </dl>
                       <div className="mt-4 flex gap-4">
-                        {guardian.isEmergencyContact && (
+                        {guardian.is_emergency_contact && (
                           <Badge variant="secondary">Emergency Contact</Badge>
                         )}
-                        {guardian.canPickup && (
+                        {guardian.can_pickup && (
                           <Badge variant="secondary">Can Pickup Student</Badge>
                         )}
                       </div>
@@ -354,4 +333,4 @@ function StatsCard({ icon, title, value, label }: StatsCardProps) {
       </CardContent>
     </Card>
   );
-} 
+}
