@@ -1,4 +1,6 @@
+
 import { Database } from '@/lib/database.types';
+import { UserRole } from '@/types/common';
 
 export type Tables = Database['public']['Tables'];
 export type Enums = Database['public']['Enums'];
@@ -18,17 +20,5 @@ export type UserRoleCache = {
 export type Profile = Tables['profiles']['Row'];
 export type School = Tables['schools']['Row'];
 
-// Add the user_role_cache type to the Database interface
-declare module '@/lib/database.types' {
-  interface Database {
-    public: {
-      Tables: {
-        user_role_cache: {
-          Row: UserRoleCache;
-          Insert: Omit<UserRoleCache, 'id' | 'last_updated'>;
-          Update: Partial<Omit<UserRoleCache, 'id'>>;
-        };
-      };
-    };
-  }
-} 
+// We don't modify the Database interface directly since it can cause conflicts
+// Instead, we can create an extended version if needed for project use

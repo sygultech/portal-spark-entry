@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchUserProfile, switchUserSchool, getUserRolesInSchool } from '@/utils/authUtils';
@@ -6,7 +7,7 @@ import { UserRole } from '@/types/common';
 
 export const useAuth = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
     // Get initial session
@@ -36,7 +37,8 @@ export const useAuth = () => {
   const loadUserProfile = async (userId: string) => {
     try {
       const profile = await fetchUserProfile(userId);
-      setUser(profile);
+      // Convert the profile to a UserProfile type to match expected structure
+      setUser(profile as unknown as UserProfile);
     } catch (error) {
       console.error('Error loading user profile:', error);
     } finally {
@@ -66,23 +68,25 @@ export const useAuth = () => {
     const targetSchoolId = schoolId || user.primary_school_id;
     if (!targetSchoolId) return false;
 
-    return user.roles.some(r => 
+    return user.roles?.some(r => 
       r.school_id === targetSchoolId && 
       r.role === role
-    );
+    ) || false;
   };
 
   const getSchoolRoles = (schoolId: string): UserSchoolRole[] => {
     if (!user) return [];
-    return user.roles.filter(r => r.school_id === schoolId);
+    return user.roles?.filter(r => r.school_id === schoolId) || [];
   };
 
   return {
     user,
-    loading,
+    profile: user, // Add profile as alias to maintain compatibility
+    loading: isLoading,
+    isLoading,
     switchSchool,
     getCurrentSchoolRoles,
     hasRole,
     getSchoolRoles
   };
-}; 
+};

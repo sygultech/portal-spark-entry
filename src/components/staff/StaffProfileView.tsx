@@ -39,7 +39,7 @@ const StaffProfileView: React.FC<StaffProfileViewProps> = ({ staff }) => {
           <p className="text-sm text-muted-foreground">{staff.designation}</p>
           <Badge variant={
             staff.status === "Active" ? "default" : 
-            staff.status === "On Leave" ? "warning" : "secondary"
+            staff.status === "On Leave" ? "outline" : "secondary"
           } className="mt-2">
             {staff.status}
           </Badge>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -230,7 +229,7 @@ const StaffDirectory = () => {
                     <TableCell>
                       <Badge variant={
                         staff.status === "Active" ? "default" : 
-                        staff.status === "On Leave" ? "warning" : "secondary"
+                        staff.status === "On Leave" ? "outline" : "secondary"
                       }>
                         {staff.status}
                       </Badge>
