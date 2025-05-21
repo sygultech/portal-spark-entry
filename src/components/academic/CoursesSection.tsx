@@ -44,3 +44,5 @@ export default function CoursesSection({ academicYearId }: CoursesSectionProps) 
 }
 
 // force update
+
+// force update

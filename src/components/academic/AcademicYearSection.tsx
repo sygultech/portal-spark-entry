@@ -208,3 +208,5 @@ const AcademicYearSection = ({ onCurrentYearChange }: AcademicYearSectionProps) 
 export default AcademicYearSection;
 
 // force update
+
+// force update
