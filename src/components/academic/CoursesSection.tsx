@@ -42,7 +42,3 @@ export default function CoursesSection({ academicYearId }: CoursesSectionProps) 
     </Card>
   );
 }
-
-// force update
-
-// force update

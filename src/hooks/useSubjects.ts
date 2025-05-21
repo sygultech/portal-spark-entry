@@ -247,7 +247,3 @@ export function useSubjects(academicYearId?: string, categoryId?: string, includ
     deleteSubject: deleteSubjectMutation.mutateAsync
   };
 }
-
-// force update
-
-// force update

@@ -214,7 +214,3 @@ export interface SchoolSettings {
   created_at: string;
   updated_at: string;
 }
-
-// force update
-
-// force update

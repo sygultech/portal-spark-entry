@@ -1,3 +1,4 @@
+
 import { 
   LayoutDashboard, 
   Users, 
@@ -106,10 +107,3 @@ export const menuConfig: MenuConfig = {
     { label: "Settings", path: "/settings", icon: Settings },
   ],
 };
-
-// Debug logging
-console.log("Menu config loaded:", menuConfig);
-
-// force update
-
-// force update

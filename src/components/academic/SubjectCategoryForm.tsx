@@ -115,7 +115,3 @@ const SubjectCategoryForm = ({
 };
 
 export default SubjectCategoryForm;
-
-// force update
-
-// force update

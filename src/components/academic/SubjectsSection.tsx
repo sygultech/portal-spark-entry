@@ -90,7 +90,3 @@ const SubjectsSection = () => {
 };
 
 export default SubjectsSection;
-
-// force update
-
-// force update

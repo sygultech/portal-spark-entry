@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,10 +36,6 @@ export const AppSidebarContent = () => {
   // Get the appropriate menu items based on user role
   const menuItems = profile?.role ? menuConfig[profile.role] || [] : [];
   
-  // Debug logging
-  console.log("Profile in AppSidebar:", profile);
-  console.log("Menu items for role:", profile?.role, menuItems);
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -145,17 +142,12 @@ export const AppSidebarContent = () => {
 export const AppSidebar = () => {
   const [isMounted, setIsMounted] = useState(false);
   
-  // Debug logging
-  console.log("AppSidebar mounted state:", isMounted);
-  
   // Only render on the client
   useEffect(() => {
     setIsMounted(true);
-    console.log("AppSidebar mounted");
   }, []);
 
   if (!isMounted) {
-    console.log("AppSidebar not mounted yet");
     return null;
   }
 
@@ -174,7 +166,3 @@ export const AppSidebar = () => {
 };
 
 export default AppSidebar;
-
-// force update
-
-// force update

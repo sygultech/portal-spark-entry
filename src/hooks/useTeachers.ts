@@ -30,7 +30,3 @@ export function useTeachers() {
     error: teachersQuery.error
   };
 }
-
-// force update
-
-// force update

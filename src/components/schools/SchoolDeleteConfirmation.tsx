@@ -47,7 +47,3 @@ const SchoolDeleteConfirmation: React.FC<SchoolDeleteConfirmationProps> = ({
 };
 
 export default SchoolDeleteConfirmation;
-
-// force update
-
-// force update

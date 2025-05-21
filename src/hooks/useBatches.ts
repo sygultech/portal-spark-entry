@@ -112,7 +112,3 @@ export function useBatchStudents(batchId: string | undefined) {
     ensureTable: ensureTableMutation.mutate
   };
 }
-
-// force update
-
-// force update

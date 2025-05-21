@@ -195,7 +195,3 @@ export function useGradingSystems() {
     assignGradingSystemToBatches: assignGradingSystemToBatchesMutation.mutateAsync
   };
 }
-
-// force update
-
-// force update

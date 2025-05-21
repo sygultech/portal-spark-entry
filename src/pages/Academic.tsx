@@ -240,7 +240,3 @@ const Academic = () => {
 };
 
 export default Academic;
-
-// force update
-
-// force update

@@ -23,7 +23,3 @@ const Layout = ({ children }: LayoutProps) => {
 };
 
 export default Layout;
-
-// force update
-
-// force update

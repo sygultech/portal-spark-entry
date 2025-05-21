@@ -29,7 +29,3 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 };
 
 export default AppLayout;
-
-// force update
-
-// force update

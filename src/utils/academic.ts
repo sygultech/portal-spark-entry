@@ -61,7 +61,3 @@ export const fetchGradingSystem = async (id: string): Promise<GradingSystem | nu
     return null;
   }
 };
-
-// force update
-
-// force update

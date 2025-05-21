@@ -62,7 +62,3 @@ function Calendar({
 Calendar.displayName = "Calendar";
 
 export { Calendar };
-
-// force update
-
-// force update

@@ -61,7 +61,3 @@ export async function updatePromotionStatus(
   console.warn('updatePromotionStatus is disabled - table does not exist');
   return { success: false, message: 'Feature not available' };
 }
-
-// force update
-
-// force update

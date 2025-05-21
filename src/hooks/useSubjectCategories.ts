@@ -140,7 +140,3 @@ export function useSubjectCategories() {
     deleteCategory: deleteCategoryMutation.mutate
   };
 }
-
-// force update
-
-// force update

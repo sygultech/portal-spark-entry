@@ -11,6 +11,3 @@ export default function AcademicLayout({
     </div>
   );
 } 
-// force update
-
-// force update

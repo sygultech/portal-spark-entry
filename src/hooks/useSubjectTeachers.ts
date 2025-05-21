@@ -116,7 +116,3 @@ export function useSubjectTeachers(subjectId?: string, batchId?: string, academi
     removeTeacher: removeTeacherMutation.mutate
   };
 }
-
-// force update
-
-// force update

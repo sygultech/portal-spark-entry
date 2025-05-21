@@ -1,8 +1,10 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   FileText,
   GraduationCap,
+  UserPlus,
   Users,
   Download,
   Upload,
@@ -10,6 +12,7 @@ import {
 } from "lucide-react";
 
 interface QuickActionsProps {
+  onAddStudent: () => void;
   onBulkImport: () => void;
   onExportData: () => void;
   totalStudents: number;
@@ -18,6 +21,7 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({
+  onAddStudent,
   onBulkImport,
   onExportData,
   totalStudents,
@@ -59,6 +63,10 @@ export function QuickActions({
 
       {/* Quick Actions */}
       <div className="flex gap-2">
+        <Button onClick={onAddStudent} className="flex-1">
+          <UserPlus className="w-4 h-4 mr-2" />
+          Add New Student
+        </Button>
         <Button variant="outline" onClick={onBulkImport} className="flex-1">
           <Upload className="w-4 h-4 mr-2" />
           Bulk Import
@@ -75,7 +83,3 @@ export function QuickActions({
     </div>
   );
 }
-
-// force update
-
-// force update

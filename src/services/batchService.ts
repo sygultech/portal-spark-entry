@@ -261,7 +261,3 @@ export async function ensureBatchStudentsTable(operation?: 'insert' | 'delete', 
     return false;
   }
 }
-
-// force update
-
-// force update

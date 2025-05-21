@@ -131,7 +131,3 @@ export const toggleLockAcademicYear = async (id: string, isLocked: boolean): Pro
   if (error) throw error;
   return data as AcademicYear;
 };
-
-// force update
-
-// force update

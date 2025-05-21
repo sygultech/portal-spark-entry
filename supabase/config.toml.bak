@@ -1,9 +1,0 @@
-# This is a template file. Replace the values with your actual Supabase project details.
-[default]
-project_id = "sjzbturfgadikgzokpyo" # Find this in Project Settings > General
-endpoint = "https://sjzbturfgadikgzokpyo.supabase.co"
-
-[default.api]
-# Get these from Project Settings > API
-anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqemJ0dXJmZ2FkaWtnem9rcHlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxOTg4OTEsImV4cCI6MjA2Mjc3NDg5MX0.kK73WOJU9iCeSnGuHpcxIAWmxNGfQL8h7h6scXthF_I"
-service_role_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqemJ0dXJmZ2FkaWtnem9rcHlvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzE5ODg5MSwiZXhwIjoyMDYyNzc0ODkxfQ.l1kGRDcgiYmJ_NVDPK76juFno2_xKEA8rhh4R-vKgrY" 

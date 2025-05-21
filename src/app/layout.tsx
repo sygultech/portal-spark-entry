@@ -16,7 +16,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-// force update
-
-// force update

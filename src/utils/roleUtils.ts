@@ -1,8 +1,5 @@
-import { Profile, UserRole } from "@/contexts/types";
-import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/lib/database.types";
 
-type UserRoleCache = Database['public']['Tables']['user_role_cache']['Row'];
+import { Profile } from "@/contexts/types";
 
 // Default routes for each role
 export const getRoleBasedRoute = (role?: string): string => {
@@ -14,7 +11,7 @@ export const getRoleBasedRoute = (role?: string): string => {
     case "teacher":
       return "/teacher";
     case "student":
-      return "/dashboard";
+      return "/student";
     case "parent":
       return "/parent";
     default:
@@ -78,68 +75,3 @@ export const getRoleNavigation = (profile: Profile | null) => {
       return baseNavItems;
   }
 };
-
-// Function to refresh user roles in cache
-export const refreshUserRoles = async (userId: string): Promise<boolean> => {
-  try {
-    const { data, error } = await supabase.rpc('refresh_user_roles', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      console.error('Error refreshing user roles:', error);
-      return false;
-    }
-
-    return data || false;
-  } catch (error) {
-    console.error('Error in refreshUserRoles:', error);
-    return false;
-  }
-};
-
-// Function to get user's roles from cache
-export const getUserRolesFromCache = async (userId: string): Promise<UserRoleCache[] | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('user_role_cache')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Error fetching user roles from cache:', error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in getUserRolesFromCache:', error);
-    return null;
-  }
-};
-
-// Function to get user's primary role from cache
-export const getUserPrimaryRole = async (userId: string): Promise<UserRole | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('user_role_cache')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('is_primary', true)
-      .single();
-
-    if (error) {
-      console.error('Error fetching primary role:', error);
-      return null;
-    }
-
-    return data?.role || null;
-  } catch (error) {
-    console.error('Error in getUserPrimaryRole:', error);
-    return null;
-  }
-};
-
-// force update
-
-// force update

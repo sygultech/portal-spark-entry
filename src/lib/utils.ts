@@ -27,7 +27,3 @@ export function getNestedValue(obj: any, path: string, defaultValue: any = undef
   return result !== undefined ? result : defaultValue;
 }
 
-
-// force update
-
-// force update

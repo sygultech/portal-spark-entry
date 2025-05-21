@@ -23,7 +23,3 @@ export interface AuthContextType {
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
-
-// force update
-
-// force update

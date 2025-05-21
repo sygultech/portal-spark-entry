@@ -151,6 +151,3 @@ export const ElectiveSubjectsDialog = ({
     </Dialog>
   );
 }; 
-// force update
-
-// force update

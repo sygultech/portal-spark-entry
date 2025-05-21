@@ -286,7 +286,3 @@ export function CategoryManager({
     </div>
   );
 }
-
-// force update
-
-// force update

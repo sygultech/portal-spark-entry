@@ -15,7 +15,3 @@ const SignUp = () => {
 };
 
 export default SignUp;
-
-// force update
-
-// force update

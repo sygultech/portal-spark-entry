@@ -8,7 +8,3 @@ document.documentElement.style.setProperty('--sidebar-width', '250px');
 document.documentElement.style.setProperty('--sidebar-width-icon', '80px');
 
 createRoot(document.getElementById("root")!).render(<App />);
-
-// force update
-
-// force update

@@ -121,7 +121,3 @@ const Index = () => {
 };
 
 export default Index;
-
-// force update
-
-// force update

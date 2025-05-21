@@ -529,7 +529,3 @@ const SchoolManagement: React.FC = () => {
 };
 
 export default SchoolManagement;
-
-// force update
-
-// force update

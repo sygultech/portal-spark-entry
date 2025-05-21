@@ -1,3 +1,4 @@
+
 // Define basic types
 export type StudentStatus = 'active' | 'transferred' | 'graduated' | 'inactive';
 export type Gender = 'male' | 'female' | 'other';
@@ -31,7 +32,6 @@ export interface Student {
   first_name: string;
   last_name: string;
   email?: string;
-  profile_id?: string;
   date_of_birth?: string;
   gender?: Gender;
   address?: string;
@@ -265,7 +265,3 @@ export interface MedicalRecord {
   status?: MedicalRecordStatus;
   attachments?: string[];
 }
-
-// force update
-
-// force update

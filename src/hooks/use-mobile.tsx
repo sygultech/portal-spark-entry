@@ -17,7 +17,3 @@ export function useIsMobile() {
 
   return !!isMobile
 }
-
-// force update
-
-// force update

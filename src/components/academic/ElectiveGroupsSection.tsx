@@ -278,6 +278,3 @@ const ElectiveGroupsSection = () => {
 };
 
 export default ElectiveGroupsSection; 
-// force update
-
-// force update

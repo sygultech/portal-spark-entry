@@ -307,7 +307,3 @@ export const useAuthOperations = () => {
     signOut
   };
 };
-
-// force update
-
-// force update

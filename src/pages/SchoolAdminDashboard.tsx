@@ -305,7 +305,3 @@ const SchoolAdminDashboard = () => {
 };
 
 export default SchoolAdminDashboard;
-
-// force update
-
-// force update

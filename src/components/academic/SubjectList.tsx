@@ -701,7 +701,3 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
 };
 
 export default SubjectList;
-
-// force update
-
-// force update

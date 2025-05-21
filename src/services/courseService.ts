@@ -116,7 +116,3 @@ export async function deleteCourse(id: string) {
     throw error;
   }
 }
-
-// force update
-
-// force update
