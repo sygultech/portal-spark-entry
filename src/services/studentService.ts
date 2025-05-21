@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Student, 
@@ -32,7 +31,7 @@ const studentQuery = `
   school_id,
   created_at,
   updated_at,
-  student_details:student_details (
+  student_details!inner (
     admission_number,
     date_of_birth,
     gender,
@@ -53,7 +52,7 @@ const studentQuery = `
     admission_date,
     status
   ),
-  batches:student_details (
+  batches:student_details!inner (
     batch_id,
     batches (
       name,
@@ -66,6 +65,45 @@ const studentQuery = `
     )
   )
 `;
+
+interface GuardianResponse {
+  guardians: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    relation: string;
+    occupation: string;
+    email: string;
+    phone: string;
+    address: string;
+    is_emergency_contact: boolean;
+    can_pickup: boolean;
+    school_id: string;
+  };
+  is_primary: boolean;
+}
+
+interface CategoryResponse {
+  category: {
+    id: string;
+    name: string;
+    description: string;
+    color: string;
+    school_id: string;
+  };
+}
+
+interface BatchResponse {
+  batches: {
+    name: string;
+    course: {
+      name: string;
+    };
+    academic_year: {
+      name: string;
+    };
+  };
+}
 
 // Transforms the database response to our Student type
 const transformStudent = (data: any): Student => {
@@ -148,20 +186,173 @@ export const fetchStudents = async (schoolId: string): Promise<Student[]> => {
   }
 };
 
+// Helper function to wait
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to retry an operation
+const retryOperation = async <T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<T> => {
+  let lastError: Error;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (i < maxRetries - 1) {
+        console.log(`Retry attempt ${i + 1} of ${maxRetries}...`);
+        await wait(delayMs);
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
 // Fetch a single student by ID with all related details
 export const fetchStudentDetails = async (studentId: string): Promise<StudentWithDetails> => {
   try {
+    // First check if the student exists in profiles
+    console.log('🔍 Checking profiles table for student:', studentId);
+    const { data: profileExists, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('❌ Error checking profiles table:', {
+        error: profileError,
+        studentId,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint
+      });
+      throw profileError;
+    }
+
+    if (!profileExists) {
+      console.error('❌ Student not found in profiles table:', { studentId });
+      throw new Error('Student not found in profiles table');
+    }
+
+    if (profileExists.role !== 'student') {
+      console.error('❌ User exists but is not a student:', { 
+        studentId, 
+        role: profileExists.role 
+      });
+      throw new Error('User exists but is not a student');
+    }
+
+    // Check if student details exist
+    console.log('🔍 Checking student_details table for student:', studentId);
+    const { data: detailsExist, error: detailsError } = await supabase
+      .from('student_details')
+      .select('id')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (detailsError) {
+      console.error('❌ Error checking student_details table:', {
+        error: detailsError,
+        studentId,
+        message: detailsError.message,
+        details: detailsError.details,
+        hint: detailsError.hint
+      });
+      throw detailsError;
+    }
+
+    if (!detailsExist) {
+      console.error('❌ Student details not found in student_details table:', { studentId });
+      throw new Error('Student details not found in student_details table');
+    }
+
     // Fetch the student profile and basic details
     const { data: studentData, error: studentError } = await supabase
       .from('profiles')
-      .select(studentQuery)
+      .select(`
+        id,
+        email,
+        first_name,
+        last_name,
+        avatar_url,
+        role,
+        school_id,
+        created_at,
+        updated_at,
+        student_details (
+          admission_number,
+          date_of_birth,
+          gender,
+          address,
+          batch_id,
+          nationality,
+          mother_tongue,
+          blood_group,
+          religion,
+          caste,
+          category,
+          phone,
+          previous_school_name,
+          previous_school_board,
+          previous_school_year,
+          previous_school_percentage,
+          tc_number,
+          admission_date,
+          status
+        )
+      `)
       .eq('id', studentId)
       .eq('role', 'student')
-      .single();
+      .maybeSingle();
 
-    if (studentError) throw studentError;
+    if (studentError) {
+      console.error('Error fetching student profile:', {
+        error: studentError,
+        studentId,
+        message: studentError.message,
+        details: studentError.details,
+        hint: studentError.hint
+      });
+      throw studentError;
+    }
+
+    if (!studentData) {
+      throw new Error('Student profile not found');
+    }
 
     const student = transformStudent(studentData);
+
+    // Fetch batch details separately
+    const { data: batchData, error: batchError } = await supabase
+      .from('student_details')
+      .select(`
+        batch_id,
+        batches (
+          name,
+          course:course_id (
+            name
+          ),
+          academic_year:academic_year_id (
+            name
+          )
+        )
+      `)
+      .eq('id', studentId)
+      .single();
+
+    if (batchError) {
+      console.error('Error fetching batch details:', batchError);
+    } else if (batchData) {
+      const batchInfo = batchData as unknown as BatchResponse;
+      student.batch_name = batchInfo.batches?.name;
+      student.course_name = batchInfo.batches?.course?.name;
+      student.academic_year = batchInfo.batches?.academic_year?.name;
+    }
 
     // Fetch guardians
     const { data: guardiansData, error: guardiansError } = await supabase
@@ -184,10 +375,23 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       `)
       .eq('student_id', studentId);
 
-    if (guardiansError) throw guardiansError;
+    if (guardiansError) {
+      console.error('Error fetching guardians:', guardiansError);
+      throw guardiansError;
+    }
 
-    const guardians: Guardian[] = guardiansData.map(item => ({
-      ...(item.guardians as Guardian),
+    const guardians: Guardian[] = (guardiansData as unknown as GuardianResponse[]).map(item => ({
+      id: item.guardians.id,
+      first_name: item.guardians.first_name,
+      last_name: item.guardians.last_name,
+      relation: item.guardians.relation,
+      occupation: item.guardians.occupation,
+      email: item.guardians.email,
+      phone: item.guardians.phone,
+      address: item.guardians.address,
+      is_emergency_contact: item.guardians.is_emergency_contact,
+      can_pickup: item.guardians.can_pickup,
+      school_id: item.guardians.school_id,
       is_primary: item.is_primary
     }));
 
@@ -205,9 +409,18 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       `)
       .eq('student_id', studentId);
 
-    if (categoriesError) throw categoriesError;
+    if (categoriesError) {
+      console.error('Error fetching categories:', categoriesError);
+      throw categoriesError;
+    }
 
-    const categories: StudentCategory[] = categoriesData.map(item => item.category as StudentCategory);
+    const categories: StudentCategory[] = (categoriesData as unknown as CategoryResponse[]).map(item => ({
+      id: item.category.id,
+      name: item.category.name,
+      description: item.category.description,
+      color: item.category.color,
+      school_id: item.category.school_id
+    }));
 
     // Fetch documents
     const { data: documentsData, error: documentsError } = await supabase
@@ -215,7 +428,10 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       .select('*')
       .eq('student_id', studentId);
 
-    if (documentsError) throw documentsError;
+    if (documentsError) {
+      console.error('Error fetching documents:', documentsError);
+      throw documentsError;
+    }
 
     // Cast types to match our type definitions
     const documents: StudentDocument[] = documentsData.map(doc => ({
@@ -230,7 +446,10 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       .select('*')
       .eq('student_id', studentId);
 
-    if (disciplinaryError) throw disciplinaryError;
+    if (disciplinaryError) {
+      console.error('Error fetching disciplinary records:', disciplinaryError);
+      throw disciplinaryError;
+    }
 
     // Cast types to match our type definitions
     const disciplinaryRecords: DisciplinaryRecord[] = disciplinaryData.map(record => ({
@@ -245,7 +464,10 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       .select('*')
       .eq('student_id', studentId);
 
-    if (transferError) throw transferError;
+    if (transferError) {
+      console.error('Error fetching transfer records:', transferError);
+      throw transferError;
+    }
 
     // Cast types to match our type definitions
     const transferRecords: TransferRecord[] = transferData.map(record => ({
@@ -260,7 +482,10 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       .select('*')
       .eq('student_id', studentId);
 
-    if (certificatesError) throw certificatesError;
+    if (certificatesError) {
+      console.error('Error fetching certificates:', certificatesError);
+      throw certificatesError;
+    }
 
     // Cast types to match our type definitions
     const certificates: Certificate[] = certificatesData.map(cert => ({
@@ -289,157 +514,73 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
 };
 
 // Create a new student
-export const createStudent = async (data: NewStudentFormData, schoolId: string): Promise<Student | null> => {
+export const createStudent = async (data: any) => {
   try {
-    // Generate admission number if not provided
-    let admissionNumber = data.admission_number;
-    if (!admissionNumber) {
-      admissionNumber = await generateAdmissionNumber(schoolId);
+    // Log the incoming data
+    console.log('Incoming student data:', data);
+
+    // Validate required fields
+    if (!data.admission_number) {
+      throw new Error('Admission number is required');
     }
+    if (!data.school_id) {
+      throw new Error('School ID is required');
+    }
+    if (!data.gender) {
+      throw new Error('Gender is required');
+    }
+    if (!data.batch_id) {
+      throw new Error('Batch is required');
+    }
+    if (!data.first_name) {
+      throw new Error('First name is required');
+    }
+    if (!data.last_name) {
+      throw new Error('Last name is required');
+    }
+    // Email is now optional, so do not throw if missing
 
-    // Step 1: Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: data.email,
-      password: Math.random().toString(36).slice(-8), // Generate a random password
-      options: {
-        data: {
-          first_name: data.first_name,
-          last_name: data.last_name,
-          role: 'student'
-        }
-      }
-    });
+    // Transform the data to ensure proper types
+    const transformedData = {
+      admission_number: data.admission_number,
+      school_id: data.school_id,
+      gender: data.gender,
+      batch_id: data.batch_id,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email || null,
+      date_of_birth: data.date_of_birth || null,
+      address: data.address || null,
+      nationality: data.nationality || null,
+      mother_tongue: data.mother_tongue || null,
+      blood_group: data.blood_group || null,
+      religion: data.religion || null,
+      caste: data.caste || null,
+      category: data.category || null,
+      phone: data.phone || null,
+      previous_school_name: data.previous_school_name || null,
+      previous_school_board: data.previous_school_board || null,
+      previous_school_year: data.previous_school_year || null,
+      previous_school_percentage: data.previous_school_percentage || null
+    };
 
-    if (authError) throw authError;
+    // Log the transformed data
+    console.log('Transformed data:', transformedData);
 
-    const userId = authData.user.id;
-
-    // Step 2: Create student details
-    const { error: detailsError } = await supabase
-      .from('student_details')
-      .insert({
-        id: userId,
-        admission_number: admissionNumber,
-        date_of_birth: data.date_of_birth,
-        gender: data.gender,
-        address: data.address,
-        batch_id: data.batch_id,
-        nationality: data.nationality,
-        mother_tongue: data.mother_tongue,
-        blood_group: data.blood_group,
-        religion: data.religion,
-        caste: data.caste,
-        category: data.category,
-        phone: data.phone,
-        previous_school_name: data.previous_school_name,
-        previous_school_board: data.previous_school_board,
-        previous_school_year: data.previous_school_year,
-        previous_school_percentage: data.previous_school_percentage,
-        school_id: schoolId,
+    const { data: result, error } = await supabase
+      .rpc('add_student_v2', {
+        p_data: transformedData
       });
 
-    if (detailsError) throw detailsError;
-
-    // Step 3: Upload avatar if provided
-    if (data.avatar) {
-      const avatarPath = `${schoolId}/${userId}/avatar`;
-      const { error: uploadError } = await supabase.storage
-        .from('student_files')
-        .upload(avatarPath, data.avatar);
-
-      if (uploadError) {
-        console.error('Error uploading avatar:', uploadError);
-      } else {
-        // Update profile with avatar URL
-        const { data: publicUrlData } = supabase.storage
-          .from('student_files')
-          .getPublicUrl(avatarPath);
-
-        await supabase
-          .from('profiles')
-          .update({ avatar_url: publicUrlData.publicUrl })
-          .eq('id', userId);
-      }
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
     }
 
-    // Step 4: Add guardians if provided
-    if (data.guardians && data.guardians.length > 0) {
-      for (const guardianData of data.guardians) {
-        // Create guardian
-        const { data: guardian, error: guardianError } = await supabase
-          .from('guardians')
-          .insert({
-            first_name: guardianData.first_name,
-            last_name: guardianData.last_name,
-            relation: guardianData.relation,
-            occupation: guardianData.occupation,
-            email: guardianData.email,
-            phone: guardianData.phone,
-            address: guardianData.address,
-            is_emergency_contact: guardianData.is_emergency_contact,
-            can_pickup: guardianData.can_pickup,
-            school_id: schoolId
-          })
-          .select('id')
-          .single();
-
-        if (guardianError) {
-          console.error('Error creating guardian:', guardianError);
-          continue;
-        }
-
-        // Link guardian to student
-        await supabase
-          .from('student_guardians')
-          .insert({
-            student_id: userId,
-            guardian_id: guardian.id,
-            is_primary: guardianData.is_primary
-          });
-      }
-    }
-
-    // Step 5: Upload documents if provided
-    if (data.documents && data.documents.length > 0) {
-      for (const docData of data.documents) {
-        const docPath = `${schoolId}/${userId}/documents/${docData.name}-${Date.now()}`;
-        const { error: uploadError } = await supabase.storage
-          .from('student_files')
-          .upload(docPath, docData.file);
-
-        if (uploadError) {
-          console.error('Error uploading document:', uploadError);
-          continue;
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('student_files')
-          .getPublicUrl(docPath);
-
-        await supabase
-          .from('student_documents')
-          .insert({
-            student_id: userId,
-            name: docData.name,
-            type: docData.type,
-            description: docData.description,
-            file_path: publicUrlData.publicUrl,
-            school_id: schoolId
-          });
-      }
-    }
-
-    // Return the created student
-    return await fetchStudentDetails(userId);
-
-  } catch (error) {
+    return result;
+  } catch (error: any) {
     console.error('Error creating student:', error);
-    toast({
-      title: 'Error',
-      description: 'Failed to create student. Please try again.',
-      variant: 'destructive',
-    });
-    return null;
+    throw error;
   }
 };
 
@@ -925,7 +1066,28 @@ export const importStudentsFromCSV = async (
 
   for (const student of students) {
     try {
-      const result = await createStudent(student, schoolId);
+      // Transform camelCase to snake_case
+      const transformedData = {
+        admission_number: student.admission_number,
+        school_id: schoolId,
+        gender: student.gender,
+        batch_id: student.batch_id,
+        date_of_birth: student.date_of_birth,
+        address: student.address,
+        nationality: student.nationality,
+        mother_tongue: student.mother_tongue,
+        blood_group: student.blood_group,
+        religion: student.religion,
+        caste: student.caste,
+        category: student.category,
+        phone: student.phone,
+        previous_school_name: student.previous_school_name,
+        previous_school_board: student.previous_school_board,
+        previous_school_year: student.previous_school_year,
+        previous_school_percentage: student.previous_school_percentage
+      };
+
+      const result = await createStudent(transformedData);
       if (result) {
         successCount++;
       } else {
@@ -986,5 +1148,69 @@ export const fetchCategories = async (schoolId: string): Promise<StudentCategory
       variant: 'destructive',
     });
     return [];
+  }
+};
+
+export const fetchStudentsFromDetails = async (schoolId: string): Promise<Student[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('student_details')
+      .select(`
+        *,
+        batches:batch_id (
+          name,
+          course:course_id (name)
+        )
+      `)
+      .eq('school_id', schoolId);
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      ...row,
+      batch_name: row.batches?.name || '',
+      course_name: row.batches?.course?.name || '',
+      first_name: row.first_name,
+      last_name: row.last_name,
+      email: row.email,
+      profile_id: row.profile_id,
+    }));
+  } catch (error) {
+    console.error('Error fetching students from details:', error);
+    return [];
+  }
+};
+
+// Create student login (calls the new SQL function)
+export const createStudentLogin = async (
+  email: string,
+  firstName: string,
+  lastName: string,
+  schoolId: string,
+  password: string,
+  studentId: string
+): Promise<{ user_id: string; status: string } | null> => {
+  try {
+    console.log('Creating student login:', { email, firstName, lastName, schoolId, studentId });
+    
+    // Call the RPC function to create the user and profile
+    const { data, error } = await supabase.rpc('create_student_login', {
+      p_email: email,
+      p_first_name: firstName,
+      p_last_name: lastName,
+      p_school_id: schoolId,
+      p_password: password,
+      p_student_id: studentId
+    });
+
+    if (error) {
+      console.error('Error creating student login:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createStudentLogin:', error);
+    throw error;
   }
 };

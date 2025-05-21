@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,8 +46,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If specific roles are required and user doesn't have one of them
   if (requiredRoles.length > 0 && profile && !requiredRoles.includes(profile.role)) {
     console.log(`User with role ${profile.role} attempted to access a route for ${requiredRoles.join(', ')}`);
-    // Redirect to their appropriate role-based dashboard
-    return <Navigate to={getRoleBasedRoute(profile.role)} replace />;
+    // Show NotFound component directly instead of redirecting
+    return <Navigate to="/404" state={{ from: location.pathname }} replace />;
   }
 
   return <>{children}</>;

@@ -1,4 +1,3 @@
-
 import { Student, StudentDocument, DisciplinaryRecord, TransferRecord, Certificate, Guardian } from "@/types/student";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,32 +21,32 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
           <div className="flex items-start gap-6">
             <Avatar className="w-24 h-24">
               <AvatarImage src={student.avatar_url} />
-              <AvatarFallback>{student.first_name[0]}{student.last_name?.[0]}</AvatarFallback>
+              <AvatarFallback>{(student.first_name?.[0] || '')}{student.last_name?.[0] || ''}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold">{student.first_name} {student.last_name}</h2>
-                  <p className="text-muted-foreground">Admission No: {student.admission_number}</p>
+                  <h2 className="text-2xl font-bold">{student.first_name || ''} {student.last_name || ''}</h2>
+                  <p className="text-muted-foreground">Admission No: {student.admission_number || ''}</p>
                 </div>
                 <Button onClick={onEdit}>Edit Profile</Button>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Batch</p>
-                  <p>{student.batch_name}</p>
+                  <p>{student.batch_name || ''}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Category</p>
-                  <Badge variant="secondary">{student.category}</Badge>
+                  <Badge variant="secondary">{student.category || ''}</Badge>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Date of Birth</p>
-                  <p>{student.date_of_birth && new Date(student.date_of_birth).toLocaleDateString()}</p>
+                  <p>{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : ''}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Blood Group</p>
-                  <p>{student.blood_group}</p>
+                  <p>{student.blood_group || ''}</p>
                 </div>
               </div>
             </div>
@@ -101,19 +100,19 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                     <dl className="space-y-2">
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Nationality</dt>
-                        <dd>{student.nationality}</dd>
+                        <dd>{student.nationality || ''}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Religion</dt>
-                        <dd>{student.religion}</dd>
+                        <dd>{student.religion || ''}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Caste</dt>
-                        <dd>{student.caste}</dd>
+                        <dd>{student.caste || ''}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Mother Tongue</dt>
-                        <dd>{student.mother_tongue}</dd>
+                        <dd>{student.mother_tongue || ''}</dd>
                       </div>
                     </dl>
                   </CardContent>
@@ -127,15 +126,15 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                     <dl className="space-y-2">
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Email</dt>
-                        <dd>{student.email}</dd>
+                        <dd>{student.email || ''}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Phone</dt>
-                        <dd>{student.phone}</dd>
+                        <dd>{student.phone || ''}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Address</dt>
-                        <dd className="text-right">{student.address}</dd>
+                        <dd className="text-right">{student.address || ''}</dd>
                       </div>
                     </dl>
                   </CardContent>
@@ -181,21 +180,21 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                       <dl className="space-y-2">
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Type</dt>
-                          <dd>{doc.type}</dd>
+                          <dd>{doc.type || ''}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Uploaded</dt>
-                          <dd>{doc.upload_date && new Date(doc.upload_date).toLocaleDateString()}</dd>
+                          <dd>{doc.upload_date ? new Date(doc.upload_date).toLocaleDateString() : ''}</dd>
                         </div>
                         {doc.verification_status === 'verified' && (
                           <>
                             <div className="flex justify-between">
                               <dt className="text-muted-foreground">Verified By</dt>
-                              <dd>{doc.verified_by}</dd>
+                              <dd>{doc.verified_by || ''}</dd>
                             </div>
                             <div className="flex justify-between">
                               <dt className="text-muted-foreground">Verified On</dt>
-                              <dd>{doc.verification_date && new Date(doc.verification_date).toLocaleDateString()}</dd>
+                              <dd>{doc.verification_date ? new Date(doc.verification_date).toLocaleDateString() : ''}</dd>
                             </div>
                           </>
                         )}
@@ -238,15 +237,15 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Severity</dt>
-                        <dd>{record.severity}</dd>
+                        <dd>{record.severity || ''}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Description</dt>
-                        <dd className="mt-1">{record.description}</dd>
+                        <dd className="mt-1">{record.description || ''}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Action Taken</dt>
-                        <dd className="mt-1">{record.action_taken}</dd>
+                        <dd className="mt-1">{record.action_taken || ''}</dd>
                       </div>
                     </dl>
                   </CardContent>
@@ -268,7 +267,7 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                   <Card key={guardian.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle>{guardian.first_name} {guardian.last_name}</CardTitle>
+                        <CardTitle>{guardian.first_name || ''} {guardian.last_name || ''}</CardTitle>
                         <Badge>{guardian.relation}</Badge>
                       </div>
                     </CardHeader>
@@ -276,19 +275,19 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
                       <dl className="space-y-2">
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Occupation</dt>
-                          <dd>{guardian.occupation}</dd>
+                          <dd>{guardian.occupation || ''}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Phone</dt>
-                          <dd>{guardian.phone}</dd>
+                          <dd>{guardian.phone || ''}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Email</dt>
-                          <dd>{guardian.email}</dd>
+                          <dd>{guardian.email || ''}</dd>
                         </div>
                         <div>
                           <dt className="text-muted-foreground">Address</dt>
-                          <dd className="mt-1">{guardian.address}</dd>
+                          <dd className="mt-1">{guardian.address || ''}</dd>
                         </div>
                       </dl>
                       <div className="mt-4 flex gap-4">

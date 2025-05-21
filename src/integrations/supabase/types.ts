@@ -1467,6 +1467,12 @@ export type Database = {
         }
         Returns: Json
       }
+      refresh_user_roles: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role:

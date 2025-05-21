@@ -1,4 +1,3 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,13 +8,14 @@ import { getRoleBasedRoute } from "@/utils/roleUtils";
 const NotFound = () => {
   const location = useLocation();
   const { profile, isLoading } = useAuth();
+  const from = location.state?.from || location.pathname;
 
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
-      location.pathname
+      from
     );
-  }, [location.pathname]);
+  }, [from]);
 
   // Determine where to redirect the user based on their role
   const homeRoute = !isLoading && profile ? getRoleBasedRoute(profile.role) : "/";
@@ -26,7 +26,9 @@ const NotFound = () => {
         <h1 className="text-6xl font-bold text-primary mb-4">404</h1>
         <h2 className="text-2xl font-semibold mb-2">Page Not Found</h2>
         <p className="text-gray-600 mb-6">
-          Sorry, the page you are looking for doesn't exist or has been moved.
+          {from === "/404" 
+            ? "You don't have permission to access this page."
+            : "Sorry, the page you are looking for doesn't exist or has been moved."}
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button asChild>
@@ -35,8 +37,8 @@ const NotFound = () => {
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/" className="flex items-center">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+            <Link to={from === "/404" ? homeRoute : "/"} className="flex items-center">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Link>
           </Button>
         </div>

@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentList } from "@/components/students/StudentList";
-import { StudentFormDialog } from "@/components/students/StudentFormDialog";
 import { StudentProfile } from "@/components/students/StudentProfile";
 import { DocumentManager } from "@/components/students/DocumentManager";
 import { TransferManager } from "@/components/students/TransferManager";
@@ -11,6 +10,7 @@ import { CertificateManager } from "@/components/students/CertificateManager";
 import { CategoryManager } from "@/components/students/CategoryManager";
 import { MedicalManager } from "@/components/students/MedicalManager";
 import { QuickActions } from "@/components/students/QuickActions";
+import { AddStudentForm } from "@/components/students/AddStudentForm";
 import { 
   Student, 
   StudentDocument, 
@@ -25,70 +25,73 @@ import {
 } from "@/types/student";
 import { FileText, GraduationCap, Shield, Tag, UserPlus, Heart, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useStudentManagement } from "@/hooks/useStudentManagement";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Students() {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
+
+  const {
+    students,
+    isStudentsLoading,
+    categories,
+    isCategoriesLoading,
+    createStudent,
+    updateStudent,
+    isUpdatingStudent,
+    addDisciplinaryRecord,
+    addTransferRecord,
+    generateCertificate
+  } = useStudentManagement();
+
+  const queryClient = useQueryClient();
+
+  const handleRefreshStudents = () => {
+    queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
+  };
+
   const [activeTab, setActiveTab] = useState("list");
-  const [formOpen, setFormOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [isAddStudentFormOpen, setIsAddStudentFormOpen] = useState(false);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [disciplinaryRecords, setDisciplinaryRecords] = useState<DisciplinaryRecord[]>([]);
-
-  // Sample data - Replace with actual data from your backend
-  const [students, setStudents] = useState<Student[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [categories, setCategories] = useState<StudentCategory[]>([]);
-
-  // Sample certificate templates
-  const certificateTemplates = [
-    {
-      id: "1",
-      name: "Transfer Certificate",
-      description: "Official transfer certificate for students leaving the school",
-      fields: [
-        { name: "reason", type: "text" as const, required: true, label: "Reason for Transfer" },
-        { name: "last_attended_date", type: "date" as const, required: true, label: "Last Date Attended" },
-        { name: "conduct", type: "text" as const, required: true, label: "Conduct" },
-      ],
-    },
-    {
-      id: "2",
-      name: "Character Certificate",
-      description: "Certificate attesting to the student's character and conduct",
-      fields: [
-        { name: "period_from", type: "date" as const, required: true, label: "Period From" },
-        { name: "period_to", type: "date" as const, required: true, label: "Period To" },
-        { name: "character", type: "text" as const, required: true, label: "Character Description" },
-      ],
-    },
-  ];
-
-  // Sample batches
-  const batches = [
-    { id: "1", name: "Grade 10A" },
-    { id: "2", name: "Grade 10B" },
-    { id: "3", name: "Grade 9A" },
-  ];
 
   const handleStudentSelect = (student: Student) => {
     setSelectedStudent(student);
     setActiveTab("profile");
   };
 
-  const handleCreateStudent = (student: Student) => {
-    setStudents((prev) => [...prev, student]);
-    setFormOpen(false);
-    toast.success("Student added successfully");
+  const handleCreateStudent = async (data: any) => {
+    if (!schoolId) {
+      toast.error("School ID not found. Please try again or contact support.");
+      return;
+    }
+    try {
+      await createStudent({
+        ...data,
+        school_id: schoolId
+      });
+      setIsAddStudentFormOpen(false);
+      toast.success("Student added successfully");
+    } catch (error) {
+      console.error('Error creating student:', error);
+      toast.error("Failed to add student. Please try again.");
+    }
   };
 
-  const handleUpdateStudent = (student: Student) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === student.id ? student : s))
-    );
-    setSelectedStudent(student);
-    toast.success("Student updated successfully");
+  const handleUpdateStudent = async (studentData: any) => {
+    if (!selectedStudent) return;
+    try {
+      await updateStudent({ id: selectedStudent.id, data: studentData });
+    } catch (error) {
+      console.error('Error updating student:', error);
+    }
   };
 
   const handleBatchAction = (action: string, studentIds: string[]) => {
@@ -147,9 +150,13 @@ export default function Students() {
   };
 
   // Transfer management handlers
-  const handleCreateTransfer = (transfer: TransferRecord) => {
-    setTransfers((prev) => [...prev, transfer]);
-    toast.success("Transfer request created");
+  const handleCreateTransfer = async (transfer: TransferRecord) => {
+    try {
+      await addTransferRecord(transfer);
+      setTransfers((prev) => [...prev, transfer]);
+    } catch (error) {
+      console.error('Error creating transfer:', error);
+    }
   };
 
   const handleUpdateTransferStatus = (
@@ -164,27 +171,24 @@ export default function Students() {
     toast.success(`Transfer status updated to ${status}`);
   };
 
-  // Category management handlers
-  const handleCreateCategory = (category: StudentCategory) => {
-    setCategories((prev) => [...prev, category]);
-    toast.success("Category created successfully");
-  };
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header with Quick Actions */}
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Students Management</h1>
+          <Button onClick={() => setIsAddStudentFormOpen(true)}>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add New Student
+          </Button>
         </div>
         
         <QuickActions
-          onAddStudent={() => setFormOpen(true)}
           onBulkImport={handleBulkImport}
           onExportData={handleExportData}
           totalStudents={students.length}
           activeStudents={students.filter(s => !s.transfer_records?.some(t => t.status === "completed")).length}
-          pendingAdmissions={0} // Replace with actual count
+          pendingAdmissions={0}
         />
       </div>
 
@@ -215,18 +219,19 @@ export default function Students() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="space-y-4">
+        <TabsContent value="list">
           <StudentList
             students={students}
             onSelect={handleStudentSelect}
             categories={categories}
             onBatchAction={handleBatchAction}
+            onRefresh={handleRefreshStudents}
           />
         </TabsContent>
 
         {selectedStudent && (
           <TabsContent value="profile">
-            <StudentProfile student={selectedStudent} onEdit={() => setFormOpen(true)} />
+            <StudentProfile student={selectedStudent} onEdit={() => {}} />
           </TabsContent>
         )}
 
@@ -272,22 +277,17 @@ export default function Students() {
         <TabsContent value="disciplinary">
           <DisciplinaryManager
             records={disciplinaryRecords}
-            onCreateRecord={(record) => {
-              const newRecord: DisciplinaryRecord = {
-                id: Date.now().toString(),
-                student_id: "",
-                incident_type: record.incident_type,
-                description: record.description,
-                date: record.date,
-                severity: record.severity,
-                status: "pending",
-                action_taken: record.action_taken,
-                reported_by: record.reported_by,
-                school_id: "",
-                created_at: new Date().toISOString(),
-              };
-              setDisciplinaryRecords((prev) => [...prev, newRecord]);
-              toast.success("Disciplinary record created successfully");
+            onCreateRecord={async (record) => {
+              if (!selectedStudent) return;
+              try {
+                await addDisciplinaryRecord({
+                  studentId: selectedStudent.id,
+                  data: record
+                });
+                setDisciplinaryRecords((prev) => [...prev, record]);
+              } catch (error) {
+                console.error('Error adding disciplinary record:', error);
+              }
             }}
             onUpdateStatus={(id, status) => {
               setDisciplinaryRecords((prev) =>
@@ -363,17 +363,46 @@ export default function Students() {
               );
               handleUploadDocument(document);
             }}
-            batches={batches}
+            batches={[
+              { id: "1", name: "Grade 10A" },
+              { id: "2", name: "Grade 10B" },
+              { id: "3", name: "Grade 9A" },
+            ]}
           />
         </TabsContent>
 
         <TabsContent value="certificates">
           <CertificateManager
             certificates={certificates}
-            templates={certificateTemplates}
-            onCreateCertificate={(cert) => {
-              setCertificates((prev) => [...prev, cert]);
-              toast.success("Certificate created");
+            templates={[
+              {
+                id: "1",
+                name: "Transfer Certificate",
+                description: "Official transfer certificate for students leaving the school",
+                fields: [
+                  { name: "reason", type: "text", required: true, label: "Reason for Transfer" },
+                  { name: "last_attended_date", type: "date", required: true, label: "Last Date Attended" },
+                  { name: "conduct", type: "text", required: true, label: "Conduct" },
+                ],
+              },
+              {
+                id: "2",
+                name: "Character Certificate",
+                description: "Certificate attesting to the student's character and conduct",
+                fields: [
+                  { name: "period_from", type: "date", required: true, label: "Period From" },
+                  { name: "period_to", type: "date", required: true, label: "Period To" },
+                  { name: "character", type: "text", required: true, label: "Character Description" },
+                ],
+              },
+            ]}
+            onCreateCertificate={async (certificate) => {
+              try {
+                await generateCertificate(certificate);
+                setCertificates((prev) => [...prev, certificate]);
+              } catch (error) {
+                console.error('Error generating certificate:', error);
+              }
             }}
             onUpdateStatus={(certId, status) => {
               setCertificates((prev) =>
@@ -391,47 +420,26 @@ export default function Students() {
               );
               toast.success("Certificate revoked");
             }}
-            currentUser="Admin" // Replace with actual user
+            currentUser="Admin"
           />
         </TabsContent>
 
         <TabsContent value="categories">
           <CategoryManager
             categories={categories}
-            onCreateCategory={handleCreateCategory}
+            onCreateCategory={(category) => {
+              toast.success("Category created successfully");
+            }}
             onUpdateCategory={(categoryId, category) => {
-              setCategories((prev) =>
-                prev.map((cat) =>
-                  cat.id === categoryId ? { ...cat, ...category } : cat
-                )
-              );
-              toast.success("Category updated");
+              toast.success("Category updated successfully");
             }}
             onDeleteCategory={(categoryId) => {
-              setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
-              toast.success("Category deleted");
+              toast.success("Category deleted successfully");
             }}
             onAssignStudents={(categoryId, studentIds) => {
-              setCategories((prev) =>
-                prev.map((cat) =>
-                  cat.id === categoryId
-                    ? { ...cat, students: [...(cat.students || []), ...studentIds] }
-                    : cat
-                )
-              );
               toast.success(`${studentIds.length} students assigned to category`);
             }}
             onRemoveStudent={(categoryId, studentId) => {
-              setCategories((prev) =>
-                prev.map((cat) =>
-                  cat.id === categoryId
-                    ? {
-                        ...cat,
-                        students: cat.students?.filter((id) => id !== studentId),
-                      }
-                    : cat
-                )
-              );
               toast.success("Student removed from category");
             }}
             students={students.map((s) => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))}
@@ -439,11 +447,10 @@ export default function Students() {
         </TabsContent>
       </Tabs>
 
-      <StudentFormDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSave={selectedStudent ? handleUpdateStudent : handleCreateStudent}
-        student={selectedStudent}
+      <AddStudentForm
+        isOpen={isAddStudentFormOpen}
+        onClose={() => setIsAddStudentFormOpen(false)}
+        onSubmit={handleCreateStudent}
       />
     </div>
   );

@@ -1,0 +1,19 @@
+[project]
+id = "sjzbturfgadikgzokpyo"
+
+[api]
+url = "https://sjzbturfgadikgzokpyo.supabase.co"
+
+[db]
+port = 54322
+password = "Subeesh@123"
+
+[functions]
+[functions.create-admin-user]
+verify_jwt = true
+
+[functions.ensure-tables]
+verify_jwt = true
+
+[functions.fix-rls]
+verify_jwt = true 

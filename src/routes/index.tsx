@@ -121,6 +121,7 @@ const AppRoutes = () => {
       />
       
       {/* Default Route */}
+      <Route path="/404" element={<NotFound />} />
       <Route path="*" element={<NotFound />} />
     </RouterRoutes>
   );

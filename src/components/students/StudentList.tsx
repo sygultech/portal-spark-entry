@@ -1,4 +1,3 @@
-
 import { Student, StudentCategory } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,15 +13,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, ChevronDown, Filter, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { createStudentLogin } from "@/services/studentService";
 
 interface StudentListProps {
   students: Student[];
   onSelect: (student: Student) => void;
   categories: StudentCategory[];
   onBatchAction: (action: string, studentIds: string[]) => void;
+  onRefresh?: () => void;
 }
 
-export function StudentList({ students, onSelect, categories, onBatchAction }: StudentListProps) {
+export function StudentList({ students, onSelect, categories, onBatchAction, onRefresh }: StudentListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [batchFilter, setBatchFilter] = useState<string>("all");
@@ -36,9 +38,9 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
   // Filter students
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
-      student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
+      (student.first_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (student.last_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (student.admission_number?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
     const matchesCategory =
       categoryFilter === "all" ||
@@ -79,6 +81,56 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
     setSelectedStudents(prev =>
       checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
     );
+  };
+
+  const handleCreateLogin = async (student: Student) => {
+    try {
+      // Prompt for password
+      const password = prompt('Enter password for student login:');
+      if (!password) {
+        toast.error('Password is required');
+        return;
+      }
+
+      console.log('Creating login for student:', student.email);
+      const result = await createStudentLogin(
+        student.email,
+        student.first_name,
+        student.last_name,
+        student.school_id,
+        password,
+        student.id
+      );
+
+      console.log('Login creation result:', result);
+
+      if (!result) {
+        toast.error('Failed to create login');
+        return;
+      }
+
+      switch (result.status) {
+        case 'created':
+          toast.success('Login created successfully');
+          break;
+        case 'linked':
+          toast.success('Student linked to school successfully');
+          break;
+        case 'already_exists':
+          toast.error('Student already has a login for this school');
+          break;
+        default:
+          toast.error('Unknown status returned');
+      }
+
+      // Call onRefresh to refresh the student list
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Error creating login:', error);
+      toast.error('Failed to create login. Please try again.');
+    }
   };
 
   return (
@@ -201,6 +253,7 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
+              <TableHead>Profile/Login Created</TableHead>
               <TableHead>Categories</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -230,7 +283,7 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
                     )}
                     <div>
                       <p className="font-medium">
-                        {student.first_name} {student.last_name}
+                        {(student.first_name || '') + ' ' + (student.last_name || '')}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {student.email}
@@ -238,7 +291,19 @@ export function StudentList({ students, onSelect, categories, onBatchAction }: S
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>{student.batch_name}</TableCell>
+                <TableCell>
+                  {student.profile_id ? (
+                    "Yes"
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCreateLogin(student)}
+                    >
+                      Create Login
+                    </Button>
+                  )}
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
                     {categories

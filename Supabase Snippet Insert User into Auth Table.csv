@@ -1,0 +1,283 @@
+policy_name,table_name,roles,policy_condition
+Super admins can do everything with schools,schools,{public},public.is_super_admin()
+Users can view academic years of their school,academic_years,{public},"(has_any_role_in_school(auth.uid(), school_id) OR public.is_super_admin())"
+School admins can insert their school's certificates,certificates,{public},null
+School admins can update their school's certificates,certificates,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = certificates.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's certificates,certificates,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = certificates.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can manage roles in their school,user_school_roles,{public},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = user_school_roles.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can manage academic years,academic_years,{public},"(is_school_admin(auth.uid(), school_id) OR public.is_super_admin())"
+School admins can view profiles in their school,profiles,{public},((get_current_user_role() = 'school_admin'::user_role) AND (get_current_user_school_id() = school_id))
+super_admin_can_manage_all_schools,schools,{public},public.is_super_admin()
+teachers_can_view_own_school,schools,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = schools.id) AND (profiles.role = 'teacher'::user_role))))"
+Users can view batch students of their school,batch_students,{public},"((EXISTS ( SELECT 1
+   FROM batches b
+  WHERE ((b.id = batch_students.batch_id) AND has_any_role_in_school(auth.uid(), b.school_id)))) OR public.is_super_admin())"
+School admins can manage batch students,batch_students,{public},"((EXISTS ( SELECT 1
+   FROM batches b
+  WHERE ((b.id = batch_students.batch_id) AND is_school_admin(auth.uid(), b.school_id)))) OR public.is_super_admin())"
+Users can view their school,schools,{public},"(has_any_role_in_school(auth.uid(), id) OR public.is_super_admin())"
+School admins can manage their school,schools,{public},"(is_school_admin(auth.uid(), id) OR public.is_super_admin())"
+Super admins can manage all roles,user_school_roles,{public},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role))))"
+users_can_view_their_schools,schools,{public},"(has_any_role_in_school(auth.uid(), id) OR public.is_super_admin())"
+school_admins_can_manage_school,schools,{public},"(is_school_admin(auth.uid(), id) OR public.is_super_admin())"
+student_details_access_policy,student_details,{public},"(has_any_role_in_school(auth.uid(), school_id) OR public.is_super_admin())"
+School admins can view and update own school,schools,{public},"(EXISTS ( SELECT 1
+   FROM user_school_roles
+  WHERE ((user_school_roles.user_id = auth.uid()) AND (user_school_roles.school_id = schools.id) AND (user_school_roles.role = 'school_admin'::user_role))))"
+departments_select_policy,departments,{public},"((auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = departments.school_id) AND (profiles.role = 'school_admin'::user_role)))) OR (EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role)))))"
+departments_insert_policy,departments,{public},null
+departments_update_policy,departments,{public},"((auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = departments.school_id) AND (profiles.role = 'school_admin'::user_role)))) OR (EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role)))))"
+departments_delete_policy,departments,{public},"((auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = departments.school_id) AND (profiles.role = 'school_admin'::user_role)))) OR (EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role)))))"
+Super admins can manage all schools,schools,{public},public.is_super_admin()
+School admins can view their own school,schools,{public},((id = get_current_user_school_id()) AND (get_current_user_role() = 'school_admin'::user_role))
+Teachers can view their school,schools,{public},((id = get_current_user_school_id()) AND (get_current_user_role() = 'teacher'::user_role))
+Students can view their school,schools,{public},((id = get_current_user_school_id()) AND (get_current_user_role() = 'student'::user_role))
+Parents can view their school,schools,{public},((id = get_current_user_school_id()) AND (get_current_user_role() = 'parent'::user_role))
+courses_select_policy,courses,{public},"((auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = courses.school_id) AND (profiles.role = 'school_admin'::user_role)))) OR (EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role)))))"
+courses_insert_policy,courses,{public},null
+courses_update_policy,courses,{public},"((auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = courses.school_id) AND (profiles.role = 'school_admin'::user_role)))) OR (EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role)))))"
+courses_delete_policy,courses,{public},"((auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = courses.school_id) AND (profiles.role = 'school_admin'::user_role)))) OR (EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role)))))"
+profiles_basic_access,profiles,{public},true
+profiles_self_access,profiles,{public},(auth.uid() = id)
+super_admin_profiles_access,profiles,{public},is_super_admin(auth.uid())
+schools_read_access,schools,{public},true
+schools_management,schools,{public},"(EXISTS ( SELECT 1
+   FROM user_school_roles usr
+  WHERE ((usr.user_id = auth.uid()) AND (usr.school_id = usr.id) AND (usr.role = ANY (ARRAY['super_admin'::user_role, 'school_admin'::user_role])))))"
+Users can view their own roles,user_school_roles,{public},(auth.uid() = user_id)
+subject_categories_school_admin_policy,subject_categories,{authenticated},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = subject_categories.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+subject_teachers_school_admin_policy,subject_teachers,{authenticated},"(auth.uid() IN ( SELECT p.id
+   FROM (profiles p
+     JOIN subjects s ON ((s.school_id = p.school_id)))
+  WHERE ((subject_teachers.subject_id = s.id) AND (p.role = 'school_admin'::user_role))))"
+subject_time_slots_school_admin_policy,subject_time_slots,{authenticated},"(auth.uid() IN ( SELECT p.id
+   FROM ((profiles p
+     JOIN subjects s ON ((s.school_id = p.school_id)))
+     JOIN subject_teachers st ON ((st.subject_id = s.id)))
+  WHERE ((subject_time_slots.subject_teacher_id = st.id) AND (p.role = 'school_admin'::user_role))))"
+batch_subjects_school_admin_policy,batch_subjects,{authenticated},"(auth.uid() IN ( SELECT p.id
+   FROM (profiles p
+     JOIN batches b ON ((b.school_id = p.school_id)))
+  WHERE ((batch_subjects.batch_id = b.id) AND (p.role = 'school_admin'::user_role))))"
+subject_teachers_teacher_view_policy,subject_teachers,{authenticated},(auth.uid() = teacher_id)
+subjects_teacher_view_policy,subjects,{authenticated},"(auth.uid() IN ( SELECT subject_teachers.teacher_id
+   FROM subject_teachers
+  WHERE (subject_teachers.subject_id = subjects.id)))"
+time_slots_teacher_view_policy,subject_time_slots,{authenticated},"(auth.uid() IN ( SELECT subject_teachers.teacher_id
+   FROM subject_teachers
+  WHERE (subject_teachers.id = subject_time_slots.subject_teacher_id)))"
+grading_systems_school_admin_select,grading_systems,{authenticated},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND ((profiles.role = 'school_admin'::user_role) OR (profiles.role = 'super_admin'::user_role)))))"
+grading_systems_school_admin_insert,grading_systems,{authenticated},null
+grading_systems_school_admin_update,grading_systems,{authenticated},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND ((profiles.role = 'school_admin'::user_role) OR (profiles.role = 'super_admin'::user_role)))))"
+grading_systems_school_admin_delete,grading_systems,{authenticated},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND ((profiles.role = 'school_admin'::user_role) OR (profiles.role = 'super_admin'::user_role)))))"
+grade_thresholds_school_admin_select,grade_thresholds,{authenticated},"(EXISTS ( SELECT 1
+   FROM grading_systems,
+    profiles
+  WHERE ((grading_systems.id = grade_thresholds.grading_system_id) AND (profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND ((profiles.role = 'school_admin'::user_role) OR (profiles.role = 'super_admin'::user_role)))))"
+grade_thresholds_school_admin_insert,grade_thresholds,{authenticated},null
+grade_thresholds_school_admin_update,grade_thresholds,{authenticated},"(EXISTS ( SELECT 1
+   FROM grading_systems,
+    profiles
+  WHERE ((grading_systems.id = grade_thresholds.grading_system_id) AND (profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND ((profiles.role = 'school_admin'::user_role) OR (profiles.role = 'super_admin'::user_role)))))"
+grade_thresholds_school_admin_delete,grade_thresholds,{authenticated},"(EXISTS ( SELECT 1
+   FROM grading_systems,
+    profiles
+  WHERE ((grading_systems.id = grade_thresholds.grading_system_id) AND (profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND ((profiles.role = 'school_admin'::user_role) OR (profiles.role = 'super_admin'::user_role)))))"
+grading_systems_teacher_select,grading_systems,{authenticated},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND (profiles.role = 'teacher'::user_role))))"
+grade_thresholds_teacher_select,grade_thresholds,{authenticated},"(EXISTS ( SELECT 1
+   FROM grading_systems,
+    profiles
+  WHERE ((grading_systems.id = grade_thresholds.grading_system_id) AND (profiles.id = auth.uid()) AND (profiles.school_id = grading_systems.school_id) AND (profiles.role = 'teacher'::user_role))))"
+subjects_school_admin_policy,subjects,{authenticated},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = subjects.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's student details,student_details,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_details.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's student details,student_details,{public},null
+School admins can update their school's student details,student_details,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_details.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's student details,student_details,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_details.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+subjects_school_admin_archived_policy,subjects,{authenticated},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = subjects.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's guardians,guardians,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = guardians.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's guardians,guardians,{public},null
+School admins can update their school's guardians,guardians,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = guardians.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's guardians,guardians,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = guardians.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's student guardians,student_guardians,{public},"(EXISTS ( SELECT 1
+   FROM (student_details sd
+     JOIN profiles p ON ((p.id = auth.uid())))
+  WHERE ((sd.id = student_guardians.student_id) AND (sd.school_id = p.school_id) AND (p.role = 'school_admin'::user_role))))"
+School admins can insert their school's student guardians,student_guardians,{public},null
+School admins can update their school's student guardians,student_guardians,{public},"(EXISTS ( SELECT 1
+   FROM (student_details sd
+     JOIN profiles p ON ((p.id = auth.uid())))
+  WHERE ((sd.id = student_guardians.student_id) AND (sd.school_id = p.school_id) AND (p.role = 'school_admin'::user_role))))"
+School admins can delete their school's student guardians,student_guardians,{public},"(EXISTS ( SELECT 1
+   FROM (student_details sd
+     JOIN profiles p ON ((p.id = auth.uid())))
+  WHERE ((sd.id = student_guardians.student_id) AND (sd.school_id = p.school_id) AND (p.role = 'school_admin'::user_role))))"
+School admins can view their school's student categories,student_categories,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_categories.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's student categories,student_categories,{public},null
+School admins can update their school's student categories,student_categories,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_categories.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's student categories,student_categories,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_categories.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's student category assignme,student_category_assignments,{public},"(EXISTS ( SELECT 1
+   FROM (student_details sd
+     JOIN profiles p ON ((p.id = auth.uid())))
+  WHERE ((sd.id = student_category_assignments.student_id) AND (sd.school_id = p.school_id) AND (p.role = 'school_admin'::user_role))))"
+School admins can insert their school's student category assign,student_category_assignments,{public},null
+School admins can update their school's student category assign,student_category_assignments,{public},"(EXISTS ( SELECT 1
+   FROM (student_details sd
+     JOIN profiles p ON ((p.id = auth.uid())))
+  WHERE ((sd.id = student_category_assignments.student_id) AND (sd.school_id = p.school_id) AND (p.role = 'school_admin'::user_role))))"
+School admins can delete their school's student category assign,student_category_assignments,{public},"(EXISTS ( SELECT 1
+   FROM (student_details sd
+     JOIN profiles p ON ((p.id = auth.uid())))
+  WHERE ((sd.id = student_category_assignments.student_id) AND (sd.school_id = p.school_id) AND (p.role = 'school_admin'::user_role))))"
+School admins can view their school's student documents,student_documents,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_documents.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's student documents,student_documents,{public},null
+School admins can update their school's student documents,student_documents,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_documents.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's student documents,student_documents,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = student_documents.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's disciplinary records,disciplinary_records,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = disciplinary_records.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's disciplinary records,disciplinary_records,{public},null
+School admins can update their school's disciplinary records,disciplinary_records,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = disciplinary_records.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's disciplinary records,disciplinary_records,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = disciplinary_records.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's parent meetings,parent_meetings,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = parent_meetings.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's parent meetings,parent_meetings,{public},null
+School admins can update their school's parent meetings,parent_meetings,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = parent_meetings.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's parent meetings,parent_meetings,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = parent_meetings.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's disciplinary evidence,disciplinary_evidence,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = disciplinary_evidence.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's disciplinary evidence,disciplinary_evidence,{public},null
+School admins can update their school's disciplinary evidence,disciplinary_evidence,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = disciplinary_evidence.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's disciplinary evidence,disciplinary_evidence,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = disciplinary_evidence.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+academic_years_select_policy,academic_years,{public},"(has_any_role_in_school(auth.uid(), school_id) OR public.is_super_admin())"
+academic_years_insert_policy,academic_years,{public},null
+academic_years_update_policy,academic_years,{public},"(is_school_admin(auth.uid(), school_id) OR public.is_super_admin())"
+academic_years_delete_policy,academic_years,{public},"((is_school_admin(auth.uid(), school_id) OR public.is_super_admin()) AND (NOT is_locked) AND (NOT is_current))"
+batches_select_policy,batches,{public},"(has_any_role_in_school(auth.uid(), school_id) OR public.is_super_admin())"
+batches_insert_policy,batches,{public},null
+batches_update_policy,batches,{public},"(is_school_admin(auth.uid(), school_id) OR public.is_super_admin())"
+batches_delete_policy,batches,{public},"(is_school_admin(auth.uid(), school_id) OR public.is_super_admin())"
+School admins can view their school's transfer records,transfer_records,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = transfer_records.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can insert their school's transfer records,transfer_records,{public},null
+School admins can update their school's transfer records,transfer_records,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = transfer_records.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can delete their school's transfer records,transfer_records,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = transfer_records.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can view their school's certificates,certificates,{public},"(auth.uid() IN ( SELECT profiles.id
+   FROM profiles
+  WHERE ((profiles.school_id = certificates.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+School admins can manage profiles in their school,profiles,{public},"(EXISTS ( SELECT 1
+   FROM user_school_roles usr
+  WHERE ((usr.user_id = auth.uid()) AND (usr.school_id = ( SELECT user_school_roles.school_id
+           FROM user_school_roles
+          WHERE ((user_school_roles.user_id = profiles.id) AND (user_school_roles.is_primary = true)))) AND (usr.role = 'school_admin'::user_role))))"
+batch_students_select_policy,batch_students,{public},"((EXISTS ( SELECT 1
+   FROM batches b
+  WHERE ((b.id = batch_students.batch_id) AND has_any_role_in_school(auth.uid(), b.school_id)))) OR public.is_super_admin())"
+batch_students_insert_policy,batch_students,{public},null
+batch_students_update_policy,batch_students,{public},"((EXISTS ( SELECT 1
+   FROM batches b
+  WHERE ((b.id = batch_students.batch_id) AND is_school_admin(auth.uid(), b.school_id)))) OR public.is_super_admin())"
+batch_students_delete_policy,batch_students,{public},"((EXISTS ( SELECT 1
+   FROM batches b
+  WHERE ((b.id = batch_students.batch_id) AND is_school_admin(auth.uid(), b.school_id)))) OR public.is_super_admin())"
+schools_select_policy,schools,{public},"(has_any_role_in_school(auth.uid(), id) OR public.is_super_admin())"
+schools_insert_policy,schools,{public},null
+schools_update_policy,schools,{public},"(is_school_admin(auth.uid(), id) OR public.is_super_admin())"
+schools_delete_policy,schools,{public},public.is_super_admin()
+Users can view their own school roles,user_schools,{public},(auth.uid() = user_id)
+School admins can manage roles in their school,user_schools,{public},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.school_id = user_schools.school_id) AND (profiles.role = 'school_admin'::user_role))))"
+Super admins can manage all roles,user_schools,{public},"(EXISTS ( SELECT 1
+   FROM profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role))))"

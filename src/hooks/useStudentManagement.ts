@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -14,7 +13,7 @@ import {
   StudentFilter
 } from '@/types/student';
 import {
-  fetchStudents,
+  fetchStudentsFromDetails,
   fetchStudentDetails,
   createStudent,
   updateStudent,
@@ -42,7 +41,7 @@ export function useStudentManagement(filters?: StudentFilter) {
     queryKey: ['students', schoolId, filters],
     queryFn: async () => {
       if (!schoolId) return [];
-      const students = await fetchStudents(schoolId);
+      const students = await fetchStudentsFromDetails(schoolId);
       
       // Apply filters if provided
       if (filters) {
@@ -102,17 +101,63 @@ export function useStudentManagement(filters?: StudentFilter) {
 
   // Create student mutation
   const createStudentMutation = useMutation({
-    mutationFn: (data: NewStudentFormData) => {
-      if (!schoolId) {
-        throw new Error("School ID is required");
+    mutationFn: async (data: any) => {
+      // Log the incoming data
+      console.log('Mutation incoming data:', data);
+
+      // Validate required fields
+      if (!data.admission_number) {
+        throw new Error('Admission number is required');
       }
-      return createStudent(data, schoolId);
+      if (!data.batch_id) {
+        throw new Error('Batch is required');
+      }
+      if (!data.gender) {
+        throw new Error('Gender is required');
+      }
+
+      // The data is already in snake_case, so we just need to ensure all required fields are present
+      const transformedData = {
+        admission_number: data.admission_number,
+        school_id: schoolId, // Use the schoolId from the hook
+        gender: data.gender,
+        batch_id: data.batch_id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        date_of_birth: data.date_of_birth || null,
+        address: data.address || null,
+        nationality: data.nationality || null,
+        mother_tongue: data.mother_tongue || null,
+        blood_group: data.blood_group || null,
+        religion: data.religion || null,
+        caste: data.caste || null,
+        category: data.category || null,
+        phone: data.phone || null,
+        previous_school_name: data.previous_school_name || null,
+        previous_school_board: data.previous_school_board || null,
+        previous_school_year: data.previous_school_year || null,
+        previous_school_percentage: data.previous_school_percentage || null
+      };
+
+      // Log the transformed data
+      console.log('Mutation transformed data:', transformedData);
+
+      return createStudent(transformedData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       toast({
         title: 'Success',
         description: 'Student created successfully',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Mutation error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create student',
+        variant: 'destructive',
       });
     }
   });
