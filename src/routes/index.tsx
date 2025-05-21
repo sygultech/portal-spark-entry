@@ -19,6 +19,7 @@ import SignUp from "@/pages/SignUp";
 import SchoolAdmin from "@/pages/SchoolAdmin";
 import Academic from "@/pages/Academic";
 import Students from "@/pages/Students";
+import StaffManagement from "@/pages/StaffManagement";
 
 const AppRoutes = () => {
   return (
@@ -115,6 +116,18 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>
               <Academic />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Staff & HR Route */}
+      <Route 
+        path="/staff" 
+        element={
+          <ProtectedRoute requiredRoles={["school_admin"]}>
+            <AppLayout>
+              <StaffManagement />
             </AppLayout>
           </ProtectedRoute>
         } 
