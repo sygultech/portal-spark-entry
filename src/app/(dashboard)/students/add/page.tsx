@@ -25,8 +25,10 @@ export default function AddStudentPage() {
           onClose={() => {
             // Handle close
           }}
-          onSubmit={(data) => {
-            // Handle submission
+          onSubmit={async (data) => {
+            // Convert to async function by adding async keyword and returning a Promise
+            // Handle submission logic here
+            return Promise.resolve();
           }} 
         />
       </div>
