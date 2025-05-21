@@ -272,13 +272,6 @@ export type Database = {
             referencedRelation: "schools"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "certificates_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_details"
-            referencedColumns: ["id"]
-          },
         ]
       }
       courses: {
@@ -468,13 +461,6 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "disciplinary_records_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_details"
             referencedColumns: ["id"]
           },
         ]
@@ -845,13 +831,6 @@ export type Database = {
             referencedRelation: "student_categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "student_category_assignments_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_details"
-            referencedColumns: ["id"]
-          },
         ]
       }
       student_details: {
@@ -865,8 +844,11 @@ export type Database = {
           category: string | null
           created_at: string | null
           date_of_birth: string | null
+          email: string | null
+          first_name: string
           gender: string | null
           id: string
+          last_name: string
           mother_tongue: string | null
           nationality: string | null
           phone: string | null
@@ -874,6 +856,7 @@ export type Database = {
           previous_school_name: string | null
           previous_school_percentage: number | null
           previous_school_year: string | null
+          profile_id: string | null
           religion: string | null
           school_id: string
           status: string | null
@@ -890,8 +873,11 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          email?: string | null
+          first_name?: string
           gender?: string | null
           id: string
+          last_name?: string
           mother_tongue?: string | null
           nationality?: string | null
           phone?: string | null
@@ -899,6 +885,7 @@ export type Database = {
           previous_school_name?: string | null
           previous_school_percentage?: number | null
           previous_school_year?: string | null
+          profile_id?: string | null
           religion?: string | null
           school_id: string
           status?: string | null
@@ -915,8 +902,11 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          email?: string | null
+          first_name?: string
           gender?: string | null
           id?: string
+          last_name?: string
           mother_tongue?: string | null
           nationality?: string | null
           phone?: string | null
@@ -924,6 +914,7 @@ export type Database = {
           previous_school_name?: string | null
           previous_school_percentage?: number | null
           previous_school_year?: string | null
+          profile_id?: string | null
           religion?: string | null
           school_id?: string
           status?: string | null
@@ -936,6 +927,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_details_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1001,13 +999,6 @@ export type Database = {
             referencedRelation: "schools"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "student_documents_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_details"
-            referencedColumns: ["id"]
-          },
         ]
       }
       student_guardians: {
@@ -1041,13 +1032,6 @@ export type Database = {
             columns: ["guardian_id"]
             isOneToOne: false
             referencedRelation: "guardians"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_guardians_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_details"
             referencedColumns: ["id"]
           },
         ]
@@ -1326,17 +1310,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "transfer_records_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_details"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "transfer_records_to_batch_id_fkey"
             columns: ["to_batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_role_cache: {
+        Row: {
+          created_at: string | null
+          id: string
+          school_id: string | null
+          updated_at: string | null
+          user_id: string
+          user_role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          school_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          user_role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          school_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_role_cache_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -1346,8 +1358,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_student_v2: {
+        Args: { p_data: Json }
+        Returns: string
+      }
       auto_confirm_email: {
         Args: { target_email: string }
+        Returns: boolean
+      }
+      check_user_role: {
+        Args:
+          | {
+              p_user_id: string
+              p_role: Database["public"]["Enums"]["user_role"]
+            }
+          | {
+              p_user_id: string
+              p_school_id: string
+              p_role: Database["public"]["Enums"]["user_role"]
+            }
         Returns: boolean
       }
       create_and_confirm_admin_user: {
@@ -1360,6 +1389,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_and_confirm_student_user: {
+        Args: {
+          student_email: string
+          student_password: string
+          student_first_name: string
+          student_last_name: string
+          student_school_id: string
+        }
+        Returns: string
+      }
       create_profile_for_existing_user: {
         Args: {
           user_id: string
@@ -1367,6 +1406,34 @@ export type Database = {
           user_role?: Database["public"]["Enums"]["user_role"]
         }
         Returns: boolean
+      }
+      create_student_login: {
+        Args: {
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_school_id: string
+          p_password: string
+          p_student_id: string
+        }
+        Returns: {
+          user_id: string
+          status: string
+        }[]
+      }
+      create_student_profile: {
+        Args: {
+          p_user_id: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_school_id: string
+          p_student_id: string
+        }
+        Returns: {
+          user_id: string
+          status: string
+        }[]
       }
       create_user_profile: {
         Args: {
@@ -1390,24 +1457,114 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_role"]
-      }
       get_current_user_school_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_highest_role: {
+        Args: { p_user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
       }
       get_user_metadata_by_email: {
         Args: { email_address: string }
         Returns: Json
       }
+      get_user_primary_school: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
+      get_user_primary_school_id: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
+      get_user_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          avatar_url: string
+          school_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_user_profile_roles: {
+        Args: { p_user_id: string }
+        Returns: {
+          user_id: string
+          school_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          is_primary: boolean
+        }[]
+      }
+      get_user_roles_bypass_rls: {
+        Args: { p_user_id: string }
+        Returns: {
+          role_id: string
+          user_id: string
+          school_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          is_primary: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_user_roles_for_school: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: Database["public"]["Enums"]["user_role"][]
+      }
+      get_user_roles_in_school: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: Database["public"]["Enums"]["user_role"][]
+      }
+      get_user_school_roles: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: Database["public"]["Enums"]["user_role"][]
+      }
+      has_any_role_in_school: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: boolean
+      }
+      has_role_in_school: {
+        Args: {
+          p_user_id: string
+          p_school_id: string
+          p_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
       is_email_confirmed: {
         Args: { email_address: string }
         Returns: boolean
       }
+      is_school_admin: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: boolean
+      }
+      is_school_admin_bypass_rls: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: boolean
+      }
+      is_school_admin_direct: {
+        Args: { user_id: string; p_school_id: string }
+        Returns: boolean
+      }
+      is_school_admin_no_rls: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: boolean
+      }
       is_super_admin: {
-        Args: Record<PropertyKey, never>
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      is_super_admin_bypass_rls: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      is_super_admin_direct: {
+        Args: { user_id: string }
         Returns: boolean
       }
       manually_confirm_email: {
@@ -1416,6 +1573,18 @@ export type Database = {
       }
       manually_confirm_user_by_id: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      refresh_user_role_cache: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      refresh_user_roles: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      switch_primary_school: {
+        Args: { p_school_id: string }
         Returns: boolean
       }
       update_admin_user: {
@@ -1467,12 +1636,6 @@ export type Database = {
         }
         Returns: Json
       }
-      refresh_user_roles: {
-        Args: {
-          p_user_id: string
-        }
-        Returns: boolean
-      }
     }
     Enums: {
       user_role:
@@ -1481,6 +1644,7 @@ export type Database = {
         | "teacher"
         | "student"
         | "parent"
+        | "staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1602,6 +1766,7 @@ export const Constants = {
         "teacher",
         "student",
         "parent",
+        "staff",
       ],
     },
   },
