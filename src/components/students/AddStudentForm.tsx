@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -253,7 +254,7 @@ export function AddStudentForm({ isOpen, onClose, onSubmit }: AddStudentFormProp
                     <SelectContent>
                       {filteredBatches.map((batch) => (
                         <SelectItem key={batch.id} value={batch.id}>
-                          {batch.name} - {batch.course.name}
+                          {batch.name} - {batch.course?.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -276,4 +277,4 @@ export function AddStudentForm({ isOpen, onClose, onSubmit }: AddStudentFormProp
       </DialogContent>
     </Dialog>
   );
-} 
+}

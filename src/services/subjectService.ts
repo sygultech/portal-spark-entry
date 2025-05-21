@@ -212,12 +212,16 @@ export async function getSubjectDependencies(subjectId: string): Promise<Subject
 
   if (timeSlotError) throw timeSlotError;
 
-  // Format batch data
-  const batches = batchData?.map(assignment => ({
-    id: assignment.batches.id,
-    name: assignment.batches.name,
-    course_name: assignment.batches.courses.name
-  })) || [];
+  // Format batch data - Fix the type issues
+  const batches = batchData?.map(assignment => {
+    // Use type assertion to help TypeScript understand the structure
+    const batch = assignment.batches as any; 
+    return {
+      id: batch.id,
+      name: batch.name,
+      course_name: batch.courses?.name || 'Unknown'
+    };
+  }) || [];
 
   return {
     batchAssignments: batches.length,

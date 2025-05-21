@@ -21,9 +21,12 @@ export default function AddStudentPage() {
       <h1 className="text-2xl font-bold mb-6">Add New Student</h1>
       <div className="bg-white rounded-lg shadow p-6">
         <AddStudentForm 
-          schoolId={user.primary_school_id} 
-          onSuccess={() => {
-            // Optionally redirect to students list or show success message
+          isOpen={true}
+          onClose={() => {
+            // Handle close
+          }}
+          onSubmit={(data) => {
+            // Handle submission
           }} 
         />
       </div>

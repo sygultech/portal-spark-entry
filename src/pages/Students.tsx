@@ -171,6 +171,27 @@ export default function Students() {
     toast.success(`Transfer status updated to ${status}`);
   };
 
+  // Fix the type issue in this function
+  const handleCreateRecord = async (record: any) => {
+    if (!selectedStudent) return;
+    try {
+      await addDisciplinaryRecord({
+        studentId: selectedStudent.id,
+        data: record
+      });
+      // Generate a unique ID for the new record to comply with the DisciplinaryRecord type
+      const newRecord: DisciplinaryRecord = {
+        ...record,
+        id: Date.now().toString(),
+        created_at: new Date().toISOString(), 
+        updated_at: new Date().toISOString()
+      };
+      setDisciplinaryRecords((prev) => [...prev, newRecord]);
+    } catch (error) {
+      console.error('Error adding disciplinary record:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header with Quick Actions */}
@@ -277,18 +298,7 @@ export default function Students() {
         <TabsContent value="disciplinary">
           <DisciplinaryManager
             records={disciplinaryRecords}
-            onCreateRecord={async (record) => {
-              if (!selectedStudent) return;
-              try {
-                await addDisciplinaryRecord({
-                  studentId: selectedStudent.id,
-                  data: record
-                });
-                setDisciplinaryRecords((prev) => [...prev, record]);
-              } catch (error) {
-                console.error('Error adding disciplinary record:', error);
-              }
-            }}
+            onCreateRecord={handleCreateRecord}
             onUpdateStatus={(id, status) => {
               setDisciplinaryRecords((prev) =>
                 prev.map((r) => (r.id === id ? { ...r, status } : r))
