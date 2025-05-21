@@ -10,6 +10,7 @@ import {
   BreadcrumbList, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Import staff module components
 import StaffDirectory from "@/components/staff/StaffDirectory";
