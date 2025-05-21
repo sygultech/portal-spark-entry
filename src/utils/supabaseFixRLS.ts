@@ -45,3 +45,5 @@ export async function fixRLSPolicies() {
     return false;
   }
 }
+
+// force update

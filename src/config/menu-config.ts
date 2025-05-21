@@ -109,3 +109,5 @@ export const menuConfig: MenuConfig = {
 
 // Debug logging
 console.log("Menu config loaded:", menuConfig);
+
+// force update

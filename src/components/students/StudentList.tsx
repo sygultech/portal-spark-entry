@@ -345,3 +345,5 @@ export function StudentList({ students, onSelect, categories, onBatchAction, onR
     </div>
   );
 }
+
+// force update

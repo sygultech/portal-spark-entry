@@ -575,3 +575,5 @@ const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
 };
 
 export default SchoolDetailView;
+
+// force update

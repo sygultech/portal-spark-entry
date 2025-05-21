@@ -281,3 +281,4 @@ School admins can manage roles in their school,user_schools,{public},"(EXISTS ( 
 Super admins can manage all roles,user_schools,{public},"(EXISTS ( SELECT 1
    FROM profiles
   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'super_admin'::user_role))))"
+

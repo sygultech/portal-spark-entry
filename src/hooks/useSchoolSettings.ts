@@ -85,3 +85,5 @@ export function useSchoolSettings(schoolId?: string) {
     isUpdating: updateSchoolMutation.isPending
   };
 }
+
+// force update

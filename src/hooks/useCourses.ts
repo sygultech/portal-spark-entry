@@ -52,3 +52,5 @@ export function useCourses(academicYearId?: string) {
     deleteCourse: deleteMutation.mutate
   };
 }
+
+// force update

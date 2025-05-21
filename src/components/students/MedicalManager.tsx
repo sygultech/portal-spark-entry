@@ -236,3 +236,5 @@ export function MedicalManager({
     </div>
   );
 }
+
+// force update

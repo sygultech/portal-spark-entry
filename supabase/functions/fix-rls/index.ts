@@ -145,3 +145,5 @@ async function fixAcademicYearsRLS(supabase) {
     `
   });
 }
+
+// force update

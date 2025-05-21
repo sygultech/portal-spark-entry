@@ -52,3 +52,5 @@ export function useDepartments() {
     deleteDepartment: deleteMutation.mutate
   };
 }
+
+// force update

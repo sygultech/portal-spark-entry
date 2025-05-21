@@ -104,3 +104,5 @@ export const createSuperAdmin = async (password: string) => {
     return { success: false, message: error.message || 'An unknown error occurred' };
   }
 };
+
+// force update

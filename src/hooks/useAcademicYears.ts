@@ -194,3 +194,5 @@ export function useAcademicYears() {
     toggleLockStatus: toggleLockStatusMutation.mutate
   };
 }
+
+// force update

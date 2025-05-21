@@ -85,3 +85,5 @@ const BatchList = ({ batches, courseId, academicYearId }: BatchListProps) => {
 };
 
 export default BatchList;
+
+// force update

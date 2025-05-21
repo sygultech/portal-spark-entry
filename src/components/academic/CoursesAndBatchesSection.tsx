@@ -580,3 +580,5 @@ const CoursesAndBatchesSection = ({
 };
 
 export default CoursesAndBatchesSection;
+
+// force update
