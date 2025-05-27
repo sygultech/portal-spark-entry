@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/contexts/types";
 import { toast } from "@/components/ui/use-toast";
-import { cleanupAuthState, fetchUserProfile, createUserProfile } from "@/utils/authUtils";
+import { cleanupAuthState, fetchUserProfile, createUserProfile, refreshUserRoleCache } from "@/utils/authUtils";
 import { getRoleBasedRoute } from "@/utils/roleUtils";
 
 export const useAuthOperations = () => {
@@ -209,9 +209,15 @@ export const useAuthOperations = () => {
           userProfile = await fetchUserProfile(userId);
         }
       }
+
+      // Refresh the role cache after fetching/creating the profile
+      if (userProfile) {
+        console.log("Refreshing role cache for user:", userId);
+        await refreshUserRoleCache(userId);
+      }
       
       // Redirect based on role - handle both single role and array
-      const roleBasedRoute = getRoleBasedRoute(userProfile?.role);
+      const roleBasedRoute = getRoleBasedRoute(userProfile?.roles?.[0]);
       
       console.log("Redirecting to:", roleBasedRoute);
       if (navigate) {

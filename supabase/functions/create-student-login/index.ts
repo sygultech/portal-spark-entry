@@ -4,12 +4,31 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+}
+
+// Helper function to create consistent responses with CORS headers
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      }
+    }
+  );
 }
 
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    })
   }
 
   try {
@@ -17,7 +36,7 @@ serve(async (req) => {
     const { email, firstName, lastName, schoolId, password, studentId } = await req.json()
 
     if (!email || !firstName || !lastName || !schoolId || !studentId) {
-      throw new Error('Missing required fields')
+      return createResponse({ error: 'Missing required fields' }, 400)
     }
 
     // Create Supabase client with admin key
@@ -35,7 +54,7 @@ serve(async (req) => {
       .single()
 
     if (studentError || !studentData) {
-      throw new Error('Student not found in student_details table')
+      return createResponse({ error: 'Student not found in student_details table' }, 404)
     }
 
     // Check if user already exists in profiles for this school
@@ -47,7 +66,7 @@ serve(async (req) => {
       .maybeSingle()
 
     if (profileError) {
-      throw profileError
+      return createResponse({ error: profileError.message }, 500)
     }
 
     if (existingProfile) {
@@ -59,113 +78,61 @@ serve(async (req) => {
         .eq('school_id', schoolId)
 
       if (updateError) {
-        throw updateError
+        return createResponse({ error: updateError.message }, 500)
       }
 
-      return new Response(
-        JSON.stringify({ user_id: existingProfile.id, status: 'already_exists' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return createResponse({ 
+        user_id: existingProfile.id, 
+        status: 'already_exists' 
+      })
     }
 
     let userId: string
     let isExistingAuthUser = false
 
     // Try to create new user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         first_name: firstName,
         last_name: lastName,
-        role: 'student',
-        school_id: schoolId
+        school_id: schoolId,
+        student_id: studentId,
+        roles: ['student']
       }
     })
 
-    if (authError) {
-      // If user already exists in auth but not in profiles, get their ID
-      if (authError.message.includes('User already registered') || authError.code === 'email_exists') {
-        const { data: users, error: userError } = await supabaseAdmin.auth.admin.listUsers({
-          filters: {
-            email: email
-          }
-        })
-        
-        if (userError) {
-          console.error('Error getting existing user:', userError)
-          throw new Error('Failed to get existing user details')
-        }
-
-        if (!users?.users?.[0]?.id) {
-          throw new Error('No user ID found for existing user')
-        }
-
-        userId = users.users[0].id
-        isExistingAuthUser = true
-
-        // Check if user already has a profile
-        const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-
-        if (profileCheckError && profileCheckError.code !== 'PGRST116') { // PGRST116 is "not found" error
-          console.error('Error checking existing profile:', profileCheckError)
-          throw new Error('Failed to check existing profile')
-        }
-
-        if (existingProfile) {
-          // If profile exists, update student_details with the profile_id
-          const { error: updateError } = await supabaseAdmin
-            .from('student_details')
-            .update({ profile_id: userId })
-            .eq('id', studentId)
-            .eq('school_id', schoolId)
-
-          if (updateError) {
-            console.error('Error updating student details:', updateError)
-            throw new Error('Failed to link existing user to student')
-          }
-
-          return new Response(
-            JSON.stringify({ user_id: userId, status: 'linked_existing' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-      } else {
-        console.error('Auth error:', authError)
-        throw new Error(`Authentication error: ${authError.message}`)
-      }
-    } else if (!authData?.user?.id) {
-      throw new Error('No user data returned from createUser')
-    } else {
-      userId = authData.user.id
+    if (createError) {
+      console.error('Error creating user:', createError)
+      return createResponse({ error: 'Failed to create user' }, 500)
     }
 
-    // Create profile
-    const { error: createProfileError } = await supabaseAdmin
+    if (!newUser?.user?.id) {
+      return createResponse({ error: 'No user data returned from createUser' }, 500)
+    } else {
+      userId = newUser.user.id
+    }
+
+    // Create profile with student role
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
         id: userId,
-        email: email,
+        email,
         first_name: firstName,
         last_name: lastName,
-        role: 'student',
         school_id: schoolId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        roles: ['student']
       })
 
-    if (createProfileError) {
+    if (profileError) {
       // If profile creation fails and we created a new auth user, clean it up
       if (!isExistingAuthUser) {
         await supabaseAdmin.auth.admin.deleteUser(userId)
       }
-      // Always throw error if profile creation fails, regardless of whether it's a new or existing auth user
-      throw new Error(`Failed to create profile: ${createProfileError.message}`)
+      return createResponse({ error: `Failed to create profile: ${profileError.message}` }, 500)
     }
 
     // Verify profile is accessible
@@ -184,22 +151,16 @@ serve(async (req) => {
       if (!isExistingAuthUser) {
         await supabaseAdmin.auth.admin.deleteUser(userId)
       }
-      throw new Error('Failed to verify profile creation')
+      return createResponse({ error: 'Failed to verify profile creation' }, 500)
     }
 
-    return new Response(
-      JSON.stringify({ user_id: userId, status: 'created' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return createResponse({ 
+      user_id: userId, 
+      status: 'created' 
+    })
 
   } catch (error) {
     console.error('Error in create-student-login:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+    return createResponse({ error: error.message }, 500)
   }
 }) 

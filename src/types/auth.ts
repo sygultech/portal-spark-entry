@@ -1,13 +1,25 @@
 import { UserRole } from './common';
 
 export interface UserSchoolRole {
-  id: string;
-  user_id: string;
   school_id: string;
-  role: UserRole;
-  is_primary: boolean;
+  roles: UserRole[];
+}
+
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  avatar_url?: string;
+  roles: UserSchoolRole[];
   created_at: string;
   updated_at: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
 }
 
 export interface UserProfile {

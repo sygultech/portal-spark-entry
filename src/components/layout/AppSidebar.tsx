@@ -33,7 +33,7 @@ export const AppSidebarContent = () => {
   const navigate = useNavigate();
   
   // Get the appropriate menu items based on user primary role
-  const primaryRole = profile?.role?.[0];
+  const primaryRole = profile?.roles?.[0];
   const menuItems = primaryRole ? menuConfig[primaryRole] || [] : [];
   
   // Debug logging
@@ -118,7 +118,7 @@ export const AppSidebarContent = () => {
                   {profile?.first_name} {profile?.last_name}
                 </span>
                 <span className="text-xs text-muted-foreground capitalize">
-                  {profile?.role?.[0]?.replace("_", " ")}
+                  {profile?.roles?.[0]?.replace("_", " ")}
                 </span>
               </div>
             )}

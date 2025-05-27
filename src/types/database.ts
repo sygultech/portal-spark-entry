@@ -1,4 +1,3 @@
-
 import { Database } from '@/lib/database.types';
 import { UserRole } from '@/types/common';
 
@@ -11,7 +10,6 @@ export type UserRoleCache = {
   user_id: string;
   school_id: string;
   role: UserRole;
-  is_primary: boolean;
   avatar_url?: string;
   last_updated: string;
 };

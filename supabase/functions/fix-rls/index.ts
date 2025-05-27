@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -9,12 +8,31 @@ interface FixRLSRequest {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+}
+
+// Helper function to create consistent responses with CORS headers
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      }
+    }
+  );
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    })
   }
 
   try {
@@ -23,7 +41,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing environment variables')
+      return createResponse({ error: 'Missing environment variables' }, 500)
     }
 
     // Initialize Supabase client
@@ -35,36 +53,27 @@ serve(async (req) => {
       // Apply RLS policies to required tables
       await fixAcademicYearsRLS(supabase);
 
-      return new Response(
-        JSON.stringify({
-          message: "Row Level Security policies have been successfully applied.",
-          success: true
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+      return createResponse({
+        message: "Row Level Security policies have been successfully applied.",
+        success: true
+      });
     } else {
       // Verify RLS status
       const academicYearsRLS = await verifyTableRLS(supabase, 'academic_years');
 
-      return new Response(
-        JSON.stringify({
-          tables: {
-            academic_years: academicYearsRLS,
-          },
-          message: "RLS verification completed"
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+      return createResponse({
+        tables: {
+          academic_years: academicYearsRLS,
+        },
+        message: "RLS verification completed"
+      });
     }
   } catch (error) {
     console.error("Error in fix-rls function:", error);
-    return new Response(
-      JSON.stringify({ 
-        message: "Error fixing RLS policies", 
-        error: error.message 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
+    return createResponse({ 
+      message: "Error fixing RLS policies", 
+      error: error.message 
+    }, 500);
   }
 })
 
@@ -112,7 +121,7 @@ async function fixAcademicYearsRLS(supabase) {
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
             AND school_id = academic_years.school_id
-            AND role = 'school_admin'
+            AND 'school_admin' = ANY(roles)
           )
         )
         WITH CHECK (
@@ -120,7 +129,7 @@ async function fixAcademicYearsRLS(supabase) {
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() 
             AND school_id = academic_years.school_id
-            AND role = 'school_admin'
+            AND 'school_admin' = ANY(roles)
           )
         );
         
@@ -132,14 +141,14 @@ async function fixAcademicYearsRLS(supabase) {
           EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid()
-            AND role = 'super_admin'
+            AND 'super_admin' = ANY(roles)
           )
         )
         WITH CHECK (
           EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid()
-            AND role = 'super_admin'
+            AND 'super_admin' = ANY(roles)
           )
         );
     `

@@ -1,13 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Profile, UserRole } from "@/contexts/types";
-import { UserProfile, UserSchoolRole, AuthUser } from '@/types/auth';
+import { Profile, UserRole } from "@/types/common";
 import { refreshUserRoles } from "./roleUtils";
 
 // Function to refresh user role cache
 export const refreshUserRoleCache = async (userId: string) => {
   try {
     // Call the database function to refresh the cache
-    const { data, error } = await supabase.rpc('refresh_user_roles', { 
+    const { data, error } = await supabase.rpc('refresh_user_role_cache', { 
       p_user_id: userId 
     });
     
@@ -54,7 +53,7 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
       email: profile.email,
       avatar_url: profile.avatar_url,
       school_id: profile.school_id,
-      role: profile.role,
+      roles: profile.roles,
       created_at: profile.created_at,
       updated_at: profile.updated_at
     };
@@ -305,4 +304,98 @@ export const getUserRolesInSchool = async (userId: string, schoolId: string): Pr
     console.error('Error getting user roles:', error);
     return [];
   }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
+  }
+};
+
+export const getCurrentProfile = async (): Promise<Profile | null> => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return null;
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (error) throw error;
+
+    // Refresh user roles in cache
+    await refreshUserRoles(user.id);
+
+    return profile;
+  } catch (error) {
+    console.error("Error getting current profile:", error);
+    return null;
+  }
+};
+
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error signing out:", error);
+    throw error;
+  }
+};
+
+export const isAuthenticated = async (): Promise<boolean> => {
+  try {
+    const user = await getCurrentUser();
+    return !!user;
+  } catch (error) {
+    console.error("Error checking authentication:", error);
+    return false;
+  }
+};
+
+export const hasRequiredRole = async (requiredRoles: UserRole[]): Promise<boolean> => {
+  try {
+    const profile = await getCurrentProfile();
+    if (!profile?.roles) return false;
+
+    return requiredRoles.some(role => profile.roles.includes(role));
+  } catch (error) {
+    console.error("Error checking required role:", error);
+    return false;
+  }
+};
+
+export const isSuperAdmin = async (): Promise<boolean> => {
+  return hasRequiredRole(["super_admin"]);
+};
+
+export const isSchoolAdmin = async (): Promise<boolean> => {
+  return hasRequiredRole(["school_admin"]);
+};
+
+export const isTeacher = async (): Promise<boolean> => {
+  return hasRequiredRole(["teacher"]);
+};
+
+export const isStudent = async (): Promise<boolean> => {
+  return hasRequiredRole(["student"]);
+};
+
+export const isParent = async (): Promise<boolean> => {
+  return hasRequiredRole(["parent"]);
+};
+
+export const isStaff = async (): Promise<boolean> => {
+  return hasRequiredRole(["staff"]);
+};
+
+export const isLibrarian = async (): Promise<boolean> => {
+  return hasRequiredRole(["librarian"]);
 };

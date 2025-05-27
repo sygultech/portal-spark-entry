@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +28,7 @@ const CreateSuperAdmin = () => {
         }
         
         // Try to query the profiles table to check if it exists and has the expected schema
-        const { error: profilesError } = await supabase.from('profiles').select('role').limit(1);
+        const { error: profilesError } = await supabase.from('profiles').select('roles').limit(1);
         
         if (profilesError) {
           console.error("Error checking profiles table:", profilesError);

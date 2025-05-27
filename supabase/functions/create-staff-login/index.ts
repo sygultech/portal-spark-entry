@@ -15,6 +15,20 @@ function normalizeEmail(email: string): string {
   return email.toLowerCase().trim();
 }
 
+// Helper function to create consistent responses with CORS headers
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      }
+    }
+  );
+}
+
 serve(async (req) => {
   console.log('=== Starting create-staff-login function ===')
   
@@ -29,7 +43,7 @@ serve(async (req) => {
 
   try {
     // Get the request body
-    const { email, firstName, lastName, schoolId, password, staffId, role } = await req.json()
+    const { email, firstName, lastName, schoolId, password, staffId, roles } = await req.json()
     const normalizedEmail = normalizeEmail(email)
     console.log('Request body received:', { 
       originalEmail: email,
@@ -38,18 +52,22 @@ serve(async (req) => {
       lastName, 
       schoolId, 
       staffId, 
-      role 
+      roles 
     })
 
-    if (!email || !firstName || !lastName || !schoolId || !staffId || !role) {
+    if (!email || !firstName || !lastName || !schoolId || !staffId || !roles) {
       console.log('Missing required fields')
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return createResponse({
+        error: 'Missing required fields',
+        details: {
+          email: !email,
+          firstName: !firstName,
+          lastName: !lastName,
+          schoolId: !schoolId,
+          staffId: !staffId,
+          roles: !roles
         }
-      )
+      }, 400)
     }
 
     console.log('Creating Supabase admin client')
@@ -70,13 +88,7 @@ serve(async (req) => {
 
     if (staffError || !staffData) {
       console.log('Staff not found:', staffError)
-      return new Response(
-        JSON.stringify({ error: 'Staff not found in staff_details table' }),
-        { 
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Staff not found in staff_details table' }, 404)
     }
     console.log('Staff found:', staffData)
 
@@ -97,23 +109,17 @@ serve(async (req) => {
         originalStaffEmail: staffData.email,
         originalProvidedEmail: email
       });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Email does not match staff record',
-          details: {
-            staffEmail: staffData.email,
-            providedEmail: email
-          }
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return createResponse({ 
+        error: 'Email does not match staff record',
+        details: {
+          staffEmail: staffData.email,
+          providedEmail: email
         }
-      );
+      }, 400);
     }
 
-    // Convert role to array if it's a single role
-    const rolesToAdd = Array.isArray(role) ? role : [role];
+    // Convert roles to array if it's a single role
+    const rolesToAdd = Array.isArray(roles) ? roles : [roles];
     console.log('Roles to add:', rolesToAdd)
 
     let userId: string
@@ -128,8 +134,9 @@ serve(async (req) => {
       user_metadata: {
         first_name: firstName,
         last_name: lastName,
-        role: rolesToAdd[0], // Use first role as primary role
-        school_id: schoolId
+        school_id: schoolId,
+        staff_id: staffId,
+        roles: rolesToAdd
       }
     })
 
@@ -147,24 +154,12 @@ serve(async (req) => {
         
         if (userError) {
           console.log('Error fetching existing user:', userError)
-          return new Response(
-            JSON.stringify({ error: 'Failed to get existing user details' }),
-            { 
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          )
+          return createResponse({ error: 'Failed to get existing user details' }, 500)
         }
 
         if (!users?.users?.[0]?.id) {
           console.log('No user found with email match')
-          return new Response(
-            JSON.stringify({ error: 'No user found with email match' }),
-            { 
-              status: 404,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          )
+          return createResponse({ error: 'No user found with email match' }, 404)
         }
 
         // Verify normalized email match
@@ -189,20 +184,14 @@ serve(async (req) => {
             originalProvidedEmail: email,
             originalStaffEmail: staffData.email
           })
-          return new Response(
-            JSON.stringify({ 
-              error: 'Email does not match existing user record',
-              details: {
-                existingEmail: existingUser.email,
-                providedEmail: email,
-                staffEmail: staffData.email
-              }
-            }),
-            { 
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          return createResponse({ 
+            error: 'Email does not match existing user record',
+            details: {
+              existingEmail: existingUser.email,
+              providedEmail: email,
+              staffEmail: staffData.email
             }
-          )
+          }, 400)
         }
 
         userId = existingUser.id
@@ -219,13 +208,7 @@ serve(async (req) => {
 
         if (profileCheckError && profileCheckError.code !== 'PGRST116') {
           console.log('Error checking existing profile:', profileCheckError)
-          return new Response(
-            JSON.stringify({ error: 'Failed to check existing profile' }),
-            { 
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          )
+          return createResponse({ error: 'Failed to check existing profile' }, 500)
         }
 
         if (existingProfile) {
@@ -233,21 +216,17 @@ serve(async (req) => {
           // Update the existing profile with all roles
           const { error: updateError } = await supabaseAdmin
             .from('profiles')
-            .update({ 
-              role: rolesToAdd, // Now saving all roles as an array
-              updated_at: new Date().toISOString()
+            .update({
+              first_name: firstName,
+              last_name: lastName,
+              school_id: schoolId,
+              roles: rolesToAdd // Now saving all roles as an array
             })
             .eq('id', userId)
 
           if (updateError) {
             console.log('Error updating existing profile:', updateError)
-            return new Response(
-              JSON.stringify({ error: 'Failed to update existing profile' }),
-              { 
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              }
-            )
+            return createResponse({ error: 'Failed to update existing profile' }, 500)
           }
 
           console.log('Updating staff_details with profile_id')
@@ -260,46 +239,23 @@ serve(async (req) => {
 
           if (updateStaffError) {
             console.log('Error updating staff details:', updateStaffError)
-            return new Response(
-              JSON.stringify({ error: 'Failed to link existing user to staff' }),
-              { 
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              }
-            )
+            return createResponse({ error: 'Failed to link existing user to staff' }, 500)
           }
 
           console.log('Successfully linked existing user')
-          return new Response(
-            JSON.stringify({ 
-              user_id: userId, 
-              status: 'linked_existing',
-              roles: rolesToAdd
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          )
+          return createResponse({ 
+            user_id: userId, 
+            status: 'linked_existing',
+            roles: rolesToAdd
+          })
         }
       } else {
         console.log('Authentication error:', authError)
-        return new Response(
-          JSON.stringify({ error: `Authentication error: ${authError.message}` }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
+        return createResponse({ error: `Authentication error: ${authError.message}` }, 500)
       }
     } else if (!authData?.user?.id) {
       console.log('No user data returned from createUser')
-      return new Response(
-        JSON.stringify({ error: 'No user data returned from createUser' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'No user data returned from createUser' }, 500)
     } else {
       userId = authData.user.id
       console.log('New user created with ID:', userId)
@@ -314,8 +270,8 @@ serve(async (req) => {
         email: email,
         first_name: firstName,
         last_name: lastName,
-        role: rolesToAdd[0], // Use first role as primary role
         school_id: schoolId,
+        roles: rolesToAdd, // Now saving all roles as an array
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -327,13 +283,7 @@ serve(async (req) => {
         console.log('Cleaning up auth user due to profile creation failure')
         await supabaseAdmin.auth.admin.deleteUser(userId)
       }
-      return new Response(
-        JSON.stringify({ error: `Failed to create profile: ${createProfileError.message}` }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: `Failed to create profile: ${createProfileError.message}` }, 500)
     }
 
     console.log('Updating staff_details with profile_id')
@@ -355,35 +305,18 @@ serve(async (req) => {
       if (!isExistingAuthUser) {
         await supabaseAdmin.auth.admin.deleteUser(userId)
       }
-      return new Response(
-        JSON.stringify({ error: 'Failed to update staff details' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Failed to update staff details' }, 500)
     }
 
     console.log('Successfully completed staff login creation')
-    return new Response(
-      JSON.stringify({ 
-        user_id: userId, 
-        status: 'created',
-        roles: rolesToAdd
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+    return createResponse({ 
+      user_id: userId, 
+      status: 'created',
+      roles: rolesToAdd
+    })
 
   } catch (error) {
     console.error('Unexpected error in create-staff-login:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+    return createResponse({ error: error.message }, 500)
   }
 }) 

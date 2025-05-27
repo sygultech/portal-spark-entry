@@ -11,15 +11,19 @@ export const getRoleBasedRoute = (role?: UserRole | UserRole[]): string => {
   
   switch (primaryRole) {
     case "super_admin":
-      return "/super-admin-dashboard";
+      return "/admin";
     case "school_admin":
-      return "/school-admin";
+      return "/school";
     case "teacher":
       return "/teacher";
     case "student":
-      return "/dashboard";
+      return "/student";
     case "parent":
       return "/parent";
+    case "staff":
+      return "/staff";
+    case "librarian":
+      return "/library";
     default:
       return "/";
   }
@@ -36,100 +40,90 @@ export const canAccessRoute = (userRole: UserRole | UserRole[] | undefined, requ
 
 // Get role-specific navigation items
 export const getRoleNavigation = (profile: Profile | null) => {
-  // Base navigation items all authenticated users can see
-  const baseNavItems = [
-    { name: "Home", href: "/" },
-    { name: "Profile", href: "/profile" },
-  ];
+  if (!profile) return [];
 
   // Get the primary role (first role in the array)
-  const primaryRole = profile?.role?.[0];
+  const primaryRole = profile?.roles?.[0];
 
   // Role-specific items
   switch (primaryRole) {
     case "super_admin":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/super-admin-dashboard" },
-        { name: "Schools", href: "/schools" },
-        { name: "Users", href: "/users" },
-        { name: "Settings", href: "/settings" },
+        { label: "Dashboard", href: "/admin" },
+        { label: "Schools", href: "/admin/schools" },
+        { label: "Users", href: "/admin/users" },
+        { label: "Settings", href: "/admin/settings" },
       ];
     case "school_admin":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/school-admin" },
-        { name: "Teachers", href: "/teachers" },
-        { name: "Students", href: "/students" },
-        { name: "Academic", href: "/academic" },
-        { name: "Staff", href: "/staff" },
-        { name: "Library", href: "/library" },
+        { label: "Dashboard", href: "/school" },
+        { label: "Students", href: "/school/students" },
+        { label: "Teachers", href: "/school/teachers" },
+        { label: "Classes", href: "/school/classes" },
+        { label: "Settings", href: "/school/settings" },
       ];
     case "teacher":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/teacher" },
-        { name: "Classes", href: "/classes" },
-        { name: "Students", href: "/my-students" },
+        { label: "Dashboard", href: "/teacher" },
+        { label: "Classes", href: "/teacher/classes" },
+        { label: "Students", href: "/teacher/students" },
+        { label: "Assignments", href: "/teacher/assignments" },
       ];
     case "student":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/student" },
-        { name: "Classes", href: "/my-classes" },
-        { name: "Assignments", href: "/assignments" },
-        { name: "Library", href: "/library" },
+        { label: "Dashboard", href: "/student" },
+        { label: "Classes", href: "/student/classes" },
+        { label: "Assignments", href: "/student/assignments" },
+        { label: "Grades", href: "/student/grades" },
       ];
     case "parent":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/parent" },
-        { name: "Children", href: "/children" },
+        { label: "Dashboard", href: "/parent" },
+        { label: "Children", href: "/parent/children" },
+        { label: "Grades", href: "/parent/grades" },
+        { label: "Messages", href: "/parent/messages" },
       ];
     case "staff":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/staff" },
-        { name: "Tasks", href: "/staff/tasks" },
-        { name: "Schedule", href: "/staff/schedule" },
+        { label: "Dashboard", href: "/staff" },
+        { label: "Tasks", href: "/staff/tasks" },
+        { label: "Schedule", href: "/staff/schedule" },
       ];
     case "librarian":
       return [
-        ...baseNavItems,
-        { name: "Dashboard", href: "/librarian" },
-        { name: "Books", href: "/library/books" },
-        { name: "Members", href: "/library/members" },
-        { name: "Borrowings", href: "/library/borrowings" },
-        { name: "Reports", href: "/library/reports" },
+        { label: "Dashboard", href: "/library" },
+        { label: "Books", href: "/library/books" },
+        { label: "Members", href: "/library/members" },
+        { label: "Loans", href: "/library/loans" },
       ];
     default:
-      return baseNavItems;
+      return [];
   }
 };
 
 // Helper function to check if user has a specific role
 export const hasRole = (profile: Profile | null, role: UserRole): boolean => {
-  if (!profile?.role) return false;
-  return profile.role.includes(role);
+  if (!profile?.roles) return false;
+  return profile.roles.includes(role);
 };
 
 // Helper function to get primary role as string
 export const getPrimaryRole = (profile: Profile | null): UserRole | undefined => {
-  return profile?.role?.[0];
+  return profile?.roles?.[0];
 };
 
 // Helper function to format role for display
 export const formatRole = (role: UserRole | UserRole[]): string => {
   const roleToFormat = Array.isArray(role) ? role[0] : role;
   return roleToFormat?.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ') || '';
 };
 
 // Function to refresh user roles in cache
 export const refreshUserRoles = async (userId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.rpc('refresh_user_roles', {
+    const { data, error } = await supabase.rpc('refresh_user_role_cache', {
       p_user_id: userId
     });
 
@@ -138,7 +132,7 @@ export const refreshUserRoles = async (userId: string): Promise<boolean> => {
       return false;
     }
 
-    return data || false;
+    return true;
   } catch (error) {
     console.error('Error in refreshUserRoles:', error);
     return false;
@@ -172,7 +166,8 @@ export const getUserPrimaryRole = async (userId: string): Promise<UserRole | nul
       .from('user_role_cache')
       .select('role')
       .eq('user_id', userId)
-      .eq('is_primary', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (error) {

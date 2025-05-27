@@ -18,7 +18,7 @@ const NotFound = () => {
   }, [from]);
 
   // Determine where to redirect the user based on their role
-  const homeRoute = !isLoading && profile ? getRoleBasedRoute(profile.role) : "/";
+  const homeRoute = !isLoading && profile ? getRoleBasedRoute(profile.roles) : "/";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">

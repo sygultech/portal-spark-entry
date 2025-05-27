@@ -7,7 +7,7 @@ export interface Student {
   email: string;
   avatar_url?: string | null;
   school_id: string;
-  role: "student";
+  roles: ["student"];
   created_at: string;
   updated_at: string;
 }
@@ -19,7 +19,7 @@ export interface Teacher {
   email: string;
   avatar_url?: string | null;
   school_id: string;
-  role: "teacher";
+  roles: ["teacher"];
   created_at: string;
   updated_at: string;
 }

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,7 +46,7 @@ export const UserProfileMenu = () => {
     `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 
     user?.email?.split('@')[0] || 'User';
 
-  const primaryRole = profile?.role?.[0];
+  const primaryRole = profile?.roles?.[0];
 
   return (
     <DropdownMenu>

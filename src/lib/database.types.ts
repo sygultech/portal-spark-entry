@@ -79,7 +79,6 @@ export interface Database {
           user_id: string;
           school_id: string;
           role: string;
-          is_primary: boolean;
           avatar_url: string | null;
           last_updated: string;
         };
@@ -88,7 +87,6 @@ export interface Database {
           user_id: string;
           school_id: string;
           role: string;
-          is_primary: boolean;
           avatar_url?: string | null;
           last_updated?: string;
         };
@@ -97,7 +95,6 @@ export interface Database {
           user_id?: string;
           school_id?: string;
           role?: string;
-          is_primary?: boolean;
           avatar_url?: string | null;
           last_updated?: string;
         };

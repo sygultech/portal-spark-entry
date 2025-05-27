@@ -1,4 +1,3 @@
-
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,8 +8,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && profile?.role) {
-      const roleSpecificRoute = getRoleBasedRoute(profile.role);
+    if (!isLoading && profile?.roles) {
+      const roleSpecificRoute = getRoleBasedRoute(profile.roles);
       if (roleSpecificRoute !== "/dashboard") {
         navigate(roleSpecificRoute, { replace: true });
       }
@@ -26,8 +25,8 @@ const Dashboard = () => {
   }
 
   // If we have a role and the role's route isn't dashboard, we should redirect
-  if (profile?.role && getRoleBasedRoute(profile.role) !== "/dashboard") {
-    return <Navigate to={getRoleBasedRoute(profile.role)} replace />;
+  if (profile?.roles && getRoleBasedRoute(profile.roles) !== "/dashboard") {
+    return <Navigate to={getRoleBasedRoute(profile.roles)} replace />;
   }
 
   return (

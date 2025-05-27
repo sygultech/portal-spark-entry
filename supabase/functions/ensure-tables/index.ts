@@ -1,16 +1,34 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+}
+
+// Helper function to create consistent responses with CORS headers
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      }
+    }
+  );
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    })
   }
 
   try {
@@ -27,10 +45,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser()
 
     if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
+      return createResponse({ error: 'Unauthorized' }, 401)
     }
 
     const { table, schema, operation, data, conditions } = await req.json()
@@ -40,10 +55,7 @@ serve(async (req) => {
       // Execute schema creation commands
       const { error } = await supabaseClient.rpc('execute_admin_sql', { sql: schema })
       if (error) {
-        return new Response(
-          JSON.stringify({ error: `Error creating schema: ${error.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
+        return createResponse({ error: `Error creating schema: ${error.message}` }, 500)
       }
     }
 
@@ -59,10 +71,7 @@ serve(async (req) => {
       })
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: `Error inserting data: ${error.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
+        return createResponse({ error: `Error inserting data: ${error.message}` }, 500)
       }
     } else if (operation === 'delete' && conditions) {
       // Handle delete operation
@@ -85,22 +94,14 @@ serve(async (req) => {
       })
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: `Error deleting data: ${error.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
+        return createResponse({ error: `Error deleting data: ${error.message}` }, 500)
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
+    return createResponse({ success: true })
+
   } catch (error) {
     console.error('Error:', error.message)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    return createResponse({ error: error.message }, 500)
   }
 })

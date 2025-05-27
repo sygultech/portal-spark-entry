@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,9 +55,9 @@ const ProfileSettings = () => {
             <div className="text-center">
               <h3 className="text-lg font-medium">{displayName}</h3>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
-              {profile?.role && (
+              {profile?.roles && (
                 <p className="mt-1 text-xs text-muted-foreground uppercase">
-                  {formatRole(profile.role)}
+                  {formatRole(profile.roles)}
                 </p>
               )}
             </div>

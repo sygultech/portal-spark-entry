@@ -9,6 +9,20 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 }
 
+// Helper function to create consistent responses with CORS headers
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      }
+    }
+  );
+}
+
 serve(async (req) => {
   console.log('=== Starting disable-staff-login function ===')
   
@@ -28,13 +42,7 @@ serve(async (req) => {
 
     if (!staffId) {
       console.log('Missing required fields')
-      return new Response(
-        JSON.stringify({ error: 'Staff ID is required' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Staff ID is required' }, 400)
     }
 
     console.log('Creating Supabase admin client')
@@ -59,26 +67,14 @@ serve(async (req) => {
 
     if (staffError || !staffData) {
       console.log('Staff not found:', staffError)
-      return new Response(
-        JSON.stringify({ error: 'Staff not found' }),
-        { 
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Staff not found' }, 404)
     }
 
     const profileId = staffData.profile_id
 
     if (!profileId) {
       console.log('No profile_id found for staff')
-      return new Response(
-        JSON.stringify({ error: 'Staff has no associated profile' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Staff has no associated profile' }, 400)
     }
 
     // Delete all records in profiles table for this user
@@ -89,13 +85,7 @@ serve(async (req) => {
 
     if (deleteError) {
       console.log('Error deleting profile records:', deleteError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete profile records' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Failed to delete profile records' }, 500)
     }
 
     // Update profile_id to NULL in staff_details
@@ -106,31 +96,14 @@ serve(async (req) => {
 
     if (updateError) {
       console.log('Error updating staff details:', updateError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to update staff details' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+      return createResponse({ error: 'Failed to update staff details' }, 500)
     }
 
     console.log('Successfully disabled staff login')
-    return new Response(
-      JSON.stringify({ success: true }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+    return createResponse({ success: true })
 
   } catch (error) {
     console.error('Unexpected error in disable-staff-login:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+    return createResponse({ error: error.message }, 500)
   }
 }) 

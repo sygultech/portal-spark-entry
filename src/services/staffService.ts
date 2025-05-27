@@ -624,10 +624,10 @@ export const createStaffLogin = async (
   schoolId: string,
   password: string,
   staffId: string,
-  role: string
+  roles: string | string[]
 ): Promise<{ user_id: string; status: string } | null> => {
   try {
-    console.log('Creating staff login:', { email, firstName, lastName, schoolId, staffId, role });
+    console.log('Creating staff login:', { email, firstName, lastName, schoolId, staffId, roles });
     
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-staff-login`,
@@ -644,7 +644,7 @@ export const createStaffLogin = async (
           schoolId,
           password,
           staffId,
-          role,
+          roles: Array.isArray(roles) ? roles : [roles],
         }),
       }
     );

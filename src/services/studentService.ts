@@ -168,7 +168,7 @@ export const fetchStudents = async (schoolId: string): Promise<Student[]> => {
       .from('profiles')
       .select(studentQuery)
       .eq('school_id', schoolId)
-      .eq('role', 'student');
+      .contains('roles', ['student']);
 
     if (error) throw error;
 
@@ -219,7 +219,7 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
     console.log('🔍 Checking profiles table for student:', studentId);
     const { data: profileExists, error: profileError } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, roles')
       .eq('id', studentId)
       .maybeSingle();
 
@@ -239,10 +239,10 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       throw new Error('Student not found in profiles table');
     }
 
-    if (profileExists.role !== 'student') {
+    if (!profileExists.roles?.includes('student')) {
       console.error('❌ User exists but is not a student:', { 
         studentId, 
-        role: profileExists.role 
+        roles: profileExists.roles 
       });
       throw new Error('User exists but is not a student');
     }

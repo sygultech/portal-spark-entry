@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,8 +20,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   useEffect(() => {
     if (!isLoading && user && profile) {
       // If we're at the root path and the user should be redirected to a role-specific page
-      if (location.pathname === "/" && profile.role) {
-        const roleRoute = getRoleBasedRoute(profile.role);
+      if (location.pathname === "/" && profile.roles) {
+        const roleRoute = getRoleBasedRoute(profile.roles);
         // Only redirect if not already on the role's route
         if (roleRoute !== "/" && location.pathname !== roleRoute) {
           const primaryRole = getPrimaryRole(profile);
@@ -46,11 +45,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If specific roles are required and user doesn't have one of them
-  if (requiredRoles.length > 0 && profile && !canAccessRoute(profile.role, requiredRoles)) {
+  if (requiredRoles.length > 0 && profile && !canAccessRoute(profile.roles, requiredRoles)) {
     const primaryRole = getPrimaryRole(profile);
     console.log(`User with role ${primaryRole} attempted to access a route for ${requiredRoles.join(', ')}`);
     // Show NotFound component directly instead of redirecting
-    return <Navigate to="/404" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

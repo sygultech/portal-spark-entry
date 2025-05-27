@@ -1,10 +1,11 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 interface AdminUserRequest {
@@ -15,10 +16,27 @@ interface AdminUserRequest {
   admin_school_id: string;
 }
 
+// Helper function to create consistent responses with CORS headers
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status,
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      }
+    }
+  );
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -45,37 +63,42 @@ serve(async (req) => {
       user_metadata: {
         first_name: admin_first_name,
         last_name: admin_last_name,
-        role: "school_admin",
-        school_id: admin_school_id
+        school_id: admin_school_id,
+        roles: ['school_admin']
       }
     });
 
     if (createError) {
-      throw createError;
+      return createResponse({ error: createError.message }, 500);
+    }
+
+    // Create profile with school_admin role
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        id: userData.user.id,
+        email: admin_email,
+        first_name: admin_first_name,
+        last_name: admin_last_name,
+        school_id: admin_school_id,
+        roles: ['school_admin']
+      });
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError);
+      return createResponse({ error: profileError.message }, 500);
     }
 
     // Return success response with user data
-    return new Response(
-      JSON.stringify({
-        user: userData.user,
-        message: "Admin user created and confirmed successfully"
-      }),
-      {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-        status: 200,
-      }
-    );
+    return createResponse({
+      user: userData.user,
+      message: "Admin user created and confirmed successfully"
+    });
+
   } catch (error) {
     console.error("Error creating admin user:", error);
-    
-    return new Response(
-      JSON.stringify({
-        error: error.message || "Failed to create admin user",
-      }),
-      {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-        status: 500,
-      }
-    );
+    return createResponse({
+      error: error.message || "Failed to create admin user",
+    }, 500);
   }
 });
