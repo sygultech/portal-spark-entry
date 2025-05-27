@@ -10,6 +10,7 @@ import {
   BreadcrumbList, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Import staff module components
 import StaffDirectory from "@/components/staff/StaffDirectory";
@@ -20,6 +21,7 @@ import LeaveManagement from "@/components/staff/LeaveManagement";
 import DocumentManagement from "@/components/staff/DocumentManagement";
 import ResignationExit from "@/components/staff/ResignationExit";
 import LoginAccessManagement from "@/components/staff/LoginAccessManagement";
+import PayrollManagement from "@/components/staff/PayrollManagement";
 
 const StaffManagement = () => {
   const { profile, isLoading } = useAuth();
@@ -62,13 +64,15 @@ const StaffManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 w-full h-auto">
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 w-full h-auto">
           <TabsTrigger value="directory" className="text-xs md:text-sm py-2 px-3">Directory</TabsTrigger>
           <TabsTrigger value="profile" className="text-xs md:text-sm py-2 px-3">Add Staff</TabsTrigger>
           <TabsTrigger value="roles" className="text-xs md:text-sm py-2 px-3">Roles & Depts</TabsTrigger>
           <TabsTrigger value="attendance" className="text-xs md:text-sm py-2 px-3">Attendance</TabsTrigger>
           <TabsTrigger value="leave" className="text-xs md:text-sm py-2 px-3">Leave</TabsTrigger>
+          <TabsTrigger value="payroll" className="text-xs md:text-sm py-2 px-3">Payroll</TabsTrigger>
           <TabsTrigger value="documents" className="text-xs md:text-sm py-2 px-3">Documents</TabsTrigger>
+          <TabsTrigger value="performance" className="text-xs md:text-sm py-2 px-3">Performance</TabsTrigger>
           <TabsTrigger value="resignation" className="text-xs md:text-sm py-2 px-3">Resignation</TabsTrigger>
           <TabsTrigger value="access" className="text-xs md:text-sm py-2 px-3">Access</TabsTrigger>
         </TabsList>
@@ -94,8 +98,31 @@ const StaffManagement = () => {
             <LeaveManagement />
           </TabsContent>
           
+          <TabsContent value="payroll" className="mt-0">
+            <PayrollManagement />
+          </TabsContent>
+          
           <TabsContent value="documents" className="mt-0">
             <DocumentManagement />
+          </TabsContent>
+          
+          <TabsContent value="performance" className="mt-0">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-medium mb-4">Performance & Evaluation</h2>
+              <p className="text-muted-foreground">
+                Configure staff performance evaluation metrics, conduct appraisals, and track professional development.
+              </p>
+              <div className="mt-6 grid gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Coming Soon</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>The Performance & Evaluation module is currently under development.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
           
           <TabsContent value="resignation" className="mt-0">
