@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types/common";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Toggle } from "@/components/ui/toggle";
+import { formatRole } from "@/utils/roleUtils";
 
 const roles: { value: UserRole; label: string }[] = [
   { value: "school_admin", label: "School Admin" },

@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatRole } from "@/utils/roleUtils";
 
 const ProfileSettings = () => {
   const { user, profile } = useAuth();
@@ -57,7 +58,7 @@ const ProfileSettings = () => {
               <p className="text-sm text-muted-foreground">{user?.email}</p>
               {profile?.role && (
                 <p className="mt-1 text-xs text-muted-foreground uppercase">
-                  {profile.role.replace('_', ' ')}
+                  {formatRole(profile.role)}
                 </p>
               )}
             </div>

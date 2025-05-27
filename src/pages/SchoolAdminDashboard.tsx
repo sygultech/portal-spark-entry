@@ -1,33 +1,15 @@
 
-import { useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Navigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { 
-  Users, 
-  School, 
-  GraduationCap, 
-  Settings,
-  MessageSquare,
-  FileText,
-  Bell
-} from "lucide-react";
+import { Users, BookOpen, Calendar, Settings, BarChart3, MessageSquare } from "lucide-react";
+import { Link } from "react-router-dom";
+import { hasRole } from "@/utils/roleUtils";
 
 const SchoolAdminDashboard = () => {
   const { profile, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  // Redirect if not school_admin
-  useEffect(() => {
-    if (!isLoading && profile?.role !== "school_admin") {
-      navigate("/");
-    }
-  }, [profile, isLoading, navigate]);
 
   if (isLoading) {
     return (
@@ -37,269 +19,185 @@ const SchoolAdminDashboard = () => {
     );
   }
 
+  // Check if user is school_admin using the helper function
+  if (!hasRole(profile, "school_admin")) {
+    return <Navigate to="/" />;
+  }
+
+  const quickActions = [
+    {
+      title: "Student Management",
+      description: "Manage student enrollments, transfers, and records",
+      icon: Users,
+      href: "/students",
+      color: "bg-blue-500",
+    },
+    {
+      title: "Academic Management", 
+      description: "Manage courses, subjects, and academic structure",
+      icon: BookOpen,
+      href: "/academic",
+      color: "bg-green-500",
+    },
+    {
+      title: "Staff Management",
+      description: "Manage teaching and non-teaching staff",
+      icon: Users,
+      href: "/staff",
+      color: "bg-purple-500",
+    },
+    {
+      title: "Timetable",
+      description: "Create and manage class schedules",
+      icon: Calendar,
+      href: "/timetable",
+      color: "bg-orange-500",
+    },
+    {
+      title: "Reports & Analytics",
+      description: "View performance reports and analytics",
+      icon: BarChart3,
+      href: "/reports",
+      color: "bg-red-500",
+    },
+    {
+      title: "Communication",
+      description: "Send announcements and messages",
+      icon: MessageSquare,
+      href: "/communication",
+      color: "bg-teal-500",
+    },
+  ];
+
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">School Admin Dashboard</h1>
-          <Breadcrumb className="mt-2">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Home</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/school-admin">Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <h1 className="text-3xl font-bold tracking-tight">School Administration Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's what's happening at your school today.
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-            School Admin
-          </Badge>
-          <Avatar>
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback>
-              {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-            </AvatarFallback>
-          </Avatar>
-        </div>
+        <Button asChild>
+          <Link to="/school-settings">
+            <Settings className="h-4 w-4 mr-2" />
+            School Settings
+          </Link>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">256</div>
-              <GraduationCap className="h-8 w-8 text-muted-foreground" />
-            </div>
+            <div className="text-2xl font-bold">1,234</div>
+            <p className="text-xs text-muted-foreground">+20.1% from last year</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Teachers</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Teaching Staff</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">32</div>
-              <Users className="h-8 w-8 text-muted-foreground" />
-            </div>
+            <div className="text-2xl font-bold">67</div>
+            <p className="text-xs text-muted-foreground">+5 new this year</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Classes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Courses</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">16</div>
-              <School className="h-8 w-8 text-muted-foreground" />
-            </div>
+            <div className="text-2xl font-bold">24</div>
+            <p className="text-xs text-muted-foreground">Across all departments</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Notifications</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">8</div>
-              <Bell className="h-8 w-8 text-muted-foreground" />
-            </div>
+            <div className="text-2xl font-bold">94.2%</div>
+            <p className="text-xs text-muted-foreground">This week</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="mb-6">
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {quickActions.map((action) => (
+            <Card key={action.title} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${action.color}`}>
+                    <action.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{action.title}</CardTitle>
+                    <CardDescription>{action.description}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button asChild className="w-full">
+                  <Link to={action.href}>Access Module</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Manage your school from here</CardDescription>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>Latest updates from your school</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <Card className="border border-dashed">
-            <CardHeader className="p-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <GraduationCap className="h-5 w-5" /> Student Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-              Manage students, enrollments, and attendance
-            </CardContent>
-            <CardFooter className="p-4 pt-0">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/students')}>
-                Manage Students
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Card className="border border-dashed">
-            <CardHeader className="p-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-5 w-5" /> Staff Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-              Manage teachers and other staff members
-            </CardContent>
-            <CardFooter className="p-4 pt-0">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/staff')}>
-                Manage Staff
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Card className="border border-dashed">
-            <CardHeader className="p-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Settings className="h-5 w-5" /> School Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-              Configure school details and preferences
-            </CardContent>
-            <CardFooter className="p-4 pt-0">
-              <Button variant="outline" className="w-full" onClick={() => navigate('/settings')}>
-                Settings
-              </Button>
-            </CardFooter>
-          </Card>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-start space-x-4">
+              <div className="bg-blue-100 p-2 rounded-full">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">New student admission</p>
+                <p className="text-xs text-muted-foreground">John Doe has been admitted to Grade 10-A</p>
+                <p className="text-xs text-muted-foreground">2 hours ago</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-4">
+              <div className="bg-green-100 p-2 rounded-full">
+                <BookOpen className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Course schedule updated</p>
+                <p className="text-xs text-muted-foreground">Mathematics schedule has been updated for Grade 12</p>
+                <p className="text-xs text-muted-foreground">5 hours ago</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-4">
+              <div className="bg-purple-100 p-2 rounded-full">
+                <MessageSquare className="h-4 w-4 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">New announcement</p>
+                <p className="text-xs text-muted-foreground">Parent-teacher meeting scheduled for next week</p>
+                <p className="text-xs text-muted-foreground">1 day ago</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      <Tabs defaultValue="students">
-        <TabsList className="mb-4">
-          <TabsTrigger value="students">Students</TabsTrigger>
-          <TabsTrigger value="teachers">Teachers</TabsTrigger>
-          <TabsTrigger value="classes">Classes</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
-        <TabsContent value="students">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Students</CardTitle>
-              <CardDescription>Newly registered students in your school.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md divide-y">
-                {[1, 2, 3].map((index) => (
-                  <div key={index} className="p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>S{index}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">Student {index}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Grade {index + 5}
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">View Details</Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/students')}>
-                View All Students
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="teachers">
-          <Card>
-            <CardHeader>
-              <CardTitle>Faculty Members</CardTitle>
-              <CardDescription>Teachers in your school.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md divide-y">
-                {[1, 2, 3].map((index) => (
-                  <div key={index} className="p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>T{index}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">Teacher {index}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {index === 1 ? 'Mathematics' : index === 2 ? 'Science' : 'English'}
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">View Profile</Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/teachers')}>
-                View All Teachers
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="classes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Classes & Schedules</CardTitle>
-              <CardDescription>Manage your school's classes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md divide-y">
-                {['Grade 6', 'Grade 7', 'Grade 8'].map((grade, index) => (
-                  <div key={index} className="p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{grade}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {20 + index} students • {3 + index} subjects
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm">View Schedule</Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/classes')}>
-                View All Classes
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle>School Reports</CardTitle>
-              <CardDescription>View and generate reports for your school.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md divide-y">
-                {['Attendance', 'Academic Performance', 'Teacher Evaluation'].map((report, index) => (
-                  <div key={index} className="p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{report}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Last updated: {new Date().toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm">Generate</Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/reports')}>
-                View All Reports
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };
