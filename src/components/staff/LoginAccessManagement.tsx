@@ -127,7 +127,7 @@ const LoginAccessManagement = () => {
         return;
       }
 
-      // Create login for the staff member with all roles
+      // Create login for the staff member with selected roles
       const result = await createStaffLogin(
         staffToActivate.email,
         staffToActivate.first_name,
@@ -135,7 +135,7 @@ const LoginAccessManagement = () => {
         staffToActivate.school_id,
         password,
         staffToActivate.id,
-        selectedRoles // Pass all roles
+        selectedRoles
       );
 
       if (!result) {

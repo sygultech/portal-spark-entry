@@ -1,4 +1,5 @@
-import { Profile, UserRole } from "@/contexts/types";
+
+import { Profile, UserRole } from "@/types/common";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/lib/database.types";
 
@@ -36,8 +37,11 @@ export const getRoleNavigation = (profile: Profile | null) => {
     { name: "Profile", href: "/profile" },
   ];
 
+  // Get the primary role (first role in the array)
+  const primaryRole = profile?.role?.[0];
+
   // Role-specific items
-  switch (profile?.role) {
+  switch (primaryRole) {
     case "super_admin":
       return [
         ...baseNavItems,

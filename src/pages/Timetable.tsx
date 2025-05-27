@@ -40,8 +40,9 @@ const Timetable = () => {
     );
   }
 
-  // Redirect if not school_admin
-  if (profile?.role !== "school_admin") {
+  // Check if user is school_admin (check if role array includes 'school_admin')
+  const isSchoolAdmin = profile?.role?.includes("school_admin");
+  if (!isSchoolAdmin) {
     return <Navigate to="/" />;
   }
 

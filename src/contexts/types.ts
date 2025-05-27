@@ -1,18 +1,8 @@
 
 import { Session, User } from "@supabase/supabase-js";
+import { UserRole, Profile } from "@/types/common";
 
-// Define profile type based on our database structure
-export type UserRole = "super_admin" | "school_admin" | "teacher" | "student" | "parent";
-
-export interface Profile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string;
-  avatar_url: string | null;
-  school_id: string | null;
-  role: UserRole;
-}
+export type { UserRole, Profile };
 
 export interface AuthContextType {
   session: Session | null;
