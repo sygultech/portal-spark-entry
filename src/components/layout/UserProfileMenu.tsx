@@ -47,6 +47,8 @@ export const UserProfileMenu = () => {
     `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 
     user?.email?.split('@')[0] || 'User';
 
+  const primaryRole = profile?.role?.[0];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -64,9 +66,9 @@ export const UserProfileMenu = () => {
           <div className="flex flex-col space-y-1">
             <p className="font-medium leading-none">{displayName}</p>
             <p className="text-xs text-muted-foreground">{user?.email}</p>
-            {profile?.role && (
+            {primaryRole && (
               <Badge variant="outline" className="w-fit mt-1">
-                {formatRoleLabel(profile.role)}
+                {formatRoleLabel(primaryRole)}
               </Badge>
             )}
           </div>

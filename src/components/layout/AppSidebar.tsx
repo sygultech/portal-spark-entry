@@ -32,12 +32,13 @@ export const AppSidebarContent = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Get the appropriate menu items based on user role
-  const menuItems = profile?.role ? menuConfig[profile.role] || [] : [];
+  // Get the appropriate menu items based on user primary role
+  const primaryRole = profile?.role?.[0];
+  const menuItems = primaryRole ? menuConfig[primaryRole] || [] : [];
   
   // Debug logging
   console.log("Profile in AppSidebar:", profile);
-  console.log("Menu items for role:", profile?.role, menuItems);
+  console.log("Menu items for role:", primaryRole, menuItems);
 
   const handleSignOut = async () => {
     try {
@@ -117,7 +118,7 @@ export const AppSidebarContent = () => {
                   {profile?.first_name} {profile?.last_name}
                 </span>
                 <span className="text-xs text-muted-foreground capitalize">
-                  {profile?.role?.replace("_", " ")}
+                  {profile?.role?.[0]?.replace("_", " ")}
                 </span>
               </div>
             )}
