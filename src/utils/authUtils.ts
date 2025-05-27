@@ -54,7 +54,9 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
       email: profile.email,
       avatar_url: profile.avatar_url,
       school_id: profile.school_id,
-      role: profile.role
+      role: profile.role,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at
     };
   } catch (error) {
     console.error('Error in fetchUserProfile:', error);

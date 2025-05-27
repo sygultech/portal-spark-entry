@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types/common";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Toggle } from "@/components/ui/toggle";
+import { formatRole } from "@/utils/roleUtils";
 
 const roles: { value: UserRole; label: string }[] = [
   { value: "school_admin", label: "School Admin" },
@@ -127,7 +129,7 @@ const LoginAccessManagement = () => {
         return;
       }
 
-      // Create login for the staff member with all roles
+      // Create login for the staff member with selected roles
       const result = await createStaffLogin(
         staffToActivate.email,
         staffToActivate.first_name,
@@ -135,7 +137,7 @@ const LoginAccessManagement = () => {
         staffToActivate.school_id,
         password,
         staffToActivate.id,
-        selectedRoles // Pass all roles
+        selectedRoles
       );
 
       if (!result) {

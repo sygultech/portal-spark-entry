@@ -370,6 +370,51 @@ export type Database = {
           },
         ]
       }
+      designations: {
+        Row: {
+          created_at: string
+          department_id: string
+          description: string | null
+          id: string
+          name: string
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          description?: string | null
+          id?: string
+          name: string
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          description?: string | null
+          id?: string
+          name?: string
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "designations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "designations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disciplinary_evidence: {
         Row: {
           disciplinary_record_id: string
@@ -606,6 +651,50 @@ export type Database = {
           },
         ]
       }
+      library_resources: {
+        Row: {
+          author: string | null
+          category: string | null
+          created_at: string | null
+          id: string
+          isbn: string | null
+          school_id: string
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          isbn?: string | null
+          school_id: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          isbn?: string | null
+          school_id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_resources_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_meetings: {
         Row: {
           attendees: string
@@ -762,6 +851,268 @@ export type Database = {
             columns: ["default_grading_system_id"]
             isOneToOne: false
             referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_details: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          date_of_birth: string | null
+          department_id: string
+          designation_id: string
+          email: string
+          employee_id: string
+          employment_status: string
+          first_name: string
+          gender: string | null
+          id: string
+          join_date: string
+          last_name: string
+          phone: string | null
+          postal_code: string | null
+          profile_id: string | null
+          profile_image_url: string | null
+          school_id: string
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          department_id: string
+          designation_id: string
+          email: string
+          employee_id: string
+          employment_status?: string
+          first_name: string
+          gender?: string | null
+          id?: string
+          join_date: string
+          last_name: string
+          phone?: string | null
+          postal_code?: string | null
+          profile_id?: string | null
+          profile_image_url?: string | null
+          school_id: string
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          department_id?: string
+          designation_id?: string
+          email?: string
+          employee_id?: string
+          employment_status?: string
+          first_name?: string
+          gender?: string | null
+          id?: string
+          join_date?: string
+          last_name?: string
+          phone?: string | null
+          postal_code?: string | null
+          profile_id?: string | null
+          profile_image_url?: string | null
+          school_id?: string
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_details_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_details_designation_id_fkey"
+            columns: ["designation_id"]
+            isOneToOne: false
+            referencedRelation: "designations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_details_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_details_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_url: string
+          id: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_url: string
+          id?: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_documents_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_emergency_contacts: {
+        Row: {
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          relationship: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          id?: string
+          relationship: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          relationship?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_emergency_contacts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_experiences: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_year: number | null
+          id: string
+          organization: string
+          position: string
+          staff_id: string
+          start_year: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_year?: number | null
+          id?: string
+          organization: string
+          position: string
+          staff_id: string
+          start_year: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_year?: number | null
+          id?: string
+          organization?: string
+          position?: string
+          staff_id?: string
+          start_year?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_experiences_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_qualifications: {
+        Row: {
+          created_at: string
+          degree: string
+          grade: string | null
+          id: string
+          institution: string
+          staff_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          degree: string
+          grade?: string | null
+          id?: string
+          institution: string
+          staff_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          degree?: string
+          grade?: string | null
+          id?: string
+          institution?: string
+          staff_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_qualifications_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_details"
             referencedColumns: ["id"]
           },
         ]
@@ -1379,6 +1730,27 @@ export type Database = {
             }
         Returns: boolean
       }
+      create_academic_year: {
+        Args: {
+          p_name: string
+          p_start_date: string
+          p_end_date: string
+          p_school_id: string
+          p_is_active?: boolean
+          p_is_archived?: boolean
+        }
+        Returns: {
+          created_at: string
+          end_date: string
+          id: string
+          is_current: boolean | null
+          is_locked: boolean | null
+          name: string
+          school_id: string
+          start_date: string
+          updated_at: string
+        }
+      }
       create_and_confirm_admin_user: {
         Args: {
           admin_email: string
@@ -1386,6 +1758,26 @@ export type Database = {
           admin_first_name: string
           admin_last_name: string
           admin_school_id: string
+        }
+        Returns: string
+      }
+      create_and_confirm_librarian_user: {
+        Args: {
+          librarian_email: string
+          librarian_password: string
+          librarian_first_name: string
+          librarian_last_name: string
+          librarian_school_id: string
+        }
+        Returns: string
+      }
+      create_and_confirm_staff_user: {
+        Args: {
+          staff_email: string
+          staff_password: string
+          staff_first_name: string
+          staff_last_name: string
+          staff_school_id: string
         }
         Returns: string
       }
@@ -1445,9 +1837,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_batch_students_table: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       execute_admin_sql: {
         Args: { sql: string }
-        Returns: Json
+        Returns: undefined
       }
       generate_admission_number: {
         Args: { p_school_id: string }
@@ -1539,6 +1935,10 @@ export type Database = {
         Args: { email_address: string }
         Returns: boolean
       }
+      is_librarian: {
+        Args: { p_user_id: string; p_school_id: string }
+        Returns: boolean
+      }
       is_school_admin: {
         Args: { p_user_id: string; p_school_id: string }
         Returns: boolean
@@ -1556,7 +1956,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: {
-        Args: { p_user_id: string }
+        Args: Record<PropertyKey, never> | { p_user_id: string }
         Returns: boolean
       }
       is_super_admin_bypass_rls: {
@@ -1645,6 +2045,7 @@ export type Database = {
         | "student"
         | "parent"
         | "staff"
+        | "librarian"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1767,6 +2168,7 @@ export const Constants = {
         "student",
         "parent",
         "staff",
+        "librarian",
       ],
     },
   },

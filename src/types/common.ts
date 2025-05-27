@@ -1,3 +1,4 @@
+
 export type UserRole = 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent' | 'staff' | 'librarian';
 
 // Add type for profile with array of roles
@@ -11,4 +12,4 @@ export interface Profile {
   role: UserRole[];  // Now an array of roles
   created_at: string;
   updated_at: string;
-} 
+}

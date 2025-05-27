@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
+import { hasRole } from '@/utils/roleUtils';
 
 interface AuthUserDetailViewProps {
   isOpen: boolean;
@@ -38,8 +39,8 @@ const AuthUserDetailView: React.FC<AuthUserDetailViewProps> = ({
   const [userMetadataFields, setUserMetadataFields] = useState<UserMetadataField[]>([]);
   const { profile } = useAuth();
   
-  // Check if current user is a super admin
-  const isSuperAdmin = profile?.role === 'super_admin';
+  // Check if current user is a super admin using the helper function
+  const isSuperAdmin = hasRole(profile, 'super_admin');
   
   React.useEffect(() => {
     setEditedUserData(userData);

@@ -1,12 +1,15 @@
-import { Profile, UserRole } from "@/contexts/types";
+import { Profile, UserRole } from "@/types/common";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/lib/database.types";
 
 type UserRoleCache = Database['public']['Tables']['user_role_cache']['Row'];
 
 // Default routes for each role
-export const getRoleBasedRoute = (role?: string): string => {
-  switch (role) {
+export const getRoleBasedRoute = (role?: UserRole | UserRole[]): string => {
+  // Handle both array and single role
+  const primaryRole = Array.isArray(role) ? role[0] : role;
+  
+  switch (primaryRole) {
     case "super_admin":
       return "/super-admin-dashboard";
     case "school_admin":
@@ -23,9 +26,12 @@ export const getRoleBasedRoute = (role?: string): string => {
 };
 
 // Check if a user has access to a specific route based on their role
-export const canAccessRoute = (userRole: string | undefined, requiredRoles: string[]): boolean => {
+export const canAccessRoute = (userRole: UserRole | UserRole[] | undefined, requiredRoles: string[]): boolean => {
   if (!userRole) return false;
-  return requiredRoles.includes(userRole);
+  
+  // Handle both array and single role
+  const roles = Array.isArray(userRole) ? userRole : [userRole];
+  return roles.some(role => requiredRoles.includes(role));
 };
 
 // Get role-specific navigation items
@@ -36,8 +42,11 @@ export const getRoleNavigation = (profile: Profile | null) => {
     { name: "Profile", href: "/profile" },
   ];
 
+  // Get the primary role (first role in the array)
+  const primaryRole = profile?.role?.[0];
+
   // Role-specific items
-  switch (profile?.role) {
+  switch (primaryRole) {
     case "super_admin":
       return [
         ...baseNavItems,
@@ -96,6 +105,25 @@ export const getRoleNavigation = (profile: Profile | null) => {
     default:
       return baseNavItems;
   }
+};
+
+// Helper function to check if user has a specific role
+export const hasRole = (profile: Profile | null, role: UserRole): boolean => {
+  if (!profile?.role) return false;
+  return profile.role.includes(role);
+};
+
+// Helper function to get primary role as string
+export const getPrimaryRole = (profile: Profile | null): UserRole | undefined => {
+  return profile?.role?.[0];
+};
+
+// Helper function to format role for display
+export const formatRole = (role: UserRole | UserRole[]): string => {
+  const roleToFormat = Array.isArray(role) ? role[0] : role;
+  return roleToFormat?.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ') || '';
 };
 
 // Function to refresh user roles in cache

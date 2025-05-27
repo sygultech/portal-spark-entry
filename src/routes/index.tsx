@@ -1,3 +1,4 @@
+
 import {
   Routes as RouterRoutes,
   Route,
@@ -20,6 +21,7 @@ import SchoolAdmin from "@/pages/SchoolAdmin";
 import Academic from "@/pages/Academic";
 import Students from "@/pages/Students";
 import StaffManagement from "@/pages/StaffManagement";
+import Timetable from "@/pages/Timetable";
 
 const AppRoutes = () => {
   return (
@@ -116,6 +118,18 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>
               <Academic />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Timetable Route */}
+      <Route 
+        path="/timetable" 
+        element={
+          <ProtectedRoute requiredRoles={["school_admin"]}>
+            <AppLayout>
+              <Timetable />
             </AppLayout>
           </ProtectedRoute>
         } 

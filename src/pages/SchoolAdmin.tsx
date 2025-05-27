@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Settings, Building, MessageSquare, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSchoolSettings } from "@/hooks/useSchoolSettings";
+import { hasRole } from "@/utils/roleUtils";
 
 const SchoolAdmin = () => {
   const { profile, isLoading } = useAuth();
@@ -20,7 +21,7 @@ const SchoolAdmin = () => {
   }
 
   // Redirect if not school_admin
-  if (profile?.role !== "school_admin") {
+  if (!hasRole(profile, "school_admin")) {
     return <Navigate to="/" />;
   }
 

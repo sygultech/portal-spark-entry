@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DepartmentsSection from "./DepartmentsSection";
 import CoursesAndBatchesSection from "./CoursesAndBatchesSection";
+import { hasRole } from "@/utils/roleUtils";
 
 interface CoursesSectionProps {
   academicYearId: string;
@@ -13,7 +14,7 @@ interface CoursesSectionProps {
 export default function CoursesSection({ academicYearId }: CoursesSectionProps) {
   const [activeTab, setActiveTab] = useState("courses");
   const { profile } = useAuth();
-  const isSchoolAdmin = profile?.role === "school_admin";
+  const isSchoolAdmin = hasRole(profile, "school_admin");
 
   return (
     <Card className="w-full">

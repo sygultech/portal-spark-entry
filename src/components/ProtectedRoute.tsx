@@ -1,7 +1,8 @@
+
 import React, { useEffect } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getRoleBasedRoute, canAccessRoute } from "@/utils/roleUtils";
+import { getRoleBasedRoute, canAccessRoute, getPrimaryRole } from "@/utils/roleUtils";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -24,7 +25,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const roleRoute = getRoleBasedRoute(profile.role);
         // Only redirect if not already on the role's route
         if (roleRoute !== "/" && location.pathname !== roleRoute) {
-          console.log(`Redirecting user with role ${profile.role} to ${roleRoute}`);
+          const primaryRole = getPrimaryRole(profile);
+          console.log(`Redirecting user with role ${primaryRole} to ${roleRoute}`);
           navigate(roleRoute, { replace: true });
         }
       }
@@ -44,8 +46,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If specific roles are required and user doesn't have one of them
-  if (requiredRoles.length > 0 && profile && !requiredRoles.includes(profile.role)) {
-    console.log(`User with role ${profile.role} attempted to access a route for ${requiredRoles.join(', ')}`);
+  if (requiredRoles.length > 0 && profile && !canAccessRoute(profile.role, requiredRoles)) {
+    const primaryRole = getPrimaryRole(profile);
+    console.log(`User with role ${primaryRole} attempted to access a route for ${requiredRoles.join(', ')}`);
     // Show NotFound component directly instead of redirecting
     return <Navigate to="/404" state={{ from: location.pathname }} replace />;
   }
