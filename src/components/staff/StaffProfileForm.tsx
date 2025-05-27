@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Form,
   FormControl,
@@ -20,6 +21,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { staffService, CreateStaffData } from '@/services/staffService';
+import { supabase } from '@/integrations/supabase/client';
+import { StaffDocumentsTab } from './StaffDocumentsTab';
 
 // Define schema for staff profile form
 const staffFormSchema = z.object({
@@ -36,7 +40,7 @@ const staffFormSchema = z.object({
   phone: z.string().min(10, {
     message: "Phone number must be at least 10 characters.",
   }),
-  dateOfBirth: z.string(),
+  dateOfBirth: z.string().optional(),
   gender: z.string(),
   address: z.string(),
   city: z.string(),
@@ -45,9 +49,9 @@ const staffFormSchema = z.object({
   
   // Professional Details
   employeeId: z.string(),
-  joinDate: z.string(),
-  department: z.string(),
-  designation: z.string(),
+  joinDate: z.string().optional(),
+  departmentId: z.string(),
+  designationId: z.string(),
   employmentStatus: z.string(),
   
   // Emergency Contact
@@ -60,42 +64,70 @@ type StaffFormValues = z.infer<typeof staffFormSchema>;
 
 interface StaffProfileFormProps {
   staff?: any;
+  onCancel?: () => void;
 }
 
-const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
-  const [qualifications, setQualifications] = useState([
-    { id: 1, degree: "", institution: "", year: "", grade: "" }
-  ]);
-  
-  const [experiences, setExperiences] = useState([
-    { id: 1, position: "", organization: "", startYear: "", endYear: "", description: "" }
-  ]);
+interface Department {
+  id: string;
+  name: string;
+}
 
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+interface Designation {
+  id: string;
+  name: string;
+}
+
+const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff, onCancel }) => {
+  const { profile } = useAuth();
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [designations, setDesignations] = useState<Designation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [qualifications, setQualifications] = useState(
+    staff?.qualifications?.length
+      ? staff.qualifications.map((q: any, idx: number) => ({
+          id: q.id || idx + 1,
+          degree: q.degree,
+          institution: q.institution,
+          year: q.year?.toString() || "",
+          grade: q.grade
+        }))
+      : [{ id: 1, degree: "", institution: "", year: "", grade: "" }]
+  );
+  const [experiences, setExperiences] = useState(
+    staff?.experiences?.length
+      ? staff.experiences.map((e: any, idx: number) => ({
+          id: e.id || idx + 1,
+          position: e.position,
+          organization: e.organization,
+          startYear: e.start_year?.toString() || e.startYear || "",
+          endYear: e.end_year?.toString() || e.endYear || "",
+          description: e.description
+        }))
+      : [{ id: 1, position: "", organization: "", startYear: "", endYear: "", description: "" }]
+  );
+  const [profileImage, setProfileImage] = useState<string | null>(staff?.avatar || staff?.avatar_url || null);
   const { toast } = useToast();
 
   // Define default values based on staff prop or empty values
   const defaultValues: Partial<StaffFormValues> = {
-    firstName: staff?.name?.split(" ")[0] || "",
-    lastName: staff?.name?.split(" ").slice(1).join(" ") || "",
+    firstName: staff?.firstName || staff?.first_name || "",
+    lastName: staff?.lastName || staff?.last_name || "",
     email: staff?.email || "",
     phone: staff?.phone || "",
-    dateOfBirth: "",
-    gender: "male",
-    address: "",
-    city: "",
-    state: "",
-    postalCode: "",
-    
-    employeeId: staff?.employeeId || "",
-    joinDate: staff?.joinDate || new Date().toISOString().split('T')[0],
-    department: staff?.department || "",
-    designation: staff?.designation || "",
-    employmentStatus: staff?.status || "Active",
-    
-    emergencyContactName: "",
-    emergencyContactRelation: "",
-    emergencyContactPhone: "",
+    dateOfBirth: staff?.dateOfBirth || staff?.date_of_birth || "",
+    gender: staff?.gender || "male",
+    address: staff?.address || "",
+    city: staff?.city || "",
+    state: staff?.state || "",
+    postalCode: staff?.postalCode || staff?.postal_code || "",
+    employeeId: staff?.employeeId || staff?.employee_id || "",
+    joinDate: staff?.joinDate || staff?.join_date || new Date().toISOString().split('T')[0],
+    departmentId: staff?.departmentId || staff?.department_id || "",
+    designationId: staff?.designationId || staff?.designation_id || "",
+    employmentStatus: staff?.employmentStatus || staff?.employment_status || "Active",
+    emergencyContactName: staff?.emergencyContactName || staff?.emergency_contact?.contact_name || "",
+    emergencyContactRelation: staff?.emergencyContactRelation || staff?.emergency_contact?.relationship || "",
+    emergencyContactPhone: staff?.emergencyContactPhone || staff?.emergency_contact?.contact_phone || "",
   };
 
   const form = useForm<StaffFormValues>({
@@ -103,17 +135,191 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
     defaultValues,
   });
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch departments
+        const { data: deptData, error: deptError } = await supabase
+          .from('departments')
+          .select('id, name')
+          .order('name');
+
+        if (deptError) throw deptError;
+        setDepartments(deptData || []);
+
+        // Fetch designations
+        const { data: desigData, error: desigError } = await supabase
+          .from('designations')
+          .select('id, name')
+          .order('name');
+
+        if (desigError) throw desigError;
+        setDesignations(desigData || []);
+      } catch (error) {
+        console.error('Error fetching form data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load departments and designations",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    setQualifications(
+      staff?.qualifications?.length
+        ? staff.qualifications.map((q: any, idx: number) => ({
+            id: q.id || idx + 1,
+            degree: q.degree,
+            institution: q.institution,
+            year: q.year?.toString() || "",
+            grade: q.grade
+          }))
+        : [{ id: 1, degree: "", institution: "", year: "", grade: "" }]
+    );
+    setExperiences(
+      staff?.experiences?.length
+        ? staff.experiences.map((e: any, idx: number) => ({
+            id: e.id || idx + 1,
+            position: e.position,
+            organization: e.organization,
+            startYear: e.start_year?.toString() || e.startYear || "",
+            endYear: e.end_year?.toString() || e.endYear || "",
+            description: e.description
+          }))
+        : [{ id: 1, position: "", organization: "", startYear: "", endYear: "", description: "" }]
+    );
+  }, [staff]);
+
   function onSubmit(values: StaffFormValues) {
-    // In a real application, this would send data to the server
-    console.log('Form submitted', values);
-    console.log('Qualifications', qualifications);
-    console.log('Experiences', experiences);
+    console.log('Profile:', profile);
+    console.log('School ID:', profile?.school_id);
     
-    // Display success message
-    toast({
-      title: "Staff profile updated",
-      description: "The staff profile has been successfully saved.",
-    });
+    if (!profile) {
+      toast({
+        title: "Error",
+        description: "User profile not found. Please try logging out and logging back in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profile.school_id) {
+      toast({
+        title: "Error",
+        description: "You are not associated with any school. Please contact your administrator.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profile.role || profile.role !== 'school_admin') {
+      toast({
+        title: "Error",
+        description: "You do not have permission to add staff members.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const staffData: CreateStaffData = {
+      firstName: values.firstName,
+      lastName: values.lastName,
+      email: values.email,
+      phone: values.phone,
+      dateOfBirth: values.dateOfBirth || null,
+      gender: values.gender,
+      address: values.address,
+      city: values.city,
+      state: values.state,
+      postalCode: values.postalCode,
+      employeeId: values.employeeId,
+      joinDate: values.joinDate || new Date().toISOString().split('T')[0],
+      departmentId: values.departmentId,
+      designationId: values.designationId,
+      employmentStatus: values.employmentStatus,
+      schoolId: profile.school_id,
+      emergencyContact: {
+        contactName: values.emergencyContactName,
+        relationship: values.emergencyContactRelation,
+        contactPhone: values.emergencyContactPhone,
+      },
+      qualifications: qualifications.map(q => ({
+        degree: q.degree,
+        institution: q.institution,
+        year: parseInt(q.year) || 0,
+        grade: q.grade,
+      })),
+      experiences: experiences.map(e => ({
+        position: e.position,
+        organization: e.organization,
+        startYear: parseInt(e.startYear) || 0,
+        endYear: e.endYear ? parseInt(e.endYear) : undefined,
+        description: e.description,
+      })),
+      documents: [], // TODO: Implement document upload
+    };
+
+    console.log('Staff Data:', staffData);
+
+    if (staff?.id) {
+      // Update existing staff
+      staffService.updateStaff(staff.id, staffData)
+        .then((response) => {
+          if (response.error) {
+            console.error('Error response:', response.error);
+            toast({
+              title: "Error",
+              description: response.error,
+              variant: "destructive",
+            });
+            return;
+          }
+          toast({
+            title: "Success",
+            description: "Staff member updated successfully",
+          });
+        })
+        .catch((error) => {
+          console.error('Error details:', error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to update staff member",
+            variant: "destructive",
+          });
+        });
+    } else {
+      // Create new staff
+      staffService.createStaff(staffData)
+        .then((response) => {
+          if (response.error) {
+            console.error('Error response:', response.error);
+            toast({
+              title: "Error",
+              description: response.error,
+              variant: "destructive",
+            });
+            return;
+          }
+          toast({
+            title: "Success",
+            description: "Staff member created successfully",
+          });
+        })
+        .catch((error) => {
+          console.error('Error details:', error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to create staff member",
+            variant: "destructive",
+          });
+        });
+    }
   }
 
   const addQualification = () => {
@@ -160,15 +366,16 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid grid-cols-4">
-          <TabsTrigger value="personal">Personal Info</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="professional">Professional</TabsTrigger>
           <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
+          <TabsTrigger value="experiences">Experiences</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <TabsContent value="personal" className="mt-6">
               <Card>
                 <CardHeader>
@@ -430,22 +637,26 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
                     />
                     <FormField
                       control={form.control}
-                      name="department"
+                      name="departmentId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Department</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            disabled={isLoading}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select department" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Mathematics">Mathematics</SelectItem>
-                              <SelectItem value="Science">Science</SelectItem>
-                              <SelectItem value="English">English</SelectItem>
-                              <SelectItem value="Administration">Administration</SelectItem>
-                              <SelectItem value="Physical Education">Physical Education</SelectItem>
+                              {departments.map((dept) => (
+                                <SelectItem key={dept.id} value={dept.id}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -454,22 +665,26 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
                     />
                     <FormField
                       control={form.control}
-                      name="designation"
+                      name="designationId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Designation</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            disabled={isLoading}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select designation" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Teacher">Teacher</SelectItem>
-                              <SelectItem value="Senior Teacher">Senior Teacher</SelectItem>
-                              <SelectItem value="Department Head">Department Head</SelectItem>
-                              <SelectItem value="Office Manager">Office Manager</SelectItem>
-                              <SelectItem value="Coach">Coach</SelectItem>
+                              {designations.map((desig) => (
+                                <SelectItem key={desig.id} value={desig.id}>
+                                  {desig.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -576,7 +791,9 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
                   </Button>
                 </CardContent>
               </Card>
+            </TabsContent>
 
+            <TabsContent value="experiences" className="mt-6 space-y-6">
               {/* Work Experience */}
               <Card>
                 <CardHeader>
@@ -600,7 +817,7 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Position</label>
                           <Input
-                            placeholder="Job Title"
+                            placeholder="Job Position"
                             value={experience.position}
                             onChange={(e) => updateExperience(experience.id, 'position', e.target.value)}
                           />
@@ -609,7 +826,7 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Organization</label>
                           <Input
-                            placeholder="Company/Institution Name"
+                            placeholder="Organization Name"
                             value={experience.organization}
                             onChange={(e) => updateExperience(experience.id, 'organization', e.target.value)}
                           />
@@ -629,20 +846,19 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">End Year</label>
                           <Input
-                            placeholder="End Year (or 'Present')"
+                            placeholder="End Year (if applicable)"
                             value={experience.endYear}
                             onChange={(e) => updateExperience(experience.id, 'endYear', e.target.value)}
                           />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Description</label>
                         <Textarea
-                          placeholder="Brief description of responsibilities"
+                          placeholder="Job Description"
                           value={experience.description}
                           onChange={(e) => updateExperience(experience.id, 'description', e.target.value)}
-                          rows={3}
                         />
                       </div>
                     </div>
@@ -661,84 +877,35 @@ const StaffProfileForm: React.FC<StaffProfileFormProps> = ({ staff }) => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="documents" className="mt-6">
+            <TabsContent value="documents">
               <Card>
                 <CardHeader>
-                  <CardTitle>Documents & Files</CardTitle>
-                  <CardDescription>Upload identification and certification documents</CardDescription>
+                  <CardTitle>Documents</CardTitle>
+                  <CardDescription>
+                    Upload and manage staff documents
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* ID Document Upload */}
-                    <div className="border rounded-md p-4">
-                      <h4 className="font-medium mb-2">ID Proof</h4>
-                      <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center">
-                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm font-medium">
-                          Drag & drop files here or click to browse
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Supported formats: JPG, PNG, PDF
-                        </p>
-                        <Button type="button" variant="outline" size="sm" className="mt-4">
-                          Upload ID Document
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Certificate Upload */}
-                    <div className="border rounded-md p-4">
-                      <h4 className="font-medium mb-2">Certificates</h4>
-                      <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center">
-                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm font-medium">
-                          Drag & drop files here or click to browse
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Supported formats: JPG, PNG, PDF
-                        </p>
-                        <Button type="button" variant="outline" size="sm" className="mt-4">
-                          Upload Certificate
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Uploaded Documents List (Mock) */}
-                  <div className="border rounded-md overflow-hidden">
-                    <div className="bg-muted px-4 py-2 text-sm font-medium">
-                      Uploaded Documents
-                    </div>
-                    <div className="divide-y">
-                      <div className="flex justify-between items-center px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">National ID Card</span>
-                          <Badge variant="outline" className="text-xs">ID Proof</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Uploaded on: 01/01/2023</span>
-                          <Button variant="ghost" size="sm">View</Button>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Master's Certificate</span>
-                          <Badge variant="outline" className="text-xs">Certificate</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Uploaded on: 01/02/2023</span>
-                          <Button variant="ghost" size="sm">View</Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <CardContent>
+                  {staff?.id ? (
+                    <StaffDocumentsTab staffId={staff.id} />
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Save the staff profile first to upload documents.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <div className="sticky bottom-0 bg-background p-4 border-t flex justify-end gap-2 mt-8">
-              <Button type="button" variant="outline">Cancel</Button>
-              <Button type="submit">Save Profile</Button>
+            <div className="flex justify-end gap-4">
+              {onCancel && (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : staff ? "Update Staff" : "Add Staff"}
+              </Button>
             </div>
           </form>
         </Form>

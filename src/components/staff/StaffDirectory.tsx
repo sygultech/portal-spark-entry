@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,72 +26,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Filter, Search, ArrowUp, ArrowDown, Download, Users, Edit } from "lucide-react";
 import StaffProfileView from "./StaffProfileView";
 import StaffProfileForm from "./StaffProfileForm";
-
-// Mock data for staff members
-const mockStaffData = [
-  {
-    id: 1,
-    name: "John Doe",
-    avatar: "",
-    employeeId: "EMP001",
-    department: "Mathematics",
-    designation: "Senior Teacher",
-    email: "john.doe@example.com",
-    phone: "+1234567890",
-    status: "Active",
-    joinDate: "2023-03-15",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    avatar: "",
-    employeeId: "EMP002",
-    department: "Science",
-    designation: "Teacher",
-    email: "jane.smith@example.com",
-    phone: "+1987654321",
-    status: "Active",
-    joinDate: "2022-08-01",
-  },
-  {
-    id: 3,
-    name: "Robert Johnson",
-    avatar: "",
-    employeeId: "EMP003",
-    department: "Administration",
-    designation: "Office Manager",
-    email: "robert.j@example.com",
-    phone: "+1567890234",
-    status: "On Leave",
-    joinDate: "2021-05-20",
-  },
-  {
-    id: 4,
-    name: "Sarah Williams",
-    avatar: "",
-    employeeId: "EMP004",
-    department: "English",
-    designation: "Teacher",
-    email: "sarah.w@example.com",
-    phone: "+1678901234",
-    status: "Active",
-    joinDate: "2023-01-10",
-  },
-  {
-    id: 5,
-    name: "Michael Brown",
-    avatar: "",
-    employeeId: "EMP005",
-    department: "Physical Education",
-    designation: "Coach",
-    email: "michael.b@example.com",
-    phone: "+1890123456",
-    status: "Inactive",
-    joinDate: "2021-11-05",
-  },
-];
+import { staffService } from "@/services/staffService";
 
 const StaffDirectory = () => {
+  const [staffData, setStaffData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -99,20 +38,32 @@ const StaffDirectory = () => {
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<any>(null);
   
+  useEffect(() => {
+    setLoading(true);
+    staffService.getStaffList({}).then((res) => {
+      setStaffData(res.data || []);
+      setLoading(false);
+    });
+  }, []);
+
   // Filter and sort staff data
-  const filteredStaff = mockStaffData.filter((staff) => {
-    const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        staff.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || staff.status === statusFilter;
-    const matchesDepartment = departmentFilter === "all" || staff.department === departmentFilter;
-    
+  const filteredStaff = staffData.filter((staff) => {
+    const name = staff.first_name && staff.last_name ? `${staff.first_name} ${staff.last_name}` : staff.name || '';
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        (staff.employee_id || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || staff.employment_status === statusFilter || staff.status === statusFilter;
+    const matchesDepartment = departmentFilter === "all" || (staff.department?.name || staff.department) === departmentFilter;
     return matchesSearch && matchesStatus && matchesDepartment;
   }).sort((a, b) => {
+    const nameA = a.first_name && a.last_name ? `${a.first_name} ${a.last_name}` : a.name || '';
+    const nameB = b.first_name && b.last_name ? `${b.first_name} ${b.last_name}` : b.name || '';
     if (sortField === "name") {
       return sortDirection === "asc" 
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name);
+        ? nameA.localeCompare(nameB)
+        : nameB.localeCompare(nameA);
     }
     return 0;
   });
@@ -213,18 +164,21 @@ const StaffDirectory = () => {
               <TableBody>
                 {currentData.map((staff) => (
                   <TableRow key={staff.id}>
-                    <TableCell className="font-medium">{staff.employeeId}</TableCell>
+                    <TableCell className="font-medium">{staff.employee_id}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={staff.avatar} alt={staff.name} />
-                          <AvatarFallback>{staff.name.charAt(0)}{staff.name.split(' ')[1]?.charAt(0)}</AvatarFallback>
+                          <AvatarImage src={staff.avatar_url || staff.avatar} alt={`${staff.first_name || ""} ${staff.last_name || ""}`} />
+                          <AvatarFallback>
+                            {(staff.first_name?.charAt(0) || "")}
+                            {(staff.last_name?.charAt(0) || "")}
+                          </AvatarFallback>
                         </Avatar>
-                        <span>{staff.name}</span>
+                        <span>{staff.first_name} {staff.last_name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{staff.department}</TableCell>
-                    <TableCell className="hidden md:table-cell">{staff.designation}</TableCell>
+                    <TableCell>{staff.department?.name || staff.department}</TableCell>
+                    <TableCell className="hidden md:table-cell">{staff.designation?.name || ""}</TableCell>
                     <TableCell className="hidden lg:table-cell">{staff.email}</TableCell>
                     <TableCell>
                       <Badge variant={
@@ -251,9 +205,9 @@ const StaffDirectory = () => {
                       </Sheet>
 
                       {/* Full Profile Dialog */}
-                      <Dialog>
+                      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingStaff(staff); setEditDialogOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -264,7 +218,49 @@ const StaffDirectory = () => {
                               View and edit complete staff profile
                             </DialogDescription>
                           </DialogHeader>
-                          <StaffProfileForm staff={staff} />
+                          {editingStaff && (
+                            <StaffProfileForm
+                              staff={{
+                                id: editingStaff.id,
+                                firstName: editingStaff.first_name,
+                                lastName: editingStaff.last_name,
+                                email: editingStaff.email,
+                                phone: editingStaff.phone,
+                                dateOfBirth: editingStaff.date_of_birth,
+                                gender: editingStaff.gender,
+                                address: editingStaff.address,
+                                city: editingStaff.city,
+                                state: editingStaff.state,
+                                postalCode: editingStaff.postal_code,
+                                employeeId: editingStaff.employee_id,
+                                joinDate: editingStaff.join_date,
+                                departmentId: editingStaff.department_id,
+                                designationId: editingStaff.designation_id,
+                                employmentStatus: editingStaff.employment_status,
+                                emergencyContactName: editingStaff.emergency_contact?.contact_name || "",
+                                emergencyContactRelation: editingStaff.emergency_contact?.relationship || "",
+                                emergencyContactPhone: editingStaff.emergency_contact?.contact_phone || "",
+                                qualifications: editingStaff.qualifications?.map(q => ({
+                                  id: q.id || Math.random(),
+                                  degree: q.degree,
+                                  institution: q.institution,
+                                  year: q.year?.toString() || "",
+                                  grade: q.grade
+                                })) || [],
+                                experiences: editingStaff.experiences?.map(e => ({
+                                  id: e.id || Math.random(),
+                                  position: e.position,
+                                  organization: e.organization,
+                                  startYear: e.start_year?.toString() || "",
+                                  endYear: e.end_year?.toString() || "",
+                                  description: e.description
+                                })) || [],
+                                documents: editingStaff.documents || [],
+                                avatar: editingStaff.avatar_url || editingStaff.avatar || ""
+                              }}
+                              onCancel={() => setEditDialogOpen(false)}
+                            />
+                          )}
                         </DialogContent>
                       </Dialog>
                     </TableCell>

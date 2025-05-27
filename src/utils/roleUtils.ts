@@ -53,6 +53,8 @@ export const getRoleNavigation = (profile: Profile | null) => {
         { name: "Teachers", href: "/teachers" },
         { name: "Students", href: "/students" },
         { name: "Academic", href: "/academic" },
+        { name: "Staff", href: "/staff" },
+        { name: "Library", href: "/library" },
       ];
     case "teacher":
       return [
@@ -67,12 +69,29 @@ export const getRoleNavigation = (profile: Profile | null) => {
         { name: "Dashboard", href: "/student" },
         { name: "Classes", href: "/my-classes" },
         { name: "Assignments", href: "/assignments" },
+        { name: "Library", href: "/library" },
       ];
     case "parent":
       return [
         ...baseNavItems,
         { name: "Dashboard", href: "/parent" },
         { name: "Children", href: "/children" },
+      ];
+    case "staff":
+      return [
+        ...baseNavItems,
+        { name: "Dashboard", href: "/staff" },
+        { name: "Tasks", href: "/staff/tasks" },
+        { name: "Schedule", href: "/staff/schedule" },
+      ];
+    case "librarian":
+      return [
+        ...baseNavItems,
+        { name: "Dashboard", href: "/librarian" },
+        { name: "Books", href: "/library/books" },
+        { name: "Members", href: "/library/members" },
+        { name: "Borrowings", href: "/library/borrowings" },
+        { name: "Reports", href: "/library/reports" },
       ];
     default:
       return baseNavItems;

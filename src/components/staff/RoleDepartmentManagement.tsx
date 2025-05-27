@@ -1,5 +1,10 @@
-
 import React, { useState } from "react";
+import { useDepartments } from "@/hooks/useDepartments";
+import { useDesignations } from "@/hooks/useDesignations";
+import { useAuth } from "@/contexts/AuthContext";
+import { Department } from "@/services/departmentService";
+import { DepartmentFormValues } from "../academic/DepartmentDialog";
+import DepartmentDialog from "../academic/DepartmentDialog";
 import {
   Card,
   CardContent,
@@ -34,7 +39,11 @@ import {
   Users, 
   Edit, 
   Trash2, 
-  Plus 
+  Plus,
+  MoreVertical,
+  MoreHorizontal,
+  Pencil,
+  Loader2
 } from "lucide-react";
 import { 
   AlertDialog, 
@@ -49,15 +58,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock data for departments
-const mockDepartments = [
-  { id: 1, name: "Mathematics", description: "Mathematics department", staffCount: 8, createdAt: "2023-03-15" },
-  { id: 2, name: "Science", description: "Science department", staffCount: 12, createdAt: "2023-03-15" },
-  { id: 3, name: "English", description: "English language department", staffCount: 10, createdAt: "2023-04-20" },
-  { id: 4, name: "Administration", description: "School administration", staffCount: 5, createdAt: "2023-01-10" },
-  { id: 5, name: "Physical Education", description: "Sports and physical education", staffCount: 4, createdAt: "2023-05-05" },
-];
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 // Mock data for roles
 const mockRoles = [
@@ -68,26 +74,19 @@ const mockRoles = [
   { id: 5, name: "Office Staff", description: "Administrative support staff", staffCount: 6, systemRole: "staff" },
 ];
 
-// Mock data for designations
-const mockDesignations = [
-  { id: 1, name: "Junior Teacher", department: "General", staffCount: 15 },
-  { id: 2, name: "Senior Teacher", department: "General", staffCount: 10 },
-  { id: 3, name: "Department Head", department: "Administration", staffCount: 5 },
-  { id: 4, name: "Principal", department: "Administration", staffCount: 1 },
-  { id: 5, name: "Office Manager", department: "Administration", staffCount: 1 },
-  { id: 6, name: "Secretary", department: "Administration", staffCount: 2 },
-];
-
 const RoleDepartmentManagement = () => {
   const [activeTab, setActiveTab] = useState("departments");
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [designationDialogOpen, setDesignationDialogOpen] = useState(false);
-  const [departments, setDepartments] = useState(mockDepartments);
   const [roles, setRoles] = useState(mockRoles);
-  const [designations, setDesignations] = useState(mockDesignations);
   const [editItem, setEditItem] = useState<any>(null);
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const { departments, isLoading: departmentsLoading, createDepartment, updateDepartment, deleteDepartment } = useDepartments();
+  const { designations, isLoading: designationsLoading, createDesignation, updateDesignation, deleteDesignation } = useDesignations();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -131,12 +130,50 @@ const RoleDepartmentManagement = () => {
     setEditItem(null);
   };
 
+  const handleCreateDepartment = () => {
+    setSelectedDepartment(null);
+    setDepartmentDialogOpen(true);
+  };
+
+  const handleEditDepartment = (department: Department) => {
+    setSelectedDepartment(department);
+    setDepartmentDialogOpen(true);
+  };
+
+  const handleDeleteDepartment = (department: Department) => {
+    setSelectedDepartment(department);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleSaveDepartment = async (values: DepartmentFormValues) => {
+    if (!profile?.school_id) return;
+    if (selectedDepartment) {
+      await updateDepartment({
+        id: selectedDepartment.id,
+        ...values
+      });
+    } else {
+      await createDepartment({
+        name: values.name,
+        description: values.description,
+        school_id: profile.school_id
+      });
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedDepartment) {
+      deleteDepartment(selectedDepartment.id);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   const handleEdit = (item: any, type: string) => {
     setEditItem({ ...item, type });
     setFormData({
       name: item.name,
       description: item.description || "",
-      department: item.department || "",
+      department: item.department_id || "",
       systemRole: item.systemRole || "teacher",
     });
 
@@ -149,61 +186,30 @@ const RoleDepartmentManagement = () => {
     }
   };
 
-  const handleDelete = (id: number, type: string) => {
+  const handleDelete = async (id: string, type: string) => {
     if (type === "department") {
-      setDepartments(departments.filter(item => item.id !== id));
-      toast({
-        title: "Department deleted",
-        description: "The department has been successfully removed",
-      });
+      deleteDepartment(id);
     } else if (type === "role") {
-      setRoles(roles.filter(item => item.id !== id));
+      setRoles(roles.filter(item => String(item.id) !== id));
       toast({
         title: "Role deleted",
         description: "The role has been successfully removed",
       });
     } else if (type === "designation") {
-      setDesignations(designations.filter(item => item.id !== id));
-      toast({
-        title: "Designation deleted",
-        description: "The designation has been successfully removed",
-      });
+      try {
+        await deleteDesignation(id);
+        toast({
+          title: "Designation deleted",
+          description: "The designation has been successfully removed",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete designation. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
-  };
-
-  const handleDepartmentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editItem?.type === "department") {
-      setDepartments(departments.map(item => 
-        item.id === editItem.id 
-          ? { ...item, name: formData.name, description: formData.description } 
-          : item
-      ));
-      
-      toast({
-        title: "Department updated",
-        description: "The department has been successfully updated",
-      });
-    } else {
-      const newDepartment = {
-        id: Math.max(...departments.map(d => d.id)) + 1,
-        name: formData.name,
-        description: formData.description,
-        staffCount: 0,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      
-      setDepartments([...departments, newDepartment]);
-      
-      toast({
-        title: "Department created",
-        description: "The department has been successfully created",
-      });
-    }
-    
-    resetForm();
-    setDepartmentDialogOpen(false);
   };
 
   const handleRoleSubmit = (e: React.FormEvent) => {
@@ -241,42 +247,63 @@ const RoleDepartmentManagement = () => {
     setRoleDialogOpen(false);
   };
 
-  const handleDesignationSubmit = (e: React.FormEvent) => {
+  const handleDesignationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editItem?.type === "designation") {
-      setDesignations(designations.map(item => 
-        item.id === editItem.id 
-          ? { ...item, name: formData.name, department: formData.department } 
-          : item
-      ));
-      
+    if (!formData.department) {
       toast({
-        title: "Designation updated",
-        description: "The designation has been successfully updated",
+        title: "Error",
+        description: "Please select a department",
+        variant: "destructive"
       });
-    } else {
-      const newDesignation = {
-        id: Math.max(...designations.map(d => d.id)) + 1,
-        name: formData.name,
-        department: formData.department,
-        staffCount: 0,
-      };
-      
-      setDesignations([...designations, newDesignation]);
-      
-      toast({
-        title: "Designation created",
-        description: "The designation has been successfully created",
-      });
+      return;
     }
     
-    resetForm();
-    setDesignationDialogOpen(false);
+    try {
+      if (editItem?.type === "designation") {
+        await updateDesignation(editItem.id, {
+          name: formData.name,
+          department_id: formData.department,
+          description: formData.description
+        });
+        
+        toast({
+          title: "Designation updated",
+          description: "The designation has been successfully updated",
+        });
+      } else {
+        await createDesignation({
+          name: formData.name,
+          department_id: formData.department,
+          school_id: profile!.school_id,
+          description: formData.description
+        });
+        
+        toast({
+          title: "Designation created",
+          description: "The designation has been successfully created",
+        });
+      }
+      
+      // Only reset form and close dialog after successful API call
+      resetForm();
+      setDesignationDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error saving designation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save designation. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Roles & Departments</h1>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="departments">Departments</TabsTrigger>
@@ -284,92 +311,77 @@ const RoleDepartmentManagement = () => {
           <TabsTrigger value="designations">Designations</TabsTrigger>
         </TabsList>
 
-        {/* Departments Tab */}
         <TabsContent value="departments" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Departments</h2>
-            <Button onClick={() => {
-              resetForm();
-              setDepartmentDialogOpen(true);
-            }}>
+            <Button onClick={handleCreateDepartment}>
               <Plus className="h-4 w-4 mr-2" />
               Add Department
             </Button>
           </div>
-          
+
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Department Name</TableHead>
-                    <TableHead className="hidden md:table-cell">Description</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>Staff Count</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Created At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {departments.map(department => (
-                    <TableRow key={department.id}>
-                      <TableCell className="font-medium">{department.name}</TableCell>
-                      <TableCell className="hidden md:table-cell">{department.description}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{department.staffCount}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{new Date(department.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleEdit(department, "department")}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete the department "{department.name}". 
-                                  This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDelete(department.id, "department")}
-                                  className="bg-destructive text-destructive-foreground"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                  {departmentsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        <div className="flex justify-center items-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin" />
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : departments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        No departments found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    departments.map((department) => (
+                      <TableRow key={department.id}>
+                        <TableCell>{department.name}</TableCell>
+                        <TableCell>{department.description}</TableCell>
+                        <TableCell>{department.staff_count || 0}</TableCell>
+                        <TableCell>{new Date(department.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditDepartment(department)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteDepartment(department)}>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Roles Tab */}
         <TabsContent value="roles" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Staff Roles</h2>
@@ -437,10 +449,7 @@ const RoleDepartmentManagement = () => {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDelete(role.id, "role")}
-                                  className="bg-destructive text-destructive-foreground"
-                                >
+                                <AlertDialogAction onClick={() => handleDelete(String(role.id), "role")} className="bg-destructive text-destructive-foreground">
                                   Delete
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -456,7 +465,6 @@ const RoleDepartmentManagement = () => {
           </Card>
         </TabsContent>
 
-        {/* Designations Tab */}
         <TabsContent value="designations" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Staff Designations</h2>
@@ -481,58 +489,71 @@ const RoleDepartmentManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {designations.map(designation => (
-                    <TableRow key={designation.id}>
-                      <TableCell className="font-medium">{designation.name}</TableCell>
-                      <TableCell>{designation.department}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{designation.staffCount}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleEdit(designation, "designation")}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete the designation "{designation.name}". 
-                                  This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDelete(designation.id, "designation")}
-                                  className="bg-destructive text-destructive-foreground"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                  {designationsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center">
+                        <div className="flex justify-center items-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin" />
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : designations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center">
+                        No designations found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    designations.map(designation => (
+                      <TableRow key={designation.id}>
+                        <TableCell className="font-medium">{designation.name}</TableCell>
+                        <TableCell>{designation.departments?.name || 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span>0</span> {/* TODO: Implement staff count */}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleEdit(designation, "designation")}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete the designation "{designation.name}". 
+                                    This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(designation.id, "designation")} className="bg-destructive text-destructive-foreground">
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -541,53 +562,12 @@ const RoleDepartmentManagement = () => {
       </Tabs>
 
       {/* Department Dialog */}
-      <Dialog open={departmentDialogOpen} onOpenChange={setDepartmentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editItem ? "Edit Department" : "Add Department"}</DialogTitle>
-            <DialogDescription>
-              {editItem ? "Update the department details" : "Create a new department for your institution"}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleDepartmentSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Department Name</Label>
-                <Input 
-                  id="name" 
-                  name="name"
-                  value={formData.name}
-                  onChange={handleFormChange}
-                  placeholder="e.g., Mathematics"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  name="description"
-                  value={formData.description}
-                  onChange={handleFormChange}
-                  placeholder="Brief department description"
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => {
-                resetForm();
-                setDepartmentDialogOpen(false);
-              }}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editItem ? "Update" : "Create"} Department
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <DepartmentDialog
+        isOpen={departmentDialogOpen}
+        onClose={() => setDepartmentDialogOpen(false)}
+        onSave={handleSaveDepartment}
+        department={selectedDepartment}
+      />
 
       {/* Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
@@ -660,11 +640,8 @@ const RoleDepartmentManagement = () => {
                     <TableBody>
                       {Object.entries(permissions).map(([module, actions]) => (
                         <TableRow key={module}>
-                          <TableCell>
-                            {module.replace(/([A-Z])/g, " $1")
-                              .replace(/^./, str => str.toUpperCase())
-                              .replace(/View/g, '')
-                              .replace(/Manage/g, '')}
+                          <TableCell className="font-medium">
+                            {module.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                           </TableCell>
                           <TableCell className="text-center">
                             <Checkbox
@@ -736,20 +713,41 @@ const RoleDepartmentManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <select
-                  id="department"
-                  name="department"
-                  value={formData.department}
+                {departmentsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading departments...
+                  </div>
+                ) : departments.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No departments available. Please create a department first.
+                  </div>
+                ) : (
+                  <select
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleFormChange}
+                    className="w-full h-10 px-3 rounded-md border border-input"
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description" 
+                  name="description"
+                  value={formData.description}
                   onChange={handleFormChange}
-                  className="w-full h-10 px-3 rounded-md border border-input"
-                  required
-                >
-                  <option value="">Select Department</option>
-                  <option value="General">General</option>
-                  {departments.map(dept => (
-                    <option key={dept.id} value={dept.name}>{dept.name}</option>
-                  ))}
-                </select>
+                  placeholder="Brief designation description"
+                  rows={2}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -759,13 +757,29 @@ const RoleDepartmentManagement = () => {
               }}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={departmentsLoading || departments.length === 0}>
                 {editItem ? "Update" : "Create"} Designation
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the department
+              and remove it from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

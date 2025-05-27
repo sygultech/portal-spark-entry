@@ -14,7 +14,7 @@ import {
 import { Search, ChevronDown, Filter, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { createStudentLogin } from "@/services/studentService";
+import { createStudentLogin, deleteStudent } from "@/services/studentService";
 
 interface StudentListProps {
   students: Student[];
@@ -130,6 +130,26 @@ export function StudentList({ students, onSelect, categories, onBatchAction, onR
     } catch (error) {
       console.error('Error creating login:', error);
       toast.error('Failed to create login. Please try again.');
+    }
+  };
+
+  const handleRemoveAccess = async (student: Student) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to remove this student\'s access? This will disable their login account.');
+      if (!confirmed) return;
+
+      const success = await deleteStudent(student.id);
+      if (success) {
+        toast.success('Student access removed successfully');
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        toast.error('Failed to remove student access');
+      }
+    } catch (error) {
+      console.error('Error removing student access:', error);
+      toast.error('Failed to remove student access. Please try again.');
     }
   };
 
@@ -293,7 +313,13 @@ export function StudentList({ students, onSelect, categories, onBatchAction, onR
                 </TableCell>
                 <TableCell>
                   {student.profile_id ? (
-                    "Yes"
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveAccess(student)}
+                    >
+                      Remove Access
+                    </Button>
                   ) : (
                     <Button
                       variant="outline"

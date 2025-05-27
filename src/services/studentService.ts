@@ -694,32 +694,47 @@ export const updateStudent = async (studentId: string, data: Partial<NewStudentF
 // Delete student
 export const deleteStudent = async (studentId: string): Promise<boolean> => {
   try {
-    // First update the profile status to inactive
-    const { error: detailsError } = await supabase
+    // First get the profile_id from student_details
+    const { data: studentData, error: studentError } = await supabase
       .from('student_details')
-      .update({ status: 'inactive' })
+      .select('profile_id')
+      .eq('id', studentId)
+      .single();
+
+    if (studentError) throw studentError;
+    if (!studentData?.profile_id) {
+      console.error('No profile_id found for student');
+      return false;
+    }
+
+    // Delete the profile entry to prevent login
+    const { error: profileDeleteError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', studentData.profile_id);
+
+    if (profileDeleteError) {
+      console.error('Error deleting profile:', profileDeleteError);
+      throw profileDeleteError;
+    }
+
+    // Only after successful profile deletion, update student_details
+    const { error: profileError } = await supabase
+      .from('student_details')
+      .update({ profile_id: null })
       .eq('id', studentId);
 
-    if (detailsError) throw detailsError;
-
-    // Disable auth user login
-    // Note: For safety, we're not actually deleting the user data from auth
-    // We could do that, but it's generally better to keep the data and just disable access
-    const { error: authError } = await supabase.rpc('update_auth_user', {
-      p_user_id: studentId,
-      p_banned: true
-    });
-
-    if (authError) {
-      console.error('Error disabling user account:', authError);
+    if (profileError) {
+      console.error('Error updating student_details:', profileError);
+      throw profileError;
     }
 
     return true;
   } catch (error) {
-    console.error('Error deleting student:', error);
+    console.error('Error removing student access:', error);
     toast({
       title: 'Error',
-      description: 'Failed to delete student. Please try again.',
+      description: 'Failed to remove student access. Please try again.',
       variant: 'destructive',
     });
     return false;
@@ -1181,7 +1196,7 @@ export const fetchStudentsFromDetails = async (schoolId: string): Promise<Studen
   }
 };
 
-// Create student login (calls the new SQL function)
+// Create student login using Supabase Auth API
 export const createStudentLogin = async (
   email: string,
   firstName: string,
@@ -1193,19 +1208,30 @@ export const createStudentLogin = async (
   try {
     console.log('Creating student login:', { email, firstName, lastName, schoolId, studentId });
     
-    // Call the RPC function to create the user and profile
-    const { data, error } = await supabase.rpc('create_student_login', {
-      p_email: email,
-      p_first_name: firstName,
-      p_last_name: lastName,
-      p_school_id: schoolId,
-      p_password: password,
-      p_student_id: studentId
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-student-login`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          schoolId,
+          password,
+          studentId,
+        }),
+      }
+    );
 
-    if (error) {
-      console.error('Error creating student login:', error);
-      throw error;
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Edge Function error:', data);
+      throw new Error(data.error || 'Failed to create student login');
     }
 
     return data;
