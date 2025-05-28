@@ -70,7 +70,7 @@ export const useAuth = () => {
 
     return user.roles?.some(r => 
       r.school_id === targetSchoolId && 
-      r.role === role
+      r.roles.includes(role)
     ) || false;
   };
 

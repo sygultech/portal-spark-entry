@@ -19,7 +19,7 @@ export const RoleNavigation = () => {
           size="sm"
           asChild
         >
-          <Link to={item.href}>{item.name}</Link>
+          <Link to={item.href}>{item.label}</Link>
         </Button>
       ))}
     </nav>

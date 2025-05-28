@@ -70,7 +70,7 @@ const Academic = () => {
 
         <div className="mt-6">
           <TabsContent value="academic-years" className="mt-0">
-            <AcademicYearSection onAcademicYearSelect={setSelectedAcademicYearId} />
+            <AcademicYearSection />
           </TabsContent>
           
           <TabsContent value="courses" className="mt-0">

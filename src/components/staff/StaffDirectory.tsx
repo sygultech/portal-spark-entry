@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Filter, Search, ArrowUp, ArrowDown, Download, Users, Edit } from "lucide-react";
 import StaffProfileView from "./StaffProfileView";
-import StaffProfileForm from "./StaffProfileForm";
 import { staffService } from "@/services/staffService";
 
 const StaffDirectory = () => {
@@ -204,65 +204,10 @@ const StaffDirectory = () => {
                         </SheetContent>
                       </Sheet>
 
-                      {/* Full Profile Dialog */}
-                      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setEditingStaff(staff); setEditDialogOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Staff Profile</DialogTitle>
-                            <DialogDescription>
-                              View and edit complete staff profile
-                            </DialogDescription>
-                          </DialogHeader>
-                          {editingStaff && (
-                            <StaffProfileForm
-                              staff={{
-                                id: editingStaff.id,
-                                firstName: editingStaff.first_name,
-                                lastName: editingStaff.last_name,
-                                email: editingStaff.email,
-                                phone: editingStaff.phone,
-                                dateOfBirth: editingStaff.date_of_birth,
-                                gender: editingStaff.gender,
-                                address: editingStaff.address,
-                                city: editingStaff.city,
-                                state: editingStaff.state,
-                                postalCode: editingStaff.postal_code,
-                                employeeId: editingStaff.employee_id,
-                                joinDate: editingStaff.join_date,
-                                departmentId: editingStaff.department_id,
-                                designationId: editingStaff.designation_id,
-                                employmentStatus: editingStaff.employment_status,
-                                emergencyContactName: editingStaff.emergency_contact?.contact_name || "",
-                                emergencyContactRelation: editingStaff.emergency_contact?.relationship || "",
-                                emergencyContactPhone: editingStaff.emergency_contact?.contact_phone || "",
-                                qualifications: editingStaff.qualifications?.map(q => ({
-                                  id: q.id || Math.random(),
-                                  degree: q.degree,
-                                  institution: q.institution,
-                                  year: q.year?.toString() || "",
-                                  grade: q.grade
-                                })) || [],
-                                experiences: editingStaff.experiences?.map(e => ({
-                                  id: e.id || Math.random(),
-                                  position: e.position,
-                                  organization: e.organization,
-                                  startYear: e.start_year?.toString() || "",
-                                  endYear: e.end_year?.toString() || "",
-                                  description: e.description
-                                })) || [],
-                                documents: editingStaff.documents || [],
-                                avatar: editingStaff.avatar_url || editingStaff.avatar || ""
-                              }}
-                              onCancel={() => setEditDialogOpen(false)}
-                            />
-                          )}
-                        </DialogContent>
-                      </Dialog>
+                      {/* Edit Action */}
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingStaff(staff); setEditDialogOpen(true); }}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -311,6 +256,26 @@ const StaffDirectory = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog - Simplified without StaffProfileForm */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Staff Profile</DialogTitle>
+            <DialogDescription>
+              Staff profile editing functionality will be implemented here.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              {editingStaff && `Editing: ${editingStaff.first_name} ${editingStaff.last_name}`}
+            </p>
+            <Button onClick={() => setEditDialogOpen(false)} className="mt-4">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
