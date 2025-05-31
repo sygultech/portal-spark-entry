@@ -4,11 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Mail, MessageSquare, Smartphone, Clock, Calendar } from "lucide-react";
+import { Bell, Mail, MessageSquare, Smartphone, Clock, Calendar, Users, Send } from "lucide-react";
 
-export const NotificationSetup = () => {
+export const NotificationCenter = () => {
   const [notifications, setNotifications] = useState({
-    timetableChanges: {
+    timetablePublish: {
       email: true,
       app: true,
       sms: false,
@@ -28,23 +28,29 @@ export const NotificationSetup = () => {
       app: true,
       sms: true,
     },
-    roomConflicts: {
+    conflicts: {
       email: true,
       app: true,
       sms: false,
+    },
+    lastMinuteChanges: {
+      email: true,
+      app: true,
+      sms: true,
     },
   });
 
   const [schedule, setSchedule] = useState({
     dailyReminderTime: "07:00",
     weeklyScheduleDay: "sunday",
-    advanceNotification: 24, // hours
+    advanceNotification: 24,
+    emergencyNotification: true,
   });
 
   const [recipients, setRecipients] = useState({
     teachers: true,
     students: true,
-    parents: false,
+    parents: true,
     administration: true,
   });
 
@@ -76,41 +82,58 @@ export const NotificationSetup = () => {
     console.log(`Sending test ${type} notification`);
   };
 
+  const sendBulkNotification = () => {
+    console.log("Sending bulk notification about timetable changes");
+  };
+
   const notificationCategories = [
     {
-      id: "timetableChanges",
-      name: "Timetable Changes",
-      description: "Notify when timetables are updated or modified",
+      id: "timetablePublish",
+      name: "Timetable Publishing",
+      description: "Notify when timetables are published or updated",
       icon: Calendar,
-      priority: "high"
+      priority: "high",
+      frequency: "As needed"
     },
     {
       id: "dailyReminders",
-      name: "Daily Reminders",
-      description: "Daily schedule notifications for upcoming classes",
+      name: "Daily Schedule Reminders",
+      description: "Daily notifications with today's schedule",
       icon: Clock,
-      priority: "medium"
+      priority: "medium",
+      frequency: "Daily at 7:00 AM"
     },
     {
       id: "weeklySchedule",
-      name: "Weekly Schedule",
-      description: "Weekly timetable summary notifications",
+      name: "Weekly Schedule Summary",
+      description: "Weekly overview of upcoming classes",
       icon: Calendar,
-      priority: "low"
+      priority: "low",
+      frequency: "Weekly on Sunday"
     },
     {
       id: "substitutions",
-      name: "Substitutions",
-      description: "Alerts for teacher substitutions and changes",
-      icon: Bell,
-      priority: "high"
+      name: "Teacher Substitutions",
+      description: "Immediate alerts for teacher changes",
+      icon: Users,
+      priority: "high",
+      frequency: "Immediate"
     },
     {
-      id: "roomConflicts",
-      name: "Room Conflicts",
-      description: "Warnings about room allocation conflicts",
+      id: "conflicts",
+      name: "Schedule Conflicts",
+      description: "Warnings about scheduling conflicts",
       icon: Bell,
-      priority: "high"
+      priority: "high",
+      frequency: "As detected"
+    },
+    {
+      id: "lastMinuteChanges",
+      name: "Last-Minute Changes",
+      description: "Emergency schedule modifications",
+      icon: Bell,
+      priority: "high",
+      frequency: "Emergency only"
     },
   ];
 
@@ -128,11 +151,17 @@ export const NotificationSetup = () => {
       {/* Notification Categories */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notification Settings
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notification Settings
+            </div>
+            <Button onClick={sendBulkNotification} size="sm">
+              <Send className="h-4 w-4 mr-2" />
+              Send Bulk Update
+            </Button>
           </CardTitle>
-          <CardDescription>Configure when and how notifications are sent</CardDescription>
+          <CardDescription>Configure when and how timetable notifications are sent to users</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -152,6 +181,9 @@ export const NotificationSetup = () => {
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           {category.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Frequency: {category.frequency}
                         </p>
                       </div>
                     </div>
@@ -211,10 +243,10 @@ export const NotificationSetup = () => {
             <Clock className="h-5 w-5" />
             Notification Schedule
           </CardTitle>
-          <CardDescription>Configure when notifications are sent</CardDescription>
+          <CardDescription>Configure timing and frequency of automated notifications</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Daily Reminder Time</label>
               <input
@@ -235,6 +267,7 @@ export const NotificationSetup = () => {
                 <option value="sunday">Sunday</option>
                 <option value="monday">Monday</option>
                 <option value="friday">Friday</option>
+                <option value="saturday">Saturday</option>
               </select>
             </div>
             
@@ -249,22 +282,37 @@ export const NotificationSetup = () => {
                 max="168"
               />
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Emergency Notifications</label>
+              <div className="flex items-center justify-between p-2 border rounded-md">
+                <span className="text-sm">Enable instant alerts</span>
+                <Switch
+                  checked={schedule.emergencyNotification}
+                  onCheckedChange={(checked) => handleScheduleChange("emergencyNotification", checked)}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Recipients */}
+      {/* Recipients Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Notification Recipients</CardTitle>
-          <CardDescription>Choose who receives notifications</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Notification Recipients
+          </CardTitle>
+          <CardDescription>Choose which user groups receive different types of notifications</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">Teachers</h4>
-                <p className="text-sm text-muted-foreground">Teaching staff</p>
+                <p className="text-sm text-muted-foreground">All teaching staff</p>
+                <Badge variant="outline" className="mt-1">142 users</Badge>
               </div>
               <Switch
                 checked={recipients.teachers}
@@ -275,7 +323,8 @@ export const NotificationSetup = () => {
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">Students</h4>
-                <p className="text-sm text-muted-foreground">Student accounts</p>
+                <p className="text-sm text-muted-foreground">All student accounts</p>
+                <Badge variant="outline" className="mt-1">1,247 users</Badge>
               </div>
               <Switch
                 checked={recipients.students}
@@ -286,7 +335,8 @@ export const NotificationSetup = () => {
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">Parents</h4>
-                <p className="text-sm text-muted-foreground">Parent accounts</p>
+                <p className="text-sm text-muted-foreground">Parent/guardian accounts</p>
+                <Badge variant="outline" className="mt-1">892 users</Badge>
               </div>
               <Switch
                 checked={recipients.parents}
@@ -297,7 +347,8 @@ export const NotificationSetup = () => {
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">Administration</h4>
-                <p className="text-sm text-muted-foreground">Admin staff</p>
+                <p className="text-sm text-muted-foreground">Admin and support staff</p>
+                <Badge variant="outline" className="mt-1">28 users</Badge>
               </div>
               <Switch
                 checked={recipients.administration}
@@ -312,7 +363,7 @@ export const NotificationSetup = () => {
       <Card>
         <CardHeader>
           <CardTitle>Test Notifications</CardTitle>
-          <CardDescription>Send test notifications to verify settings</CardDescription>
+          <CardDescription>Send test notifications to verify your settings are working correctly</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -345,6 +396,49 @@ export const NotificationSetup = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Notification Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Sent Today</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">347</div>
+            <p className="text-xs text-muted-foreground">notifications delivered</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Delivery Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">98.2%</div>
+            <p className="text-xs text-muted-foreground">successful delivery</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Open Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">76.4%</div>
+            <p className="text-xs text-muted-foreground">email/app opens</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Active Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">2,156</div>
+            <p className="text-xs text-muted-foreground">receiving notifications</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Save Settings */}
       <div className="flex justify-end">
