@@ -2,9 +2,13 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+<<<<<<< HEAD
 import { Save, Download, Upload, Trash2, Copy, FileText } from "lucide-react";
 import CreateTimetableTemplate from "./CreateTimetableTemplate";
 import DragDropTimetableTemplate from "./DragDropTimetableTemplate";
+=======
+import { Save, Download, Upload, Trash2, Copy, FileText, Calendar, Users } from "lucide-react";
+>>>>>>> 7fd482f7a5692f1101e6706c9e708577f63999e8
 
 // Mock template data
 const mockTemplates = [
@@ -14,8 +18,11 @@ const mockTemplates = [
     description: "5-day week with 8 periods per day",
     createdDate: "2024-05-15",
     lastUsed: "2024-05-26",
-    classes: ["Class 6A", "Class 6B", "Class 7A"],
-    isActive: true
+    classes: ["Grade 6A", "Grade 6B", "Grade 7A"],
+    isActive: true,
+    createdBy: "School Admin",
+    totalPeriods: 40,
+    subjects: ["Math", "English", "Science", "History", "PE"]
   },
   {
     id: "template-2",
@@ -24,7 +31,10 @@ const mockTemplates = [
     createdDate: "2024-05-10",
     lastUsed: "2024-05-20",
     classes: ["All Classes"],
-    isActive: false
+    isActive: false,
+    createdBy: "Academic Coordinator",
+    totalPeriods: 30,
+    subjects: ["All Subjects"]
   },
   {
     id: "template-3",
@@ -32,33 +42,41 @@ const mockTemplates = [
     description: "Schedule for sports and activity days",
     createdDate: "2024-05-05",
     lastUsed: "2024-05-18",
-    classes: ["Class 6A", "Class 7A", "Class 7B"],
-    isActive: false
+    classes: ["Grade 6A", "Grade 7A", "Grade 7B"],
+    isActive: false,
+    createdBy: "Sports Coordinator",
+    totalPeriods: 25,
+    subjects: ["PE", "Music", "Art", "Drama"]
   },
 ];
 
 export const TemplateManager = () => {
   const [templates, setTemplates] = useState(mockTemplates);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState("");
-  const [newTemplateDescription, setNewTemplateDescription] = useState("");
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    description: "",
+    basedOn: ""
+  });
 
   const handleCreateTemplate = () => {
-    if (newTemplateName.trim()) {
-      const newTemplate = {
+    if (newTemplate.name.trim()) {
+      const template = {
         id: `template-${Date.now()}`,
-        name: newTemplateName,
-        description: newTemplateDescription,
+        name: newTemplate.name,
+        description: newTemplate.description,
         createdDate: new Date().toISOString().split('T')[0],
         lastUsed: "Never",
         classes: ["Current Selection"],
-        isActive: false
+        isActive: false,
+        createdBy: "School Admin",
+        totalPeriods: 40,
+        subjects: ["Current Subjects"]
       };
-      setTemplates(prev => [...prev, newTemplate]);
-      setNewTemplateName("");
-      setNewTemplateDescription("");
+      setTemplates(prev => [...prev, template]);
+      setNewTemplate({ name: "", description: "", basedOn: "" });
       setShowCreateForm(false);
-      console.log("Creating new template:", newTemplate);
+      console.log("Creating new template:", template);
     }
   };
 
@@ -83,14 +101,15 @@ export const TemplateManager = () => {
       name: `${template.name} (Copy)`,
       createdDate: new Date().toISOString().split('T')[0],
       lastUsed: "Never",
-      isActive: false
+      isActive: false,
+      createdBy: "School Admin"
     };
     setTemplates(prev => [...prev, duplicatedTemplate]);
     console.log("Duplicating template:", duplicatedTemplate);
   };
 
-  const handleExportTemplate = (templateId: string) => {
-    console.log("Exporting template:", templateId);
+  const handleExportTemplate = (templateId: string, format: string) => {
+    console.log(`Exporting template ${templateId} as ${format}`);
   };
 
   const handleImportTemplate = () => {
@@ -99,7 +118,7 @@ export const TemplateManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* Template Actions */}
+      {/* Template Actions Header */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -118,10 +137,15 @@ export const TemplateManager = () => {
               </Button>
             </div>
           </CardTitle>
-          <CardDescription>Save, load, and manage timetable templates for reuse</CardDescription>
+          <CardDescription>
+            Save, load, and manage timetable templates for reuse across classes and terms
+          </CardDescription>
         </CardHeader>
+
+        {/* Create Template Form */}
         {showCreateForm && (
           <CardContent className="border-t">
+<<<<<<< HEAD
             <DragDropTimetableTemplate
               onSave={tpl => {
                 setTemplates(prev => [
@@ -139,20 +163,74 @@ export const TemplateManager = () => {
               }}
               onCancel={() => setShowCreateForm(false)}
             />
+=======
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Template Name</label>
+                  <input
+                    type="text"
+                    value={newTemplate.name}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter template name..."
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <input
+                    type="text"
+                    value={newTemplate.description}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Enter description..."
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Base Template (Optional)</label>
+                <select
+                  value={newTemplate.basedOn}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, basedOn: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="">Create from current timetable</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreateTemplate}>Create Template</Button>
+                <Button onClick={() => setShowCreateForm(false)} variant="outline">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+>>>>>>> 7fd482f7a5692f1101e6706c9e708577f63999e8
           </CardContent>
         )}
       </Card>
 
-      {/* Template List */}
+      {/* Template Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {templates.map((template) => (
-          <Card key={template.id} className={`relative ${template.isActive ? "ring-2 ring-primary" : ""}`}>
+          <Card 
+            key={template.id} 
+            className={`relative transition-shadow hover:shadow-md ${
+              template.isActive ? "ring-2 ring-primary" : ""
+            }`}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center justify-between">
                 <span>{template.name}</span>
-                {template.isActive && (
-                  <Badge className="bg-green-100 text-green-800">Active</Badge>
-                )}
+                <div className="flex items-center gap-1">
+                  {template.isActive && (
+                    <Badge className="bg-green-100 text-green-800">Active</Badge>
+                  )}
+                </div>
               </CardTitle>
               <CardDescription className="text-sm">
                 {template.description}
@@ -160,58 +238,101 @@ export const TemplateManager = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
+                {/* Template Stats */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <span>{template.totalPeriods} periods</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    <span>{template.classes.length} classes</span>
+                  </div>
+                </div>
+
+                {/* Meta Information */}
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>Created: {template.createdDate}</p>
                   <p>Last used: {template.lastUsed}</p>
+                  <p>By: {template.createdBy}</p>
                 </div>
                 
+                {/* Applicable Classes */}
                 <div>
                   <p className="text-xs font-medium mb-1">Applicable to:</p>
                   <div className="flex flex-wrap gap-1">
-                    {template.classes.map((className, index) => (
+                    {template.classes.slice(0, 2).map((className, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {className}
                       </Badge>
                     ))}
+                    {template.classes.length > 2 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{template.classes.length - 2} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Subject Types */}
+                <div>
+                  <p className="text-xs font-medium mb-1">Subjects:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {template.subjects.slice(0, 3).map((subject, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {subject}
+                      </Badge>
+                    ))}
+                    {template.subjects.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{template.subjects.length - 3} more
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 
-                <div className="flex flex-wrap gap-1">
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-1">
                   <Button
                     onClick={() => handleLoadTemplate(template.id)}
                     size="sm"
                     variant={template.isActive ? "secondary" : "default"}
-                    className="flex-1"
+                    className="h-8"
                   >
                     {template.isActive ? "Active" : "Load"}
                   </Button>
                   
-                  <Button
-                    onClick={() => handleDuplicateTemplate(template)}
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 p-0"
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                  
-                  <Button
-                    onClick={() => handleExportTemplate(template.id)}
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 p-0"
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
-                  
-                  <Button
-                    onClick={() => handleDeleteTemplate(template.id)}
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={() => handleDuplicateTemplate(template)}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      title="Duplicate"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                    
+                    <Button
+                      onClick={() => handleExportTemplate(template.id, "json")}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      title="Export"
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                    
+                    <Button
+                      onClick={() => handleDeleteTemplate(template.id)}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -223,7 +344,7 @@ export const TemplateManager = () => {
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common template operations</CardDescription>
+          <CardDescription>Common template operations and bulk actions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -234,7 +355,7 @@ export const TemplateManager = () => {
             
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center">
               <Upload className="h-5 w-5 mb-2" />
-              <span className="text-sm">Import from File</span>
+              <span className="text-sm">Import Bulk</span>
             </Button>
             
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center">
@@ -251,7 +372,7 @@ export const TemplateManager = () => {
       </Card>
 
       {/* Template Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Total Templates</CardTitle>
@@ -281,6 +402,16 @@ export const TemplateManager = () => {
           <CardContent>
             <div className="text-sm font-bold text-orange-600">Standard Weekly</div>
             <p className="text-xs text-muted-foreground">most frequently used</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Success Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">94%</div>
+            <p className="text-xs text-muted-foreground">conflict-free usage</p>
           </CardContent>
         </Card>
       </div>
