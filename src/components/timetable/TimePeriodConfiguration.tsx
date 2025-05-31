@@ -17,7 +17,8 @@ import {
   Calendar,
   Settings2,
   Coffee,
-  BookOpen
+  BookOpen,
+  X
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -30,6 +31,11 @@ interface Period {
   label?: string;
 }
 
+interface TimePeriodConfigurationProps {
+  configId: string;
+  onClose?: () => void;
+}
+
 const weekDays = [
   { id: 'monday', label: 'Mon', fullName: 'Monday' },
   { id: 'tuesday', label: 'Tue', fullName: 'Tuesday' },
@@ -40,8 +46,8 @@ const weekDays = [
   { id: 'sunday', label: 'Sun', fullName: 'Sunday' }
 ];
 
-export const TimePeriodConfiguration = () => {
-  const [timetableName, setTimetableName] = useState("Greenfield High School 2024-2025");
+export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigurationProps) => {
+  const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
   const [totalPeriods, setTotalPeriods] = useState(8);
   const [periods, setPeriods] = useState<Period[]>([
     { id: '1', number: 1, startTime: '08:00', endTime: '08:45', type: 'period' },
@@ -63,19 +69,17 @@ export const TimePeriodConfiguration = () => {
     const num = parseInt(value) || 0;
     if (num > 0 && num <= 12) {
       setTotalPeriods(num);
-      // Regenerate periods list based on new total
       generatePeriods(num);
     }
   };
 
   const generatePeriods = (total: number) => {
     const newPeriods: Period[] = [];
-    let currentTime = { hours: 8, minutes: 0 }; // Start at 8:00 AM
+    let currentTime = { hours: 8, minutes: 0 };
     
     for (let i = 1; i <= total; i++) {
       const startTime = `${currentTime.hours.toString().padStart(2, '0')}:${currentTime.minutes.toString().padStart(2, '0')}`;
       
-      // Add 45 minutes for period duration
       currentTime.minutes += 45;
       if (currentTime.minutes >= 60) {
         currentTime.hours += Math.floor(currentTime.minutes / 60);
@@ -92,10 +96,9 @@ export const TimePeriodConfiguration = () => {
         type: 'period'
       });
 
-      // Add breaks after certain periods
       if (i === 3 || i === 5) {
         const breakStart = endTime;
-        currentTime.minutes += 15; // 15 minute break
+        currentTime.minutes += 15;
         if (currentTime.minutes >= 60) {
           currentTime.hours += Math.floor(currentTime.minutes / 60);
           currentTime.minutes = currentTime.minutes % 60;
@@ -129,7 +132,6 @@ export const TimePeriodConfiguration = () => {
     const afterPeriod = periods[periodIndex];
     const breakId = `break-after-${afterPeriodId}`;
     
-    // Calculate break end time (15 minutes after period end)
     const [hours, minutes] = afterPeriod.endTime.split(':').map(Number);
     const breakEndTime = new Date();
     breakEndTime.setHours(hours, minutes + 15);
@@ -168,7 +170,6 @@ export const TimePeriodConfiguration = () => {
   };
 
   const handleSaveConfiguration = () => {
-    // Validation
     if (!timetableName.trim()) {
       toast({
         title: "Error",
@@ -187,8 +188,8 @@ export const TimePeriodConfiguration = () => {
       return;
     }
 
-    // Here you would save to backend
     console.log('Saving configuration:', {
+      configId,
       timetableName,
       totalPeriods,
       periods,
@@ -198,56 +199,43 @@ export const TimePeriodConfiguration = () => {
 
     toast({
       title: "Configuration Saved",
-      description: "Time & period configuration has been saved successfully"
+      description: `${timetableName} has been saved successfully`
     });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
             <Settings2 className="h-5 w-5" />
             Time & Period Configuration
-          </CardTitle>
-          <CardDescription>
-            Set up your school's daily schedule with periods, breaks, and working days
-          </CardDescription>
-        </CardHeader>
-      </Card>
+          </span>
+          {onClose && (
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Set up your school's daily schedule with periods, breaks, and working days
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Timetable Name */}
+        <div className="space-y-2">
+          <Label htmlFor="timetable-name">Timetable Name</Label>
+          <Input
+            id="timetable-name"
+            value={timetableName}
+            onChange={(e) => setTimetableName(e.target.value)}
+            placeholder="e.g., Grade 10 Science Stream"
+            className="max-w-md"
+          />
+        </div>
 
-      {/* Timetable Name */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Timetable Name</CardTitle>
-          <CardDescription>
-            Enter a descriptive name for this timetable configuration
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="timetable-name">Timetable Label</Label>
-            <Input
-              id="timetable-name"
-              value={timetableName}
-              onChange={(e) => setTimetableName(e.target.value)}
-              placeholder="e.g., Greenfield High School 2024-2025"
-              className="max-w-md"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Period Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Period Configuration</CardTitle>
-          <CardDescription>
-            Define the total number of periods and configure their timings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        {/* Period Configuration */}
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="total-periods">Total Periods Per Day</Label>
             <Input
@@ -272,10 +260,6 @@ export const TimePeriodConfiguration = () => {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 mt-4">
-              <p className="text-sm text-muted-foreground">
-                Set up your periods and breaks. The duration of periods will stay consistent.
-              </p>
-              
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {periods.map((period, index) => (
                   <div key={period.id} className={`flex items-center gap-3 p-3 rounded-lg border ${
@@ -346,18 +330,10 @@ export const TimePeriodConfiguration = () => {
               </div>
             </CollapsibleContent>
           </Collapsible>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Days Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Days Configuration</CardTitle>
-          <CardDescription>
-            Select which days of the week are school days
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        {/* Days Configuration */}
+        <div className="space-y-4">
           <div className="space-y-3">
             <Label>School Days</Label>
             <ToggleGroup 
@@ -397,56 +373,39 @@ export const TimePeriodConfiguration = () => {
               )}
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            <div>
-              <span className="text-sm font-medium">Days Off: </span>
-              {weekDays
-                .filter(day => !selectedDays.includes(day.id))
-                .map(day => (
-                  <Badge key={day.id} variant="outline" className="mr-1 text-muted-foreground">
-                    {day.fullName}
-                  </Badge>
-                ))}
+        {/* Mode Selection & Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
+          <div className="flex items-center gap-3">
+            <Label htmlFor="timetable-mode" className="text-sm font-medium">
+              Timetable Mode:
+            </Label>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${isWeeklyMode ? 'font-medium' : 'text-muted-foreground'}`}>
+                Weekly
+              </span>
+              <Switch
+                id="timetable-mode"
+                checked={!isWeeklyMode}
+                onCheckedChange={(checked) => setIsWeeklyMode(!checked)}
+              />
+              <span className={`text-sm ${!isWeeklyMode ? 'font-medium' : 'text-muted-foreground'}`}>
+                Fortnightly
+              </span>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Mode Selection & Actions */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-3">
-              <Label htmlFor="timetable-mode" className="text-sm font-medium">
-                Timetable Mode:
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm ${isWeeklyMode ? 'font-medium' : 'text-muted-foreground'}`}>
-                  Weekly
-                </span>
-                <Switch
-                  id="timetable-mode"
-                  checked={!isWeeklyMode}
-                  onCheckedChange={(checked) => setIsWeeklyMode(!checked)}
-                />
-                <span className={`text-sm ${!isWeeklyMode ? 'font-medium' : 'text-muted-foreground'}`}>
-                  Fortnightly
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline">
-                Save as Template
-              </Button>
-              <Button onClick={handleSaveConfiguration}>
-                Save Configuration
-              </Button>
-            </div>
+          <div className="flex gap-2">
+            <Button variant="outline">
+              Save as Template
+            </Button>
+            <Button onClick={handleSaveConfiguration}>
+              Save Configuration
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

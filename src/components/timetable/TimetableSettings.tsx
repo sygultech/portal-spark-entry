@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Calendar, Settings, Users, Timer } from "lucide-react";
+import { Clock, Calendar, Settings, Users, Timer, Plus, Trash2 } from "lucide-react";
 import { useTimetableSettings, TimetableSettings as TimetableSettingsType, WorkingDays } from "@/hooks/useTimetableSettings";
 import { toast } from "@/components/ui/use-toast";
 import { TimePeriodConfiguration } from "./TimePeriodConfiguration";
@@ -32,11 +32,19 @@ const defaultWorkingDays: WorkingDays = {
   sunday: false
 };
 
+interface TimePeriodConfig {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 export const TimetableSettings = () => {
   const { isLoading, getTimetableSettings, updateTimetableSettings, updateWorkingDays, getWorkingDays } = useTimetableSettings();
   const [settings, setSettings] = useState<TimetableSettingsType>(defaultSettings);
   const [workingDays, setWorkingDays] = useState<WorkingDays>(defaultWorkingDays);
   const [isSaving, setIsSaving] = useState(false);
+  const [periodConfigurations, setPeriodConfigurations] = useState<TimePeriodConfig[]>([]);
+  const [activeConfigId, setActiveConfigId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -69,6 +77,45 @@ export const TimetableSettings = () => {
     toast({ title: "Timetable settings saved" });
   };
 
+  const handleAddPeriodConfiguration = () => {
+    const newConfig: TimePeriodConfig = {
+      id: `config-${Date.now()}`,
+      name: `Configuration ${periodConfigurations.length + 1}`,
+      isActive: false
+    };
+    setPeriodConfigurations(prev => [...prev, newConfig]);
+    setActiveConfigId(newConfig.id);
+    
+    toast({
+      title: "New Configuration Added",
+      description: `${newConfig.name} has been created`
+    });
+  };
+
+  const handleRemoveConfiguration = (configId: string) => {
+    const config = periodConfigurations.find(c => c.id === configId);
+    setPeriodConfigurations(prev => prev.filter(c => c.id !== configId));
+    
+    if (activeConfigId === configId) {
+      setActiveConfigId(null);
+    }
+    
+    if (config) {
+      toast({
+        title: "Configuration Removed",
+        description: `${config.name} has been deleted`
+      });
+    }
+  };
+
+  const handleToggleConfiguration = (configId: string) => {
+    if (activeConfigId === configId) {
+      setActiveConfigId(null);
+    } else {
+      setActiveConfigId(configId);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -94,8 +141,71 @@ export const TimetableSettings = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="time-periods">
-          <TimePeriodConfiguration />
+        <TabsContent value="time-periods" className="space-y-6">
+          {/* Period Configurations Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Timer className="h-5 w-5" />
+                  Period Configurations
+                </span>
+                <Button onClick={handleAddPeriodConfiguration} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Configuration
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                Create and manage multiple timetable configurations for different scenarios.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {periodConfigurations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Timer className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No period configurations created yet.</p>
+                  <p className="text-sm">Click "Add Configuration" to create your first timetable setup.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {periodConfigurations.map(config => (
+                    <div key={config.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Timer className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{config.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={activeConfigId === config.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleToggleConfiguration(config.id)}
+                        >
+                          {activeConfigId === config.id ? "Hide" : "Configure"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveConfiguration(config.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Active Configuration Editor */}
+          {activeConfigId && (
+            <TimePeriodConfiguration 
+              key={activeConfigId}
+              configId={activeConfigId}
+              onClose={() => setActiveConfigId(null)}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="basic-settings">
