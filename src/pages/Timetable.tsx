@@ -123,9 +123,9 @@ const Timetable = () => {
             onChange={(e) => setSelectedTerm(e.target.value)}
             className="px-3 py-2 border rounded-md bg-background"
           >
-            <option value="2024-25-term1">2024-25 Term 1</option>
-            <option value="2024-25-term2">2024-25 Term 2</option>
-            <option value="2024-25-term3">2024-25 Term 3</option>
+            {mockTerms.map(term => (
+              <option key={term.id} value={term.id}>{term.name}</option>
+            ))}
           </select>
 
           <select 
@@ -133,13 +133,13 @@ const Timetable = () => {
             onChange={(e) => setSelectedClass(e.target.value)}
             className="px-3 py-2 border rounded-md bg-background"
           >
-            <option value="grade-6a">Grade 6A</option>
-            <option value="grade-6b">Grade 6B</option>
-            <option value="grade-7a">Grade 7A</option>
-            <option value="grade-7b">Grade 7B</option>
+            {mockClasses.map(cls => (
+              <option key={cls.id} value={cls.id}>{cls.name}</option>
+            ))}
           </select>
         </div>
       </div>
+
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleSaveDraft} variant="outline">
@@ -167,6 +167,7 @@ const Timetable = () => {
           Print View
         </Button>
       </div>
+
       {/* Main Tabs Interface */}
       <Tabs defaultValue="grid-editor" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
@@ -203,27 +204,15 @@ const Timetable = () => {
             <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>
         </TabsList>
-<<<<<<< HEAD
-        <TabsContent value="class-timetable">
-          <ClassTimetableEditor />
-=======
 
         <TabsContent value="grid-editor">
           <TimetableGridEditor selectedClass={selectedClass} selectedTerm={selectedTerm} />
->>>>>>> 7fd482f7a5692f1101e6706c9e708577f63999e8
         </TabsContent>
         <TabsContent value="teacher-view">
           <TeacherScheduleView selectedTerm={selectedTerm} />
         </TabsContent>
         <TabsContent value="rooms">
-<<<<<<< HEAD
-          <RoomAllocationPanel />
-        </TabsContent>
-        <TabsContent value="settings">
-          <TimetableSettings />
-=======
           <RoomAllocation selectedTerm={selectedTerm} />
->>>>>>> 7fd482f7a5692f1101e6706c9e708577f63999e8
         </TabsContent>
         <TabsContent value="substitutions">
           <SubstitutionManager selectedTerm={selectedTerm} />
@@ -231,18 +220,12 @@ const Timetable = () => {
         <TabsContent value="templates">
           <TemplateManager />
         </TabsContent>
-<<<<<<< HEAD
-=======
-
         <TabsContent value="conflicts">
           <ConflictChecker selectedClass={selectedClass} selectedTerm={selectedTerm} />
         </TabsContent>
-
->>>>>>> 7fd482f7a5692f1101e6706c9e708577f63999e8
         <TabsContent value="notifications">
           <NotificationCenter />
         </TabsContent>
-
         <TabsContent value="settings">
           <TimetableSettings />
         </TabsContent>
