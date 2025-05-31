@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +14,7 @@ export function useTeachers() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'teacher')
+        .contains('roles', ['teacher'])
         .eq('school_id', schoolId);
         
       if (error) throw error;

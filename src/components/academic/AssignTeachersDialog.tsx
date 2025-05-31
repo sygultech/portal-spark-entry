@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from "react";
 import { useTeachers } from "@/hooks/useTeachers";
-import { useBatches } from "@/hooks/useBatches";
 import { useSubjectTeachers } from "@/hooks/useSubjectTeachers";
 import {
   Dialog,
@@ -31,48 +29,58 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
+interface Teacher {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  avatar_url: string | null;
+  school_id: string | null;
+  roles: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 interface AssignTeachersDialogProps {
   isOpen: boolean;
   onClose: () => void;
   subject: any;
   academicYearId: string;
+  batchId: string;
 }
 
 const AssignTeachersDialog = ({ 
   isOpen, 
   onClose, 
   subject,
-  academicYearId
+  academicYearId,
+  batchId
 }: AssignTeachersDialogProps) => {
   const { teachers, isLoading: teachersLoading } = useTeachers();
-  const { batches, isLoading: batchesLoading } = useBatches(academicYearId);
   const { 
     subjectTeachers, 
     isLoading: assignmentsLoading,
     assignTeacher,
     removeTeacher
-  } = useSubjectTeachers(subject?.id, undefined, academicYearId);
+  } = useSubjectTeachers(subject?.id, batchId, academicYearId);
   
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
-  const [selectedBatch, setSelectedBatch] = useState<string>("");
   
   useEffect(() => {
     if (isOpen) {
       setSelectedTeacher("");
-      setSelectedBatch("");
     }
   }, [isOpen]);
   
   const handleAssign = () => {
-    if (selectedTeacher && selectedBatch && subject) {
+    if (selectedTeacher && subject) {
       assignTeacher({
         subject_id: subject.id,
         teacher_id: selectedTeacher,
-        batch_id: selectedBatch,
+        batch_id: batchId,
         academic_year_id: academicYearId
       });
       setSelectedTeacher("");
-      setSelectedBatch("");
     }
   };
   
@@ -80,20 +88,21 @@ const AssignTeachersDialog = ({
     removeTeacher(assignmentId);
   };
   
-  const isAssigning = teachersLoading || batchesLoading;
-  const canAssign = selectedTeacher && selectedBatch;
+  const isAssigning = teachersLoading;
+  const canAssign = selectedTeacher;
   
-  // Filter out already assigned combinations
-  const isAlreadyAssigned = (teacherId: string, batchId: string) => {
+  // Filter out already assigned teachers
+  const isAlreadyAssigned = (teacherId: string) => {
     return subjectTeachers.some(
-      st => st.teacher_id === teacherId && st.batch_id === batchId
+      st => st.teacher_id === teacherId
     );
   };
 
-  // Ensure we have teachers and batches to display
-  const availableTeachers = teachers.filter(teacher => teacher.role === 'teacher');
+  // Ensure we have teachers to display
+  const availableTeachers = teachers.filter(teacher => 
+    teacher.roles?.includes('teacher')
+  );
   const hasTeachers = availableTeachers.length > 0;
-  const hasBatches = batches.length > 0;
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -101,7 +110,7 @@ const AssignTeachersDialog = ({
         <DialogHeader>
           <DialogTitle>Assign Teachers for {subject?.name}</DialogTitle>
           <DialogDescription>
-            Assign teachers to this subject for specific batches
+            Assign teachers to this subject
           </DialogDescription>
         </DialogHeader>
         
@@ -119,32 +128,10 @@ const AssignTeachersDialog = ({
                   availableTeachers.map((teacher) => (
                     <SelectItem 
                       key={teacher.id} 
-                      value={teacher.id || "unknown-id"}>
-                      {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.email})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex-1">
-            <label className="text-sm font-medium mb-1 block">Select Batch/Class</label>
-            <Select value={selectedBatch} onValueChange={setSelectedBatch}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a batch" />
-              </SelectTrigger>
-              <SelectContent>
-                {!hasBatches ? (
-                  <SelectItem value="no-batches" disabled>No batches available</SelectItem>
-                ) : (
-                  batches.map((batch) => (
-                    <SelectItem 
-                      key={batch.id} 
-                      value={batch.id || "unknown-id"}
-                      disabled={selectedTeacher ? isAlreadyAssigned(selectedTeacher, batch.id) : false}
+                      value={teacher.id}
+                      disabled={isAlreadyAssigned(teacher.id)}
                     >
-                      {batch.name} {batch.code ? `(${batch.code})` : ''}
+                      {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.email})
                     </SelectItem>
                   ))
                 )}
@@ -174,7 +161,6 @@ const AssignTeachersDialog = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Teacher</TableHead>
-                  <TableHead>Batch/Class</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -184,9 +170,6 @@ const AssignTeachersDialog = ({
                     <TableCell>
                       {assignment.teacher?.first_name || ''} {assignment.teacher?.last_name || ''} <br />
                       <span className="text-xs text-muted-foreground">{assignment.teacher?.email}</span>
-                    </TableCell>
-                    <TableCell>
-                      {assignment.batch?.name} {assignment.batch?.code ? `(${assignment.batch.code})` : ''}
                     </TableCell>
                     <TableCell>
                       <Button 

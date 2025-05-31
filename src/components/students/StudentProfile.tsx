@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, FileText, GraduationCap, Library, Receipt, Shield, UserRound, Users } from "lucide-react";
+import { CalendarDays, FileText, GraduationCap, Library, Receipt, Shield, UserRound, Users, Briefcase, Phone, Mail, MapPin } from "lucide-react";
 
 interface StudentProfileProps {
   student: Student;
@@ -262,46 +262,97 @@ export function StudentProfile({ student, onEdit }: StudentProfileProps) {
             </TabsContent>
 
             <TabsContent value="guardians" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {student.guardians?.map((guardian) => (
-                  <Card key={guardian.id}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle>{guardian.first_name || ''} {guardian.last_name || ''}</CardTitle>
-                        <Badge>{guardian.relation}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <dl className="space-y-2">
-                        <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Occupation</dt>
-                          <dd>{guardian.occupation || ''}</dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Phone</dt>
-                          <dd>{guardian.phone || ''}</dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Email</dt>
-                          <dd>{guardian.email || ''}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Address</dt>
-                          <dd className="mt-1">{guardian.address || ''}</dd>
-                        </div>
-                      </dl>
-                      <div className="mt-4 flex gap-4">
-                        {guardian.is_emergency_contact && (
-                          <Badge variant="secondary">Emergency Contact</Badge>
-                        )}
-                        {guardian.can_pickup && (
-                          <Badge variant="secondary">Can Pickup Student</Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Guardian Information</h3>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage guardian details for the student
+                  </p>
+                </div>
+                <Button onClick={onEdit} size="sm">
+                  <UserRound className="w-4 h-4 mr-2" />
+                  Edit Guardians
+                </Button>
               </div>
+
+              {student.guardians && student.guardians.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {student.guardians.map((guardian) => (
+                    <Card key={guardian.id} className="relative">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg">
+                              {guardian.first_name || ''} {guardian.last_name || ''}
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {guardian.relation}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {guardian.is_primary && (
+                              <Badge variant="default">Primary</Badge>
+                            )}
+                            {guardian.is_emergency_contact && (
+                              <Badge variant="secondary">Emergency Contact</Badge>
+                            )}
+                            {guardian.can_pickup && (
+                              <Badge variant="outline">Can Pickup</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <dl className="space-y-3">
+                          <div className="flex items-start gap-2">
+                            <Briefcase className="w-4 h-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <dt className="text-sm text-muted-foreground">Occupation</dt>
+                              <dd className="text-sm">{guardian.occupation || 'Not specified'}</dd>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <dt className="text-sm text-muted-foreground">Phone</dt>
+                              <dd className="text-sm">{guardian.phone || 'Not specified'}</dd>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Mail className="w-4 h-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <dt className="text-sm text-muted-foreground">Email</dt>
+                              <dd className="text-sm">{guardian.email || 'Not specified'}</dd>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <dt className="text-sm text-muted-foreground">Address</dt>
+                              <dd className="text-sm">{guardian.address || 'Not specified'}</dd>
+                            </div>
+                          </div>
+                        </dl>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-8">
+                    <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground text-center">
+                      No guardians have been added for this student.
+                    </p>
+                    <Button onClick={onEdit} variant="outline" className="mt-4">
+                      Add Guardians
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </div>
         </ScrollArea>

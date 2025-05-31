@@ -1,23 +1,51 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Clock, Calendar, Settings } from "lucide-react";
+import { useTimetableSettings, TimetableSettings as TimetableSettingsType, WorkingDays } from "@/hooks/useTimetableSettings";
+import { toast } from "@/components/ui/use-toast";
 
 export const TimetableSettings = () => {
-  const [settings, setSettings] = useState({
-    workingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-    periodDuration: 45,
-    breakDuration: 15,
-    lunchDuration: 45,
-    startTime: "08:00",
-    endTime: "15:00",
-    halfDayEnd: "12:00",
-    enableHalfDays: true,
-    enableExamDays: true,
-    enableActivityDays: true,
+  const { isLoading, getTimetableSettings, updateTimetableSettings, updateWorkingDays, getWorkingDays } = useTimetableSettings();
+  const [settings, setSettings] = useState<TimetableSettingsType>({
+    id: '',
+    school_id: '',
+    period_duration: 45,
+    break_duration: 15,
+    lunch_duration: 45,
+    school_start_time: '08:00:00',
+    school_end_time: '15:00:00',
+    half_day_end_time: '12:00:00',
+    created_at: '',
+    updated_at: ''
   });
+
+  const [workingDays, setWorkingDays] = useState<WorkingDays>({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: false,
+    sunday: false
+  });
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    const timetableSettings = await getTimetableSettings();
+    if (timetableSettings) {
+      setSettings(timetableSettings);
+    }
+
+    const workingDaysConfig = await getWorkingDays();
+    if (workingDaysConfig) {
+      setWorkingDays(workingDaysConfig);
+    }
+  };
 
   const weekDays = [
     { id: "monday", label: "Monday" },
@@ -29,13 +57,13 @@ export const TimetableSettings = () => {
     { id: "sunday", label: "Sunday" },
   ];
 
-  const handleDayToggle = (dayId: string) => {
-    setSettings(prev => ({
-      ...prev,
-      workingDays: prev.workingDays.includes(dayId)
-        ? prev.workingDays.filter(d => d !== dayId)
-        : [...prev.workingDays, dayId]
-    }));
+  const handleDayToggle = async (dayId: string) => {
+    const newWorkingDays = {
+      ...workingDays,
+      [dayId]: !workingDays[dayId as keyof WorkingDays]
+    };
+    setWorkingDays(newWorkingDays);
+    await updateWorkingDays(newWorkingDays);
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -45,9 +73,19 @@ export const TimetableSettings = () => {
     }));
   };
 
-  const handleSave = () => {
-    console.log("Saving timetable settings:", settings);
+  const handleSave = async () => {
+    const updated = await updateTimetableSettings(settings);
+    if (updated) {
+      toast({
+        title: "Success",
+        description: "Timetable settings saved successfully"
+      });
+    }
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -66,7 +104,7 @@ export const TimetableSettings = () => {
               <div key={day.id} className="flex items-center space-x-2">
                 <Switch
                   id={day.id}
-                  checked={settings.workingDays.includes(day.id)}
+                  checked={workingDays[day.id as keyof WorkingDays]}
                   onCheckedChange={() => handleDayToggle(day.id)}
                 />
                 <label 
@@ -96,8 +134,8 @@ export const TimetableSettings = () => {
               <label className="text-sm font-medium">Period Duration (minutes)</label>
               <input
                 type="number"
-                value={settings.periodDuration}
-                onChange={(e) => handleInputChange("periodDuration", parseInt(e.target.value))}
+                value={settings.period_duration}
+                onChange={(e) => handleInputChange("period_duration", parseInt(e.target.value))}
                 className="w-full p-2 border rounded-md"
                 min="30"
                 max="60"
@@ -108,8 +146,8 @@ export const TimetableSettings = () => {
               <label className="text-sm font-medium">Break Duration (minutes)</label>
               <input
                 type="number"
-                value={settings.breakDuration}
-                onChange={(e) => handleInputChange("breakDuration", parseInt(e.target.value))}
+                value={settings.break_duration}
+                onChange={(e) => handleInputChange("break_duration", parseInt(e.target.value))}
                 className="w-full p-2 border rounded-md"
                 min="10"
                 max="30"
@@ -120,8 +158,8 @@ export const TimetableSettings = () => {
               <label className="text-sm font-medium">Lunch Duration (minutes)</label>
               <input
                 type="number"
-                value={settings.lunchDuration}
-                onChange={(e) => handleInputChange("lunchDuration", parseInt(e.target.value))}
+                value={settings.lunch_duration}
+                onChange={(e) => handleInputChange("lunch_duration", parseInt(e.target.value))}
                 className="w-full p-2 border rounded-md"
                 min="30"
                 max="60"
@@ -132,8 +170,8 @@ export const TimetableSettings = () => {
               <label className="text-sm font-medium">Half Day End Time</label>
               <input
                 type="time"
-                value={settings.halfDayEnd}
-                onChange={(e) => handleInputChange("halfDayEnd", e.target.value)}
+                value={settings.half_day_end_time}
+                onChange={(e) => handleInputChange("half_day_end_time", e.target.value)}
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -144,8 +182,8 @@ export const TimetableSettings = () => {
               <label className="text-sm font-medium">School Start Time</label>
               <input
                 type="time"
-                value={settings.startTime}
-                onChange={(e) => handleInputChange("startTime", e.target.value)}
+                value={settings.school_start_time}
+                onChange={(e) => handleInputChange("school_start_time", e.target.value)}
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -154,101 +192,10 @@ export const TimetableSettings = () => {
               <label className="text-sm font-medium">School End Time</label>
               <input
                 type="time"
-                value={settings.endTime}
-                onChange={(e) => handleInputChange("endTime", e.target.value)}
+                value={settings.school_end_time}
+                onChange={(e) => handleInputChange("school_end_time", e.target.value)}
                 className="w-full p-2 border rounded-md"
               />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Special Days Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Special Days
-          </CardTitle>
-          <CardDescription>Enable special day types for flexible scheduling</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">Half Days</h4>
-                <p className="text-sm text-muted-foreground">
-                  Enable scheduling for half-day sessions
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableHalfDays}
-                onCheckedChange={(checked) => handleInputChange("enableHalfDays", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">Exam Days</h4>
-                <p className="text-sm text-muted-foreground">
-                  Enable special scheduling for examination periods
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableExamDays}
-                onCheckedChange={(checked) => handleInputChange("enableExamDays", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">Activity Days</h4>
-                <p className="text-sm text-muted-foreground">
-                  Enable scheduling for sports and extracurricular activities
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableActivityDays}
-                onCheckedChange={(checked) => handleInputChange("enableActivityDays", checked)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Schedule Preview</CardTitle>
-          <CardDescription>Preview of the timetable structure based on current settings</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Working Days:</span>
-                <span className="font-medium">
-                  {settings.workingDays.length} days ({settings.workingDays.join(", ")})
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>School Hours:</span>
-                <span className="font-medium">
-                  {settings.startTime} - {settings.endTime}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Period Duration:</span>
-                <span className="font-medium">{settings.periodDuration} minutes</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Break Duration:</span>
-                <span className="font-medium">{settings.breakDuration} minutes</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Lunch Duration:</span>
-                <span className="font-medium">{settings.lunchDuration} minutes</span>
-              </div>
             </div>
           </div>
         </CardContent>

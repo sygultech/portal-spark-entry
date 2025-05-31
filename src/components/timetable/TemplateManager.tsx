@@ -1,9 +1,10 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Save, Download, Upload, Trash2, Copy, FileText } from "lucide-react";
+import CreateTimetableTemplate from "./CreateTimetableTemplate";
+import DragDropTimetableTemplate from "./DragDropTimetableTemplate";
 
 // Mock template data
 const mockTemplates = [
@@ -121,36 +122,23 @@ export const TemplateManager = () => {
         </CardHeader>
         {showCreateForm && (
           <CardContent className="border-t">
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Template Name</label>
-                  <input
-                    type="text"
-                    value={newTemplateName}
-                    onChange={(e) => setNewTemplateName(e.target.value)}
-                    placeholder="Enter template name..."
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <input
-                    type="text"
-                    value={newTemplateDescription}
-                    onChange={(e) => setNewTemplateDescription(e.target.value)}
-                    placeholder="Enter description..."
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleCreateTemplate}>Create Template</Button>
-                <Button onClick={() => setShowCreateForm(false)} variant="outline">
-                  Cancel
-                </Button>
-              </div>
-            </div>
+            <DragDropTimetableTemplate
+              onSave={tpl => {
+                setTemplates(prev => [
+                  ...prev,
+                  {
+                    ...tpl,
+                    id: `template-${Date.now()}`,
+                    createdDate: new Date().toISOString().split('T')[0],
+                    lastUsed: "Never",
+                    classes: ["Current Selection"],
+                    isActive: false
+                  }
+                ]);
+                setShowCreateForm(false);
+              }}
+              onCancel={() => setShowCreateForm(false)}
+            />
           </CardContent>
         )}
       </Card>

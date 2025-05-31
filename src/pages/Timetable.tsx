@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -28,6 +27,19 @@ import { TemplateManager } from "@/components/timetable/TemplateManager";
 import { NotificationSetup } from "@/components/timetable/NotificationSetup";
 import { hasRole } from "@/utils/roleUtils";
 
+// Mock class and term data for demonstration; replace with real data as needed
+const mockClasses = [
+  { id: "class-6a", name: "Class 6A", students: 30 },
+  { id: "class-6b", name: "Class 6B", students: 28 },
+  { id: "class-7a", name: "Class 7A", students: 32 },
+  { id: "class-7b", name: "Class 7B", students: 29 },
+];
+const mockTerms = [
+  { id: "2024-25-term1", name: "2024-25 Term 1" },
+  { id: "2024-25-term2", name: "2024-25 Term 2" },
+  { id: "2024-25-term3", name: "2024-25 Term 3" },
+];
+
 const Timetable = () => {
   const { profile, isLoading } = useAuth();
   const [publishStatus, setPublishStatus] = useState<"draft" | "published">("draft");
@@ -41,7 +53,6 @@ const Timetable = () => {
     );
   }
 
-  // Check if user is school_admin using the helper function
   if (!hasRole(profile, "school_admin")) {
     return <Navigate to="/" />;
   }
@@ -68,7 +79,6 @@ const Timetable = () => {
           <h1 className="text-3xl font-bold tracking-tight">Timetable Management</h1>
           <p className="text-muted-foreground">Create and manage class schedules, teacher assignments, and room allocations</p>
         </div>
-        
         <div className="flex items-center gap-4">
           <Badge 
             variant={publishStatus === "published" ? "default" : "secondary"}
@@ -76,7 +86,6 @@ const Timetable = () => {
           >
             {publishStatus === "published" ? "Published" : "Draft"}
           </Badge>
-          
           <select 
             value={selectedTerm} 
             onChange={(e) => setSelectedTerm(e.target.value)}
@@ -88,7 +97,6 @@ const Timetable = () => {
           </select>
         </div>
       </div>
-
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleSaveDraft} variant="outline">
@@ -112,7 +120,6 @@ const Timetable = () => {
           Print View
         </Button>
       </div>
-
       {/* Main Tabs Interface */}
       <Tabs defaultValue="class-timetable" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
@@ -145,31 +152,24 @@ const Timetable = () => {
             <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value="class-timetable">
           <ClassTimetableEditor />
         </TabsContent>
-
         <TabsContent value="teacher-view">
           <TeacherTimetableView />
         </TabsContent>
-
         <TabsContent value="rooms">
           <RoomAllocationPanel />
         </TabsContent>
-
         <TabsContent value="settings">
           <TimetableSettings />
         </TabsContent>
-
         <TabsContent value="substitutions">
           <SubstitutionManager />
         </TabsContent>
-
         <TabsContent value="templates">
           <TemplateManager />
         </TabsContent>
-
         <TabsContent value="notifications">
           <NotificationSetup />
         </TabsContent>

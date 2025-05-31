@@ -11,6 +11,7 @@ import { CategoryManager } from "@/components/students/CategoryManager";
 import { MedicalManager } from "@/components/students/MedicalManager";
 import { QuickActions } from "@/components/students/QuickActions";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
+import { fetchStudentDetails } from "@/services/studentService";
 import { 
   Student, 
   StudentDocument, 
@@ -62,9 +63,16 @@ export default function Students() {
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
 
-  const handleStudentSelect = (student: Student) => {
-    setSelectedStudent(student);
-    setActiveTab("profile");
+  const handleStudentSelect = async (student: Student) => {
+    try {
+      // Fetch detailed student data including guardians
+      const detailedStudent = await fetchStudentDetails(student.id);
+      setSelectedStudent(detailedStudent);
+      setActiveTab("profile");
+    } catch (error) {
+      console.error('Error fetching student details:', error);
+      toast.error("Failed to load student details");
+    }
   };
 
   const handleCreateStudent = async (data: any) => {

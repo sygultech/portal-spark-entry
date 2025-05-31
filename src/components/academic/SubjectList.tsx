@@ -245,8 +245,9 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
     }
   };
 
-  const handleTeachersClick = (subject: Subject) => {
+  const handleTeachersClick = (subject: Subject, batchId: string) => {
     setSelectedSubject(subject);
+    setSelectedBatchId(batchId);
     setIsAssignTeacherDialogOpen(true);
   };
   
@@ -544,7 +545,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
                                                 </Button>
                                               </DropdownMenuTrigger>
                                               <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleTeachersClick(subject)}>
+                                                <DropdownMenuItem onClick={() => handleTeachersClick(subject, batchId)}>
                                                   <Users className="h-4 w-4 mr-2" />
                                                   Assign Teachers
                                                 </DropdownMenuItem>
@@ -602,6 +603,7 @@ const SubjectList = ({ academicYearId, categoryId }: SubjectListProps) => {
           onClose={() => setIsAssignTeacherDialogOpen(false)}
           subject={selectedSubject}
           academicYearId={academicYearId}
+          batchId={selectedBatchId || ''}
         />
       )}
       

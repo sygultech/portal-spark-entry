@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -70,7 +69,7 @@ const Academic = () => {
 
         <div className="mt-6">
           <TabsContent value="academic-years" className="mt-0">
-            <AcademicYearSection />
+            <AcademicYearSection onCurrentYearChange={setSelectedAcademicYearId} />
           </TabsContent>
           
           <TabsContent value="courses" className="mt-0">

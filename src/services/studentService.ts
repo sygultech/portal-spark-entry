@@ -215,43 +215,11 @@ const retryOperation = async <T>(
 // Fetch a single student by ID with all related details
 export const fetchStudentDetails = async (studentId: string): Promise<StudentWithDetails> => {
   try {
-    // First check if the student exists in profiles
-    console.log('🔍 Checking profiles table for student:', studentId);
-    const { data: profileExists, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, roles')
-      .eq('id', studentId)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error('❌ Error checking profiles table:', {
-        error: profileError,
-        studentId,
-        message: profileError.message,
-        details: profileError.details,
-        hint: profileError.hint
-      });
-      throw profileError;
-    }
-
-    if (!profileExists) {
-      console.error('❌ Student not found in profiles table:', { studentId });
-      throw new Error('Student not found in profiles table');
-    }
-
-    if (!profileExists.roles?.includes('student')) {
-      console.error('❌ User exists but is not a student:', { 
-        studentId, 
-        roles: profileExists.roles 
-      });
-      throw new Error('User exists but is not a student');
-    }
-
-    // Check if student details exist
+    // First check if the student exists in student_details
     console.log('🔍 Checking student_details table for student:', studentId);
     const { data: detailsExist, error: detailsError } = await supabase
       .from('student_details')
-      .select('id')
+      .select('id, profile_id')
       .eq('id', studentId)
       .maybeSingle();
 
@@ -271,47 +239,55 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       throw new Error('Student details not found in student_details table');
     }
 
+    // If we have a profile_id, use that to check profiles table
+    const profileId = detailsExist.profile_id || studentId;
+    
+    // Check if the student exists in profiles
+    console.log('🔍 Checking profiles table for student:', profileId);
+    const { data: profileExists, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, roles')
+      .eq('id', profileId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('❌ Error checking profiles table:', {
+        error: profileError,
+        studentId: profileId,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint
+      });
+      throw profileError;
+    }
+
+    // If profile doesn't exist, we'll still proceed with student details
+    if (!profileExists) {
+      console.warn('⚠️ Student not found in profiles table, proceeding with student details only');
+    } else if (!profileExists.roles?.includes('student')) {
+      console.error('❌ User exists but is not a student:', { 
+        studentId: profileId, 
+        roles: profileExists.roles 
+      });
+      throw new Error('User exists but is not a student');
+    }
+
     // Fetch the student profile and basic details
     const { data: studentData, error: studentError } = await supabase
-      .from('profiles')
+      .from('student_details')
       .select(`
-        id,
-        email,
-        first_name,
-        last_name,
-        avatar_url,
-        role,
-        school_id,
-        created_at,
-        updated_at,
-        student_details (
-          admission_number,
-          date_of_birth,
-          gender,
-          address,
-          batch_id,
-          nationality,
-          mother_tongue,
-          blood_group,
-          religion,
-          caste,
-          category,
-          phone,
-          previous_school_name,
-          previous_school_board,
-          previous_school_year,
-          previous_school_percentage,
-          tc_number,
-          admission_date,
-          status
+        *,
+        batches:batch_id (
+          name,
+          course:course_id (name),
+          academic_year:academic_year_id (name)
         )
       `)
       .eq('id', studentId)
-      .eq('role', 'student')
       .maybeSingle();
 
     if (studentError) {
-      console.error('Error fetching student profile:', {
+      console.error('Error fetching student details:', {
         error: studentError,
         studentId,
         message: studentError.message,
@@ -322,37 +298,10 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
     }
 
     if (!studentData) {
-      throw new Error('Student profile not found');
+      throw new Error('Student details not found');
     }
 
     const student = transformStudent(studentData);
-
-    // Fetch batch details separately
-    const { data: batchData, error: batchError } = await supabase
-      .from('student_details')
-      .select(`
-        batch_id,
-        batches (
-          name,
-          course:course_id (
-            name
-          ),
-          academic_year:academic_year_id (
-            name
-          )
-        )
-      `)
-      .eq('id', studentId)
-      .single();
-
-    if (batchError) {
-      console.error('Error fetching batch details:', batchError);
-    } else if (batchData) {
-      const batchInfo = batchData as unknown as BatchResponse;
-      student.batch_name = batchInfo.batches?.name;
-      student.course_name = batchInfo.batches?.course?.name;
-      student.academic_year = batchInfo.batches?.academic_year?.name;
-    }
 
     // Fetch guardians
     const { data: guardiansData, error: guardiansError } = await supabase
@@ -395,121 +344,13 @@ export const fetchStudentDetails = async (studentId: string): Promise<StudentWit
       is_primary: item.is_primary
     }));
 
-    // Fetch categories
-    const { data: categoriesData, error: categoriesError } = await supabase
-      .from('student_category_assignments')
-      .select(`
-        category:category_id (
-          id,
-          name,
-          description,
-          color,
-          school_id
-        )
-      `)
-      .eq('student_id', studentId);
+    // Add guardians to student object
+    student.guardians = guardians;
 
-    if (categoriesError) {
-      console.error('Error fetching categories:', categoriesError);
-      throw categoriesError;
-    }
-
-    const categories: StudentCategory[] = (categoriesData as unknown as CategoryResponse[]).map(item => ({
-      id: item.category.id,
-      name: item.category.name,
-      description: item.category.description,
-      color: item.category.color,
-      school_id: item.category.school_id
-    }));
-
-    // Fetch documents
-    const { data: documentsData, error: documentsError } = await supabase
-      .from('student_documents')
-      .select('*')
-      .eq('student_id', studentId);
-
-    if (documentsError) {
-      console.error('Error fetching documents:', documentsError);
-      throw documentsError;
-    }
-
-    // Cast types to match our type definitions
-    const documents: StudentDocument[] = documentsData.map(doc => ({
-      ...doc,
-      verification_status: doc.verification_status as DocumentVerificationStatus,
-      type: doc.type as string,
-    }));
-
-    // Fetch disciplinary records
-    const { data: disciplinaryData, error: disciplinaryError } = await supabase
-      .from('disciplinary_records')
-      .select('*')
-      .eq('student_id', studentId);
-
-    if (disciplinaryError) {
-      console.error('Error fetching disciplinary records:', disciplinaryError);
-      throw disciplinaryError;
-    }
-
-    // Cast types to match our type definitions
-    const disciplinaryRecords: DisciplinaryRecord[] = disciplinaryData.map(record => ({
-      ...record,
-      severity: record.severity as IncidentSeverity,
-      status: record.status as IncidentStatus,
-    }));
-
-    // Fetch transfer records
-    const { data: transferData, error: transferError } = await supabase
-      .from('transfer_records')
-      .select('*')
-      .eq('student_id', studentId);
-
-    if (transferError) {
-      console.error('Error fetching transfer records:', transferError);
-      throw transferError;
-    }
-
-    // Cast types to match our type definitions
-    const transferRecords: TransferRecord[] = transferData.map(record => ({
-      ...record,
-      type: record.type as TransferType,
-      status: record.status as TransferStatus,
-    }));
-
-    // Fetch certificates
-    const { data: certificatesData, error: certificatesError } = await supabase
-      .from('certificates')
-      .select('*')
-      .eq('student_id', studentId);
-
-    if (certificatesError) {
-      console.error('Error fetching certificates:', certificatesError);
-      throw certificatesError;
-    }
-
-    // Cast types to match our type definitions
-    const certificates: Certificate[] = certificatesData.map(cert => ({
-      ...cert,
-      status: cert.status as CertificateStatus,
-    }));
-
-    return {
-      ...student,
-      guardians,
-      categories,
-      documents,
-      disciplinary_records: disciplinaryRecords,
-      transfer_records: transferRecords,
-      certificates
-    };
+    return student;
   } catch (error) {
     console.error('Error fetching student details:', error);
-    toast({
-      title: 'Error',
-      description: 'Failed to load student details. Please try again later.',
-      variant: 'destructive',
-    });
-    return null;
+    throw error;
   }
 };
 
@@ -538,7 +379,6 @@ export const createStudent = async (data: any) => {
     if (!data.last_name) {
       throw new Error('Last name is required');
     }
-    // Email is now optional, so do not throw if missing
 
     // Transform the data to ensure proper types
     const transformedData = {
@@ -567,17 +407,89 @@ export const createStudent = async (data: any) => {
     // Log the transformed data
     console.log('Transformed data:', transformedData);
 
-    const { data: result, error } = await supabase
+    // Create the student first
+    const { data: studentId, error: studentError } = await supabase
       .rpc('add_student_v2', {
         p_data: transformedData
       });
 
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+    if (studentError) {
+      console.error('Error creating student:', studentError);
+      throw studentError;
     }
 
-    return result;
+    if (!studentId) {
+      throw new Error('Failed to create student: No ID returned');
+    }
+
+    console.log('Student created successfully with ID:', studentId);
+
+    // Create a student result object
+    const studentResult = {
+      id: studentId,
+      ...transformedData
+    };
+
+    // Now create guardians if they exist
+    if (data.guardians && Array.isArray(data.guardians)) {
+      console.log('Creating guardians for student:', studentId, data.guardians);
+      
+      for (const guardian of data.guardians) {
+        try {
+          // Log guardian data before processing
+          console.log('Processing guardian:', guardian);
+
+          // Ensure guardian has required fields
+          if (!guardian.first_name || !guardian.relation || !guardian.phone) {
+            console.warn('Skipping guardian due to missing required fields:', {
+              first_name: guardian.first_name,
+              relation: guardian.relation,
+              phone: guardian.phone
+            });
+            continue;
+          }
+
+          // Add guardian to student
+          console.log('Adding guardian to student:', {
+            studentId: studentId,
+            guardianData: guardian,
+            schoolId: data.school_id
+          });
+
+          const success = await addGuardianToStudent(
+            studentId,
+            {
+              first_name: guardian.first_name,
+              last_name: guardian.last_name || '',
+              relation: guardian.relation,
+              occupation: guardian.occupation || '',
+              email: guardian.email || '',
+              phone: guardian.phone,
+              address: guardian.address || '',
+              is_emergency_contact: guardian.is_emergency_contact || false,
+              can_pickup: guardian.can_pickup || false,
+              is_primary: guardian.is_primary || false
+            },
+            data.school_id
+          );
+
+          if (!success) {
+            console.error('Failed to add guardian:', guardian);
+          } else {
+            console.log('Successfully added guardian:', guardian);
+          }
+        } catch (guardianError) {
+          console.error('Error adding guardian:', guardianError);
+          // Continue with other guardians even if one fails
+        }
+      }
+      
+      console.log('Finished creating guardians for student:', studentId);
+    } else {
+      console.log('No guardians to create for student:', studentId);
+    }
+
+    return studentResult;
   } catch (error: any) {
     console.error('Error creating student:', error);
     throw error;
@@ -748,6 +660,19 @@ export const addGuardianToStudent = async (
   schoolId: string
 ): Promise<boolean> => {
   try {
+    console.log('Creating guardian record:', {
+      first_name: guardianData.first_name,
+      last_name: guardianData.last_name,
+      relation: guardianData.relation,
+      occupation: guardianData.occupation,
+      email: guardianData.email,
+      phone: guardianData.phone,
+      address: guardianData.address,
+      is_emergency_contact: guardianData.is_emergency_contact,
+      can_pickup: guardianData.can_pickup,
+      school_id: schoolId
+    });
+
     // Create guardian
     const { data: guardian, error: guardianError } = await supabase
       .from('guardians')
@@ -766,9 +691,20 @@ export const addGuardianToStudent = async (
       .select('id')
       .single();
 
-    if (guardianError) throw guardianError;
+    if (guardianError) {
+      console.error('Error creating guardian record:', guardianError);
+      throw guardianError;
+    }
+
+    console.log('Created guardian record:', guardian);
 
     // Link guardian to student
+    console.log('Linking guardian to student:', {
+      student_id: studentId,
+      guardian_id: guardian.id,
+      is_primary: guardianData.is_primary || false
+    });
+
     const { error: linkError } = await supabase
       .from('student_guardians')
       .insert({
@@ -777,8 +713,12 @@ export const addGuardianToStudent = async (
         is_primary: guardianData.is_primary || false
       });
 
-    if (linkError) throw linkError;
+    if (linkError) {
+      console.error('Error linking guardian to student:', linkError);
+      throw linkError;
+    }
 
+    console.log('Successfully linked guardian to student');
     return true;
   } catch (error) {
     console.error('Error adding guardian:', error);

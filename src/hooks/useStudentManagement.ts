@@ -137,7 +137,8 @@ export function useStudentManagement(filters?: StudentFilter) {
         previous_school_name: data.previous_school_name || null,
         previous_school_board: data.previous_school_board || null,
         previous_school_year: data.previous_school_year || null,
-        previous_school_percentage: data.previous_school_percentage || null
+        previous_school_percentage: data.previous_school_percentage || null,
+        guardians: data.guardians || [] // Include guardians array
       };
 
       // Log the transformed data
