@@ -4,47 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { 
-  Clock, 
-  Plus, 
-  Trash2, 
-  ChevronDown, 
-  ChevronUp, 
-  Calendar,
-  Settings2,
-  Coffee,
-  BookOpen,
-  X
-} from "lucide-react";
+import { Settings2, X } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-
-interface Period {
-  id: string;
-  number: number;
-  startTime: string;
-  endTime: string;
-  type: 'period' | 'break';
-  label?: string;
-}
-
-interface TimePeriodConfigurationProps {
-  configId: string;
-  onClose?: () => void;
-}
-
-const weekDays = [
-  { id: 'monday', label: 'Mon', fullName: 'Monday' },
-  { id: 'tuesday', label: 'Tue', fullName: 'Tuesday' },
-  { id: 'wednesday', label: 'Wed', fullName: 'Wednesday' },
-  { id: 'thursday', label: 'Thu', fullName: 'Thursday' },
-  { id: 'friday', label: 'Fri', fullName: 'Friday' },
-  { id: 'saturday', label: 'Sat', fullName: 'Saturday' },
-  { id: 'sunday', label: 'Sun', fullName: 'Sunday' }
-];
+import { PeriodConfigurationForm } from "./components/PeriodConfigurationForm";
+import { WeekDaysSelector } from "./components/WeekDaysSelector";
+import { TimetableActions } from "./components/TimetableActions";
+import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
 
 export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigurationProps) => {
   const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
@@ -235,176 +200,30 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
         </div>
 
         {/* Period Configuration */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="total-periods">Total Periods Per Day</Label>
-            <Input
-              id="total-periods"
-              type="number"
-              min="1"
-              max="12"
-              value={totalPeriods}
-              onChange={(e) => handleTotalPeriodsChange(e.target.value)}
-              className="w-24"
-            />
-          </div>
-
-          <Collapsible open={isPeriodsExpanded} onOpenChange={setIsPeriodsExpanded}>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Period & Break Timings
-                </span>
-                {isPeriodsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-4">
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {periods.map((period, index) => (
-                  <div key={period.id} className={`flex items-center gap-3 p-3 rounded-lg border ${
-                    period.type === 'break' ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'
-                  }`}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {period.type === 'period' ? (
-                        <>
-                          <BookOpen className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-sm">Period {period.number}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Coffee className="h-4 w-4 text-orange-600" />
-                          <Input
-                            value={period.label || ''}
-                            onChange={(e) => updateBreakLabel(period.id, e.target.value)}
-                            placeholder="Break name"
-                            className="text-sm h-8 max-w-32"
-                          />
-                        </>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={period.startTime}
-                        onChange={(e) => updatePeriodTime(period.id, 'startTime', e.target.value)}
-                        className="w-24 h-8 text-sm"
-                      />
-                      <span className="text-muted-foreground">to</span>
-                      <Input
-                        type="time"
-                        value={period.endTime}
-                        onChange={(e) => updatePeriodTime(period.id, 'endTime', e.target.value)}
-                        className="w-24 h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="flex gap-1">
-                      {period.type === 'period' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addBreakAfterPeriod(period.id)}
-                          className="h-8 w-8 p-0"
-                          title="Add break after this period"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      )}
-                      
-                      {period.type === 'break' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeBreak(period.id)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          title="Remove break"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+        <PeriodConfigurationForm
+          totalPeriods={totalPeriods}
+          periods={periods}
+          isPeriodsExpanded={isPeriodsExpanded}
+          onTotalPeriodsChange={handleTotalPeriodsChange}
+          onPeriodsExpandedChange={setIsPeriodsExpanded}
+          onUpdatePeriodTime={updatePeriodTime}
+          onAddBreakAfterPeriod={addBreakAfterPeriod}
+          onRemoveBreak={removeBreak}
+          onUpdateBreakLabel={updateBreakLabel}
+        />
 
         {/* Days Configuration */}
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <Label>School Days</Label>
-            <ToggleGroup 
-              type="multiple" 
-              value={selectedDays} 
-              onValueChange={setSelectedDays}
-              className="flex flex-wrap justify-start gap-2"
-            >
-              {weekDays.map((day) => (
-                <ToggleGroupItem
-                  key={day.id}
-                  value={day.id}
-                  aria-label={day.fullName}
-                  className="flex-col h-16 w-16 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                >
-                  <Calendar className="h-4 w-4 mb-1" />
-                  <span className="text-xs">{day.label}</span>
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <div>
-              <span className="text-sm font-medium">School Days: </span>
-              {selectedDays.length > 0 ? (
-                selectedDays.map(dayId => {
-                  const day = weekDays.find(d => d.id === dayId);
-                  return (
-                    <Badge key={dayId} variant="default" className="mr-1">
-                      {day?.fullName}
-                    </Badge>
-                  );
-                })
-              ) : (
-                <Badge variant="secondary">None selected</Badge>
-              )}
-            </div>
-          </div>
-        </div>
+        <WeekDaysSelector
+          selectedDays={selectedDays}
+          onSelectedDaysChange={setSelectedDays}
+        />
 
         {/* Mode Selection & Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
-          <div className="flex items-center gap-3">
-            <Label htmlFor="timetable-mode" className="text-sm font-medium">
-              Timetable Mode:
-            </Label>
-            <div className="flex items-center gap-2">
-              <span className={`text-sm ${isWeeklyMode ? 'font-medium' : 'text-muted-foreground'}`}>
-                Weekly
-              </span>
-              <Switch
-                id="timetable-mode"
-                checked={!isWeeklyMode}
-                onCheckedChange={(checked) => setIsWeeklyMode(!checked)}
-              />
-              <span className={`text-sm ${!isWeeklyMode ? 'font-medium' : 'text-muted-foreground'}`}>
-                Fortnightly
-              </span>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline">
-              Save as Template
-            </Button>
-            <Button onClick={handleSaveConfiguration}>
-              Save Configuration
-            </Button>
-          </div>
-        </div>
+        <TimetableActions
+          isWeeklyMode={isWeeklyMode}
+          onModeChange={setIsWeeklyMode}
+          onSaveConfiguration={handleSaveConfiguration}
+        />
       </CardContent>
     </Card>
   );
