@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Calendar, Settings, Users, Timer, Plus, Trash2, Tag, Info } from "lucide-react";
+import { Settings, Timer, Plus, Trash2, Tag } from "lucide-react";
 import { useTimetableSettings, TimetableSettings as TimetableSettingsType, WorkingDays } from "@/hooks/useTimetableSettings";
 import { toast } from "@/components/ui/use-toast";
 import { TimePeriodConfiguration } from "./TimePeriodConfiguration";
@@ -180,14 +180,10 @@ export const TimetableSettings = () => {
       </Card>
 
       <Tabs defaultValue="time-periods" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="time-periods" className="flex items-center gap-2">
             <Timer className="h-4 w-4" />
             Time & Periods
-          </TabsTrigger>
-          <TabsTrigger value="basic-settings" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Basic Settings
           </TabsTrigger>
         </TabsList>
 
@@ -243,7 +239,6 @@ export const TimetableSettings = () => {
                             onCheckedChange={() => handleToggleActive(config.id)}
                           />
                         </div>
-                        
                         {/* Default Toggle */}
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-muted-foreground">Default</span>
@@ -252,7 +247,6 @@ export const TimetableSettings = () => {
                             onCheckedChange={() => handleToggleDefault(config.id)}
                           />
                         </div>
-
                         {/* Batch Tagging Icon */}
                         <TooltipProvider>
                           <Tooltip>
@@ -275,7 +269,6 @@ export const TimetableSettings = () => {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-
                         <Button
                           variant={activeConfigId === config.id ? "default" : "outline"}
                           size="sm"
@@ -298,7 +291,6 @@ export const TimetableSettings = () => {
               )}
             </CardContent>
           </Card>
-
           {/* Active Configuration Editor */}
           {activeConfigId && (
             <TimePeriodConfiguration 
@@ -309,97 +301,7 @@ export const TimetableSettings = () => {
             />
           )}
         </TabsContent>
-
-        <TabsContent value="basic-settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Timetable Settings</CardTitle>
-              <CardDescription>
-                Configure default durations and school timings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <label className="block font-medium">Period Duration (minutes)</label>
-                  <input
-                    type="number"
-                    name="period_duration"
-                    value={settings.period_duration}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                  <label className="block font-medium">Break Duration (minutes)</label>
-                  <input
-                    type="number"
-                    name="break_duration"
-                    value={settings.break_duration}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                  <label className="block font-medium">Lunch Duration (minutes)</label>
-                  <input
-                    type="number"
-                    name="lunch_duration"
-                    value={settings.lunch_duration}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-                <div className="space-y-4">
-                  <label className="block font-medium">School Start Time</label>
-                  <input
-                    type="time"
-                    name="school_start_time"
-                    value={settings.school_start_time}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                  <label className="block font-medium">School End Time</label>
-                  <input
-                    type="time"
-                    name="school_end_time"
-                    value={settings.school_end_time}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                  <label className="block font-medium">Half Day End Time</label>
-                  <input
-                    type="time"
-                    name="half_day_end_time"
-                    value={settings.half_day_end_time}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-              </div>
-              <div className="mt-6">
-                <h3 className="font-medium mb-2">Working Days</h3>
-                <div className="flex flex-wrap gap-4">
-                  {Object.entries(workingDays).map(([day, enabled]) => (
-                    <div key={day} className="flex items-center gap-2">
-                      <Switch
-                        checked={enabled}
-                        onCheckedChange={() => handleDayToggle(day)}
-                        id={`switch-${day}`}
-                      />
-                      <label htmlFor={`switch-${day}`} className="capitalize">
-                        {day}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-6 flex gap-2">
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save Settings"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
-
       {/* Batch Tagging Dialog */}
       <BatchTaggingDialog
         open={batchTaggingDialogOpen}
