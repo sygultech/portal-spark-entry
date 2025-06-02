@@ -1,10 +1,12 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings2, X } from "lucide-react";
+import { Settings2, X, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PeriodConfigurationForm } from "./components/PeriodConfigurationForm";
 import { WeekDaysSelector } from "./components/WeekDaysSelector";
 import { TimetableActions } from "./components/TimetableActions";
@@ -144,6 +146,40 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
     }));
   };
 
+  // Enhanced validation function that checks all configurations
+  const getComprehensiveValidationStatus = () => {
+    const issues: string[] = [];
+    
+    // Validate default periods
+    const defaultErrors = validatePeriodTimings(periods);
+    if (defaultErrors.length > 0) {
+      issues.push(`Default schedule has ${defaultErrors.length} timing conflicts`);
+    }
+    
+    // Validate day-specific periods
+    let daySpecificErrorCount = 0;
+    const daySpecificIssues: string[] = [];
+    
+    Object.entries(daySpecificPeriods).forEach(([dayId, dayPeriods]) => {
+      const dayErrors = validatePeriodTimings(dayPeriods);
+      if (dayErrors.length > 0) {
+        daySpecificErrorCount += dayErrors.length;
+        daySpecificIssues.push(`${dayId}: ${dayErrors.length} conflicts`);
+      }
+    });
+    
+    if (daySpecificErrorCount > 0) {
+      issues.push(`Day-specific schedules have ${daySpecificErrorCount} timing conflicts`);
+    }
+    
+    return {
+      hasErrors: issues.length > 0,
+      totalErrors: defaultErrors.length + daySpecificErrorCount,
+      issues,
+      daySpecificIssues
+    };
+  };
+
   const handleSaveConfiguration = () => {
     if (!timetableName.trim()) {
       toast({
@@ -172,28 +208,15 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       return;
     }
 
-    // Validate timings for default periods
-    const validationErrors = validatePeriodTimings(periods);
-    if (validationErrors.length > 0) {
+    // Comprehensive validation
+    const validationStatus = getComprehensiveValidationStatus();
+    if (validationStatus.hasErrors) {
       toast({
         title: "Cannot Save Configuration",
-        description: "Please fix all timing conflicts in default schedule before saving",
+        description: `Please fix all ${validationStatus.totalErrors} timing conflicts before saving`,
         variant: "destructive"
       });
       return;
-    }
-
-    // Validate timings for day-specific periods
-    for (const [dayId, dayPeriods] of Object.entries(daySpecificPeriods)) {
-      const dayValidationErrors = validatePeriodTimings(dayPeriods);
-      if (dayValidationErrors.length > 0) {
-        toast({
-          title: "Cannot Save Configuration",
-          description: `Please fix timing conflicts for ${dayId} before saving`,
-          variant: "destructive"
-        });
-        return;
-      }
     }
 
     console.log('Saving configuration:', {
@@ -213,6 +236,8 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
     });
   };
 
+  const validationStatus = getComprehensiveValidationStatus();
+
   return (
     <Card>
       <CardHeader>
@@ -220,6 +245,12 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
           <span className="flex items-center gap-2">
             <Settings2 className="h-5 w-5" />
             Time & Period Configuration
+            {validationStatus.hasErrors && (
+              <span className="flex items-center gap-1 text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">{validationStatus.totalErrors} conflicts</span>
+              </span>
+            )}
           </span>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
@@ -232,6 +263,30 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Global Validation Alert */}
+        {validationStatus.hasErrors && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-medium">Configuration has timing conflicts that must be resolved:</p>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  {validationStatus.issues.map((issue, index) => (
+                    <li key={index}>{issue}</li>
+                  ))}
+                  {validationStatus.daySpecificIssues.slice(0, 3).map((issue, index) => (
+                    <li key={`day-${index}`} className="ml-4">• {issue}</li>
+                  ))}
+                  {validationStatus.daySpecificIssues.length > 3 && (
+                    <li className="ml-4">• ... and {validationStatus.daySpecificIssues.length - 3} more day-specific conflicts</li>
+                  )}
+                </ul>
+                <p className="text-sm font-medium">Fix all conflicts before saving the configuration.</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Timetable Name */}
         <div className="space-y-2">
           <Label htmlFor="timetable-name">Timetable Name</Label>
