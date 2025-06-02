@@ -1,96 +1,103 @@
-
-import React from "react";
+import React from 'react';
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Calendar } from "lucide-react";
-import { weekDays, WeekDay } from "../types/TimePeriodTypes";
+import { Switch } from "@/components/ui/switch";
+
+interface WeekDay {
+  id: string;
+  label: string;
+  fullName: string;
+}
+
+const weekDays: WeekDay[] = [
+  { id: 'monday', label: 'Mon', fullName: 'Monday' },
+  { id: 'tuesday', label: 'Tue', fullName: 'Tuesday' },
+  { id: 'wednesday', label: 'Wed', fullName: 'Wednesday' },
+  { id: 'thursday', label: 'Thu', fullName: 'Thursday' },
+  { id: 'friday', label: 'Fri', fullName: 'Friday' },
+  { id: 'saturday', label: 'Sat', fullName: 'Saturday' },
+  { id: 'sunday', label: 'Sun', fullName: 'Sunday' }
+];
 
 interface WeekDaysSelectorProps {
   selectedDays: string[];
-  onSelectedDaysChange: (days: string[]) => void;
+  onDaysChange: (days: string[]) => void;
   isWeeklyMode: boolean;
+  fortnightStartDate?: string;
+  onFortnightStartDateChange?: (date: string) => void;
 }
 
-// Generate fortnight days (14 days)
-const generateFortnightDays = (): WeekDay[] => {
-  const fortnightDays: WeekDay[] = [];
-  
-  // Week 1
-  weekDays.forEach((day, index) => {
-    fortnightDays.push({
-      id: `week1-${day.id}`,
-      label: `W1-${day.label}`,
-      fullName: `Week 1 ${day.fullName}`
-    });
-  });
-  
-  // Week 2
-  weekDays.forEach((day, index) => {
-    fortnightDays.push({
-      id: `week2-${day.id}`,
-      label: `W2-${day.label}`,
-      fullName: `Week 2 ${day.fullName}`
-    });
-  });
-  
-  return fortnightDays;
-};
+export const WeekDaysSelector: React.FC<WeekDaysSelectorProps> = ({
+  selectedDays,
+  onDaysChange,
+  isWeeklyMode,
+  fortnightStartDate,
+  onFortnightStartDateChange
+}) => {
+  const handleDayToggle = (dayId: string) => {
+    const newSelectedDays = selectedDays.includes(dayId)
+      ? selectedDays.filter(d => d !== dayId)
+      : [...selectedDays, dayId];
+    onDaysChange(newSelectedDays);
+  };
 
-export const WeekDaysSelector = ({ 
-  selectedDays, 
-  onSelectedDaysChange, 
-  isWeeklyMode 
-}: WeekDaysSelectorProps) => {
-  const daysToShow = isWeeklyMode ? weekDays : generateFortnightDays();
-  
+  const handleSelectAll = () => {
+    onDaysChange(weekDays.map(day => day.id));
+  };
+
+  const handleClearAll = () => {
+    onDaysChange([]);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
-        <Label>School Days</Label>
-        <p className="text-sm text-muted-foreground">
-          {isWeeklyMode 
-            ? "Select the days your school operates during a normal week" 
-            : "Select the days your school operates during a 2-week cycle"
-          }
-        </p>
-        <ToggleGroup 
-          type="multiple" 
-          value={selectedDays} 
-          onValueChange={onSelectedDaysChange}
-          className="flex flex-wrap justify-start gap-2"
-        >
-          {daysToShow.map((day) => (
-            <ToggleGroupItem
-              key={day.id}
-              value={day.id}
-              aria-label={day.fullName}
-              className="flex-col h-16 w-16 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-            >
-              <Calendar className="h-4 w-4 mb-1" />
-              <span className="text-xs">{day.label}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <div>
-          <span className="text-sm font-medium">School Days: </span>
-          {selectedDays.length > 0 ? (
-            selectedDays.map(dayId => {
-              const day = daysToShow.find(d => d.id === dayId);
-              return (
-                <Badge key={dayId} variant="default" className="mr-1">
-                  {day?.fullName}
-                </Badge>
-              );
-            })
-          ) : (
-            <Badge variant="secondary">None selected</Badge>
-          )}
+      <div className="flex items-center justify-between">
+        <Label>Working Days</Label>
+        <div className="space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleSelectAll}
+          >
+            Select All
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleClearAll}
+          >
+            Clear All
+          </Button>
         </div>
       </div>
+
+      <div className="grid grid-cols-7 gap-2">
+        {weekDays.map(day => (
+          <Button
+            key={day.id}
+            variant={selectedDays.includes(day.id) ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleDayToggle(day.id)}
+            className="flex flex-col h-16 text-xs"
+          >
+            <span className="font-medium">{day.label}</span>
+            <span className="text-[10px] opacity-70">{day.fullName}</span>
+          </Button>
+        ))}
+      </div>
+
+      {!isWeeklyMode && (
+        <div className="flex items-center gap-4 pt-4">
+          <Label htmlFor="fortnight-start">Fortnight Start Date</Label>
+          <input
+            type="date"
+            id="fortnight-start"
+            value={fortnightStartDate}
+            onChange={(e) => onFortnightStartDateChange?.(e.target.value)}
+            className="px-3 py-1.5 border rounded"
+          />
+        </div>
+      )}
     </div>
   );
 };

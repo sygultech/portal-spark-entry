@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -13,11 +12,12 @@ import { validatePeriodTimings } from "../utils/timeValidation";
 import { toast } from "@/components/ui/use-toast";
 
 interface DaySpecificConfigProps {
+  enableFlexibleTimings: boolean;
+  setEnableFlexibleTimings: (enabled: boolean) => void;
   selectedDays: string[];
-  isWeeklyMode: boolean;
   defaultPeriods: Period[];
-  onUpdateDayPeriods: (dayId: string, periods: Period[]) => void;
   daySpecificPeriods: Record<string, Period[]>;
+  onUpdateDayPeriods: (dayId: string, periods: Period[]) => void;
 }
 
 // Generate fortnight days
@@ -43,27 +43,52 @@ const generateFortnightDays = (): WeekDay[] => {
   return fortnightDays;
 };
 
-export const DaySpecificConfig = ({
+export const DaySpecificConfig: React.FC<DaySpecificConfigProps> = ({
+  enableFlexibleTimings,
+  setEnableFlexibleTimings,
   selectedDays,
-  isWeeklyMode,
   defaultPeriods,
-  onUpdateDayPeriods,
-  daySpecificPeriods
-}: DaySpecificConfigProps) => {
-  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(false);
+  daySpecificPeriods,
+  onUpdateDayPeriods
+}) => {
   const [activeDay, setActiveDay] = useState<string | null>(null);
 
-  const daysToShow = isWeeklyMode ? weekDays : generateFortnightDays();
-  const activeDays = daysToShow.filter(day => selectedDays.includes(day.id));
+  useEffect(() => {
+    // When selected days change, update active day if needed
+    if (selectedDays.length > 0 && !activeDay) {
+      setActiveDay(selectedDays[0]);
+    } else if (!selectedDays.includes(activeDay || '')) {
+      setActiveDay(selectedDays[0] || null);
+    }
+  }, [selectedDays, activeDay]);
 
   const handleToggleFlexibleTimings = (enabled: boolean) => {
     setEnableFlexibleTimings(enabled);
     if (!enabled) {
       setActiveDay(null);
-      // Reset all day-specific configurations when disabled
-      activeDays.forEach(day => {
-        onUpdateDayPeriods(day.id, []);
+      // When disabled, copy default periods to each selected day
+      selectedDays.forEach(day => {
+        const periodsWithDay = defaultPeriods.map(period => ({
+          ...period,
+          dayOfWeek: day
+        }));
+        onUpdateDayPeriods(day, periodsWithDay);
       });
+    } else {
+      // When enabled, initialize each selected day with default periods
+      selectedDays.forEach(day => {
+        if (!daySpecificPeriods[day]) {
+          const periodsWithDay = defaultPeriods.map(period => ({
+            ...period,
+            dayOfWeek: day
+          }));
+          onUpdateDayPeriods(day, periodsWithDay);
+        }
+      });
+      // Set the first day as active
+      if (selectedDays.length > 0) {
+        setActiveDay(selectedDays[0]);
+      }
     }
   };
 
@@ -101,7 +126,7 @@ export const DaySpecificConfig = ({
     } else {
       toast({
         title: "Periods Copied",
-        description: `Periods copied from ${daysToShow.find(d => d.id === sourceDayId)?.label} successfully`
+        description: `Periods copied from ${weekDays.find(d => d.id === sourceDayId)?.label} successfully`
       });
     }
   };
@@ -134,7 +159,7 @@ export const DaySpecificConfig = ({
       if (periodErrors.length > 0) {
         toast({
           title: "Timing Conflict",
-          description: `${daysToShow.find(d => d.id === dayId)?.label}: ${periodErrors[0].message}`,
+          description: `${weekDays.find(d => d.id === dayId)?.label}: ${periodErrors[0].message}`,
           variant: "destructive"
         });
       }
@@ -178,7 +203,7 @@ export const DaySpecificConfig = ({
       } else {
         toast({
           title: "Break Added",
-          description: `Break added after Period ${afterPeriod.number} for ${daysToShow.find(d => d.id === dayId)?.label}`
+          description: `Break added after Period ${afterPeriod.number} for ${weekDays.find(d => d.id === dayId)?.label}`
         });
       }
     }, 100);
@@ -191,7 +216,7 @@ export const DaySpecificConfig = ({
     
     toast({
       title: "Break Removed",
-      description: `Break removed from ${daysToShow.find(d => d.id === dayId)?.label}`
+      description: `Break removed from ${weekDays.find(d => d.id === dayId)?.label}`
     });
   };
 
@@ -218,7 +243,7 @@ export const DaySpecificConfig = ({
 
   const validationStatus = getOverallValidationStatus();
 
-  if (activeDays.length === 0) {
+  if (selectedDays.length === 0) {
     return (
       <Alert>
         <Info className="h-4 w-4" />
@@ -288,21 +313,21 @@ export const DaySpecificConfig = ({
             </Alert>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-              {activeDays.map((day) => {
-                const hasErrors = hasValidationErrors(day.id);
-                const hasCustom = hasCustomTimings(day.id);
+              {selectedDays.map((day) => {
+                const hasErrors = hasValidationErrors(day);
+                const hasCustom = hasCustomTimings(day);
                 
                 return (
                   <Button
-                    key={day.id}
-                    variant={activeDay === day.id ? "default" : hasCustom ? "secondary" : "outline"}
+                    key={day}
+                    variant={activeDay === day ? "default" : hasCustom ? "secondary" : "outline"}
                     size="sm"
-                    onClick={() => setActiveDay(activeDay === day.id ? null : day.id)}
+                    onClick={() => setActiveDay(activeDay === day ? null : day)}
                     className={`flex flex-col h-16 text-xs ${
                       hasErrors ? 'border-destructive bg-destructive/10 hover:bg-destructive/20' : ''
                     }`}
                   >
-                    <span className="font-medium">{day.label}</span>
+                    <span className="font-medium">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
                     <div className="flex items-center gap-1">
                       {hasCustom && (
                         <span className="text-xs opacity-75">Custom</span>
@@ -322,7 +347,7 @@ export const DaySpecificConfig = ({
                   <CardTitle className="flex items-center justify-between text-lg">
                     <span className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
-                      {daysToShow.find(d => d.id === activeDay)?.fullName} Timings
+                      {weekDays.find(d => d.id === activeDay)?.fullName} Timings
                       {hasValidationErrors(activeDay) && (
                         <span className="flex items-center gap-1 text-destructive">
                           <AlertTriangle className="h-4 w-4" />
@@ -342,15 +367,15 @@ export const DaySpecificConfig = ({
                         <Copy className="h-3 w-3 mr-1" />
                         Copy Default
                       </Button>
-                      {activeDays.length > 1 && (
+                      {selectedDays.length > 1 && (
                         <select
                           className="text-xs px-2 py-1 border rounded"
                           onChange={(e) => e.target.value && copyFromAnotherDay(activeDay, e.target.value)}
                           defaultValue=""
                         >
                           <option value="" disabled>Copy from...</option>
-                          {activeDays.filter(d => d.id !== activeDay && hasCustomTimings(d.id)).map(day => (
-                            <option key={day.id} value={day.id}>{day.label}</option>
+                          {selectedDays.filter(d => d !== activeDay && hasCustomTimings(d)).map(day => (
+                            <option key={day} value={day}>{day.charAt(0).toUpperCase() + day.slice(1)}</option>
                           ))}
                         </select>
                       )}

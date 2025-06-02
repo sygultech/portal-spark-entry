@@ -12,12 +12,17 @@ import { TimetableActions } from "./components/TimetableActions";
 import { DaySpecificConfig } from "./components/DaySpecificConfig";
 import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
 import { validatePeriodTimings } from "./utils/timeValidation";
+import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
+import { useAuth } from "@/hooks/useAuth";
+import { UserProfile } from "@/types/auth";
 
 export interface TimePeriodConfigurationPropsExtended extends TimePeriodConfigurationProps {
   onSave?: () => void;
 }
 
 export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePeriodConfigurationPropsExtended) => {
+  const { profile } = useAuth();
+  const { saveConfiguration, isLoading } = useTimetableConfiguration();
   const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
   const [totalPeriods, setTotalPeriods] = useState(8);
   const [periods, setPeriods] = useState<Period[]>([
@@ -183,7 +188,16 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
     };
   };
 
-  const handleSaveConfiguration = () => {
+  const handleSaveConfiguration = async () => {
+    if (!profile?.primary_school_id) {
+      toast({
+        title: "Error",
+        description: "No school selected",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!timetableName.trim()) {
       toast({
         title: "Error",
@@ -222,25 +236,45 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
       return;
     }
 
-    console.log('Saving configuration:', {
-      configId,
-      timetableName,
-      totalPeriods,
-      periods,
-      selectedDays,
-      isWeeklyMode,
-      fortnightStartDate,
-      daySpecificPeriods
+    // Prepare periods data for saving
+    let periodsToSave = [];
+    
+    if (Object.keys(daySpecificPeriods).length > 0) {
+      // If day-specific periods exist, use them
+      for (const [dayId, dayPeriods] of Object.entries(daySpecificPeriods)) {
+        periodsToSave.push(...dayPeriods.map(period => ({
+          ...period,
+          dayOfWeek: dayId,
+          isFortnightly: !isWeeklyMode,
+          fortnightWeek: !isWeeklyMode ? (dayId.startsWith('week1') ? 1 : 2) : null
+        })));
+      }
+    } else {
+      // If no day-specific periods, create copies for each selected day
+      selectedDays.forEach(dayId => {
+        periodsToSave.push(...periods.map(period => ({
+          ...period,
+          dayOfWeek: dayId,
+          isFortnightly: !isWeeklyMode,
+          fortnightWeek: !isWeeklyMode ? (dayId.startsWith('week1') ? 1 : 2) : null
+        })));
+      });
+    }
+
+    const result = await saveConfiguration({
+      schoolId: profile.primary_school_id,
+      name: timetableName,
+      isActive: false, // Default to inactive
+      isDefault: false, // Default to non-default
+      academicYearId: profile.primary_school_id, // Using school_id as academic_year_id for now
+      periods: periodsToSave
     });
 
-    toast({
-      title: "Configuration Saved",
-      description: `${timetableName} has been saved successfully`
-    });
-
-    // Call the onSave callback to close the configuration
-    if (onSave) {
-      onSave();
+    if (result) {
+      // Call the onSave callback to close the configuration
+      if (onSave) {
+        onSave();
+      }
     }
   };
 
@@ -250,24 +284,18 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Settings2 className="h-5 w-5" />
-            Time & Period Configuration
-            {validationStatus.hasErrors && (
-              <span className="flex items-center gap-1 text-destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">{validationStatus.totalErrors} conflicts</span>
-              </span>
-            )}
-          </span>
+            Configure Periods
+          </div>
           {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           )}
         </CardTitle>
         <CardDescription>
-          Set up your school's daily schedule with periods, breaks, and working days
+          Set up period timings and breaks for your timetable
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -349,6 +377,7 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
           onSaveConfiguration={handleSaveConfiguration}
           fortnightStartDate={fortnightStartDate}
           onFortnightStartDateChange={setFortnightStartDate}
+          isLoading={isLoading}
         />
       </CardContent>
     </Card>
