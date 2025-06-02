@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import { PeriodConfigurationForm } from "./components/PeriodConfigurationForm";
 import { WeekDaysSelector } from "./components/WeekDaysSelector";
 import { TimetableActions } from "./components/TimetableActions";
+import { DaySpecificConfig } from "./components/DaySpecificConfig";
 import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
 import { validatePeriodTimings } from "./utils/timeValidation";
 
@@ -30,6 +31,7 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
   const [isPeriodsExpanded, setIsPeriodsExpanded] = useState(true);
   const [isWeeklyMode, setIsWeeklyMode] = useState(true);
   const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
+  const [daySpecificPeriods, setDaySpecificPeriods] = useState<Record<string, Period[]>>({});
 
   const handleTotalPeriodsChange = (value: string) => {
     const num = parseInt(value) || 0;
@@ -135,6 +137,13 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
     ));
   };
 
+  const handleUpdateDayPeriods = (dayId: string, dayPeriods: Period[]) => {
+    setDaySpecificPeriods(prev => ({
+      ...prev,
+      [dayId]: dayPeriods
+    }));
+  };
+
   const handleSaveConfiguration = () => {
     if (!timetableName.trim()) {
       toast({
@@ -163,15 +172,28 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       return;
     }
 
-    // Validate timings before saving
+    // Validate timings for default periods
     const validationErrors = validatePeriodTimings(periods);
     if (validationErrors.length > 0) {
       toast({
         title: "Cannot Save Configuration",
-        description: "Please fix all timing conflicts before saving",
+        description: "Please fix all timing conflicts in default schedule before saving",
         variant: "destructive"
       });
       return;
+    }
+
+    // Validate timings for day-specific periods
+    for (const [dayId, dayPeriods] of Object.entries(daySpecificPeriods)) {
+      const dayValidationErrors = validatePeriodTimings(dayPeriods);
+      if (dayValidationErrors.length > 0) {
+        toast({
+          title: "Cannot Save Configuration",
+          description: `Please fix timing conflicts for ${dayId} before saving`,
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     console.log('Saving configuration:', {
@@ -181,7 +203,8 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       periods,
       selectedDays,
       isWeeklyMode,
-      fortnightStartDate
+      fortnightStartDate,
+      daySpecificPeriods
     });
 
     toast({
@@ -221,24 +244,39 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
           />
         </div>
 
-        {/* Period Configuration */}
-        <PeriodConfigurationForm
-          totalPeriods={totalPeriods}
-          periods={periods}
-          isPeriodsExpanded={isPeriodsExpanded}
-          onTotalPeriodsChange={handleTotalPeriodsChange}
-          onPeriodsExpandedChange={setIsPeriodsExpanded}
-          onUpdatePeriodTime={updatePeriodTime}
-          onAddBreakAfterPeriod={addBreakAfterPeriod}
-          onRemoveBreak={removeBreak}
-          onUpdateBreakLabel={updateBreakLabel}
-        />
+        {/* Default Period Configuration */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Label className="text-base font-medium">Default Schedule</Label>
+            <span className="text-sm text-muted-foreground">(applies to all days unless customized)</span>
+          </div>
+          <PeriodConfigurationForm
+            totalPeriods={totalPeriods}
+            periods={periods}
+            isPeriodsExpanded={isPeriodsExpanded}
+            onTotalPeriodsChange={handleTotalPeriodsChange}
+            onPeriodsExpandedChange={setIsPeriodsExpanded}
+            onUpdatePeriodTime={updatePeriodTime}
+            onAddBreakAfterPeriod={addBreakAfterPeriod}
+            onRemoveBreak={removeBreak}
+            onUpdateBreakLabel={updateBreakLabel}
+          />
+        </div>
 
         {/* Days Configuration */}
         <WeekDaysSelector
           selectedDays={selectedDays}
           onSelectedDaysChange={setSelectedDays}
           isWeeklyMode={isWeeklyMode}
+        />
+
+        {/* Day-Specific Configuration */}
+        <DaySpecificConfig
+          selectedDays={selectedDays}
+          isWeeklyMode={isWeeklyMode}
+          defaultPeriods={periods}
+          onUpdateDayPeriods={handleUpdateDayPeriods}
+          daySpecificPeriods={daySpecificPeriods}
         />
 
         {/* Mode Selection & Actions */}
