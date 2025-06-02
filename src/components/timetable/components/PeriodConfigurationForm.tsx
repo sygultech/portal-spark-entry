@@ -144,7 +144,9 @@ export const PeriodConfigurationForm = ({
                       </>
                     )}
                     {hasError && (
-                      <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" title={periodErrors[0].message} />
+                      <span title={periodErrors[0].message}>
+                        <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                      </span>
                     )}
                   </div>
                   
