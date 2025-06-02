@@ -1,12 +1,9 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Edit, Trash2, MapPin, AlertTriangle, Monitor, FlaskConical, Dumbbell } from "lucide-react";
-import { AcademicYearSelector } from "./components/AcademicYearSelector";
-import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 
 interface RoomAllocationProps {
   selectedTerm: string;
@@ -45,14 +42,6 @@ const mockRoomAllocations: any = {
 };
 
 export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
-  const { 
-    academicYears, 
-    selectedAcademicYear, 
-    setSelectedAcademicYear, 
-    selectedYear,
-    isLoading: academicYearLoading 
-  } = useAcademicYearSelector();
-  
   const [selectedRoom, setSelectedRoom] = useState(mockRooms[0]);
   const [isAddingAllocation, setIsAddingAllocation] = useState(false);
 
@@ -79,26 +68,15 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Room Allocation
-              </div>
-              <AcademicYearSelector
-                academicYears={academicYears}
-                selectedAcademicYear={selectedAcademicYear}
-                onAcademicYearChange={setSelectedAcademicYear}
-                isLoading={academicYearLoading}
-              />
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Room Allocation
             </div>
             <Button onClick={handleAddAllocation} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Allocation
             </Button>
           </CardTitle>
-          <CardDescription>
-            Manage room allocations for {selectedYear?.name || 'the selected academic year'}. Assign classes to rooms and view occupancy schedules.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

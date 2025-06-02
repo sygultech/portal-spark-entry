@@ -9,8 +9,6 @@ import { toast } from "@/components/ui/use-toast";
 import { TimePeriodConfiguration } from "./TimePeriodConfiguration";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BatchTaggingDialog } from "./components/BatchTaggingDialog";
-import { AcademicYearSelector } from "./components/AcademicYearSelector";
-import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 
 const defaultSettings: TimetableSettingsType = {
   id: '',
@@ -43,14 +41,6 @@ interface TimePeriodConfig {
 }
 
 export const TimetableSettings = () => {
-  const { 
-    academicYears, 
-    selectedAcademicYear, 
-    setSelectedAcademicYear, 
-    selectedYear,
-    isLoading: academicYearLoading 
-  } = useAcademicYearSelector();
-  
   const { isLoading, getTimetableSettings, updateTimetableSettings, updateWorkingDays, getWorkingDays } = useTimetableSettings();
   const [settings, setSettings] = useState<TimetableSettingsType>(defaultSettings);
   const [workingDays, setWorkingDays] = useState<WorkingDays>(defaultWorkingDays);
@@ -180,22 +170,11 @@ export const TimetableSettings = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Settings className="h-5 w-5" /> 
-                Timetable Settings
-              </div>
-              <AcademicYearSelector
-                academicYears={academicYears}
-                selectedAcademicYear={selectedAcademicYear}
-                onAcademicYearChange={setSelectedAcademicYear}
-                isLoading={academicYearLoading}
-              />
-            </div>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" /> Timetable Settings
           </CardTitle>
           <CardDescription>
-            Configure your school's timetable settings, periods, and working days for {selectedYear?.name || 'the selected academic year'}.
+            Configure your school's timetable settings, periods, and working days.
           </CardDescription>
         </CardHeader>
       </Card>
