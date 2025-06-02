@@ -147,6 +147,14 @@ export const TimePeriodConfiguration = ({
     );
   };
 
+  // Handler to convert string to number for totalPeriods
+  const handleTotalPeriodsChange = (value: string) => {
+    const numValue = parseInt(value, 10);
+    if (!isNaN(numValue)) {
+      setTotalPeriods(numValue);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -167,7 +175,7 @@ export const TimePeriodConfiguration = ({
         {/* Week Days Selector */}
         <WeekDaysSelector
           selectedDays={selectedDays}
-          onDaysChange={setSelectedDays}
+          onSelectedDaysChange={setSelectedDays}
           isWeeklyMode={isWeeklyMode}
         />
 
@@ -176,7 +184,7 @@ export const TimePeriodConfiguration = ({
           totalPeriods={totalPeriods}
           periods={periods}
           isPeriodsExpanded={isPeriodsExpanded}
-          onTotalPeriodsChange={setTotalPeriods}
+          onTotalPeriodsChange={handleTotalPeriodsChange}
           onPeriodsExpandedChange={setIsPeriodsExpanded}
           onUpdatePeriodTime={updatePeriodTime}
           onAddBreakAfterPeriod={addBreakAfterPeriod}
