@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,7 +161,14 @@ export const DaySpecificConfig = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {!enableFlexibleTimings ? (
+        {activeDays.length === 0 ? (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Please select school days first to configure day-specific timings.
+            </AlertDescription>
+          </Alert>
+        ) : !enableFlexibleTimings ? (
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
