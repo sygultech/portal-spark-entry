@@ -101,6 +101,45 @@ export type Database = {
           },
         ]
       }
+      batch_configuration_mapping: {
+        Row: {
+          batch_id: string
+          configuration_id: string
+          created_at: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          batch_id: string
+          configuration_id: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          batch_id?: string
+          configuration_id?: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_configuration_mapping_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_configuration_mapping_configuration_id_fkey"
+            columns: ["configuration_id"]
+            isOneToOne: false
+            referencedRelation: "timetable_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_students: {
         Row: {
           batch_id: string
@@ -834,6 +873,59 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      period_settings: {
+        Row: {
+          configuration_id: string
+          created_at: string | null
+          day_of_week: string | null
+          end_time: string
+          fortnight_week: number | null
+          id: string
+          is_fortnightly: boolean | null
+          label: string | null
+          period_number: number
+          start_time: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          configuration_id: string
+          created_at?: string | null
+          day_of_week?: string | null
+          end_time: string
+          fortnight_week?: number | null
+          id?: string
+          is_fortnightly?: boolean | null
+          label?: string | null
+          period_number: number
+          start_time: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          configuration_id?: string
+          created_at?: string | null
+          day_of_week?: string | null
+          end_time?: string
+          fortnight_week?: number | null
+          id?: string
+          is_fortnightly?: boolean | null
+          label?: string | null
+          period_number?: number
+          start_time?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_settings_configuration_id_fkey"
+            columns: ["configuration_id"]
+            isOneToOne: false
+            referencedRelation: "timetable_configurations"
             referencedColumns: ["id"]
           },
         ]
@@ -1769,51 +1861,49 @@ export type Database = {
           },
         ]
       }
-      timetable_settings: {
+      timetable_configurations: {
         Row: {
-          break_duration: number
-          created_at: string
-          half_day_end_time: string
+          academic_year_id: string
+          created_at: string | null
           id: string
-          lunch_duration: number
-          period_duration: number
-          school_end_time: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
           school_id: string
-          school_start_time: string
-          updated_at: string
-          working_days: Json | null
+          updated_at: string | null
         }
         Insert: {
-          break_duration?: number
-          created_at?: string
-          half_day_end_time?: string
+          academic_year_id: string
+          created_at?: string | null
           id?: string
-          lunch_duration?: number
-          period_duration?: number
-          school_end_time?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
           school_id: string
-          school_start_time?: string
-          updated_at?: string
-          working_days?: Json | null
+          updated_at?: string | null
         }
         Update: {
-          break_duration?: number
-          created_at?: string
-          half_day_end_time?: string
+          academic_year_id?: string
+          created_at?: string | null
           id?: string
-          lunch_duration?: number
-          period_duration?: number
-          school_end_time?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
           school_id?: string
-          school_start_time?: string
-          updated_at?: string
-          working_days?: Json | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "timetable_settings_school_id_fkey"
+            foreignKeyName: "timetable_configurations_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetable_configurations_school_id_fkey"
             columns: ["school_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "schools"
             referencedColumns: ["id"]
           },
@@ -1885,6 +1975,41 @@ export type Database = {
             columns: ["to_batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          roles: string[] | null
+          school_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          roles?: string[] | null
+          school_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          roles?: string[] | null
+          school_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -2077,6 +2202,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_timetable_configurations: {
+        Args: { p_school_id: string; p_academic_year_id: string }
+        Returns: Json
+      }
       get_user_highest_role: {
         Args: { p_user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -2202,6 +2331,18 @@ export type Database = {
       refresh_user_roles: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      save_timetable_configuration: {
+        Args: {
+          p_school_id: string
+          p_name: string
+          p_is_active: boolean
+          p_is_default: boolean
+          p_academic_year_id: string
+          p_periods: Json
+          p_batch_ids?: string[]
+        }
+        Returns: string
       }
       switch_primary_school: {
         Args: { p_school_id: string }
