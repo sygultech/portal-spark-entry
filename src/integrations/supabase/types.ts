@@ -1769,56 +1769,6 @@ export type Database = {
           },
         ]
       }
-      timetable_settings: {
-        Row: {
-          break_duration: number
-          created_at: string
-          half_day_end_time: string
-          id: string
-          lunch_duration: number
-          period_duration: number
-          school_end_time: string
-          school_id: string
-          school_start_time: string
-          updated_at: string
-          working_days: Json | null
-        }
-        Insert: {
-          break_duration?: number
-          created_at?: string
-          half_day_end_time?: string
-          id?: string
-          lunch_duration?: number
-          period_duration?: number
-          school_end_time?: string
-          school_id: string
-          school_start_time?: string
-          updated_at?: string
-          working_days?: Json | null
-        }
-        Update: {
-          break_duration?: number
-          created_at?: string
-          half_day_end_time?: string
-          id?: string
-          lunch_duration?: number
-          period_duration?: number
-          school_end_time?: string
-          school_id?: string
-          school_start_time?: string
-          updated_at?: string
-          working_days?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "timetable_settings_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: true
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       transfer_records: {
         Row: {
           created_at: string | null

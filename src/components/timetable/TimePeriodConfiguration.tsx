@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,16 +10,23 @@ import { PeriodConfigurationForm } from "./components/PeriodConfigurationForm";
 import { WeekDaysSelector } from "./components/WeekDaysSelector";
 import { TimetableActions } from "./components/TimetableActions";
 import { DaySpecificConfig } from "./components/DaySpecificConfig";
-import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
+import { Period, TimePeriodConfigurationProps, TimetableConfiguration, ValidationError } from "./types/TimePeriodTypes";
 import { validatePeriodTimings } from "./utils/timeValidation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from '@/components/ui/use-toast';
+import { Switch } from '@/components/ui/switch';
 
 export interface TimePeriodConfigurationPropsExtended extends TimePeriodConfigurationProps {
-  onSave?: () => void;
+  selectedAcademicYear: string;
+  onSave?: (config: TimetableConfiguration) => void;
 }
 
-export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePeriodConfigurationPropsExtended) => {
+export const TimePeriodConfiguration = ({ configId, selectedAcademicYear, onClose, onSave }: TimePeriodConfigurationPropsExtended) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
   const [totalPeriods, setTotalPeriods] = useState(8);
+  const [enableDaySpecificTimings, setEnableDaySpecificTimings] = useState(false);
   const [periods, setPeriods] = useState<Period[]>([
     { id: '1', number: 1, startTime: '08:00', endTime: '08:45', type: 'period' },
     { id: '2', number: 2, startTime: '08:45', endTime: '09:30', type: 'period' },
@@ -37,6 +44,40 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
   const [isWeeklyMode, setIsWeeklyMode] = useState(true);
   const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
   const [daySpecificPeriods, setDaySpecificPeriods] = useState<Record<string, Period[]>>({});
+  const [fortnightWeeks, setFortnightWeeks] = useState<Record<string, number>>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    // Initialize with default periods if none exist
+    if (periods.length === 0) {
+      const defaultPeriods: Period[] = [
+        {
+          id: '1',
+          number: 1,
+          startTime: '08:00',
+          endTime: '08:45',
+          type: 'period'
+        },
+        {
+          id: '2',
+          number: 2,
+          startTime: '08:45',
+          endTime: '09:30',
+          type: 'period'
+        },
+        {
+          id: 'break1',
+          number: 3,
+          startTime: '09:30',
+          endTime: '09:45',
+          type: 'break',
+          label: 'Break'
+        }
+      ];
+      setPeriods(defaultPeriods);
+    }
+  }, []);
 
   const handleTotalPeriodsChange = (value: string) => {
     const num = parseInt(value) || 0;
@@ -46,20 +87,14 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
     }
   };
 
-  const generatePeriods = (total: number) => {
+  const generatePeriods = (num: number) => {
     const newPeriods: Period[] = [];
-    let currentTime = { hours: 8, minutes: 0 };
-    
-    for (let i = 1; i <= total; i++) {
-      const startTime = `${currentTime.hours.toString().padStart(2, '0')}:${currentTime.minutes.toString().padStart(2, '0')}`;
-      
-      currentTime.minutes += 45;
-      if (currentTime.minutes >= 60) {
-        currentTime.hours += Math.floor(currentTime.minutes / 60);
-        currentTime.minutes = currentTime.minutes % 60;
-      }
-      
-      const endTime = `${currentTime.hours.toString().padStart(2, '0')}:${currentTime.minutes.toString().padStart(2, '0')}`;
+    let currentTime = '08:00';
+    const periodDuration = 45; // minutes
+
+    for (let i = 1; i <= num; i++) {
+      const startTime = currentTime;
+      const endTime = addMinutes(currentTime, periodDuration);
       
       newPeriods.push({
         id: i.toString(),
@@ -69,121 +104,161 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
         type: 'period'
       });
 
-      if (i === 3 || i === 5) {
-        const breakStart = endTime;
-        currentTime.minutes += 15;
-        if (currentTime.minutes >= 60) {
-          currentTime.hours += Math.floor(currentTime.minutes / 60);
-          currentTime.minutes = currentTime.minutes % 60;
-        }
-        const breakEnd = `${currentTime.hours.toString().padStart(2, '0')}:${currentTime.minutes.toString().padStart(2, '0')}`;
+      currentTime = endTime;
+
+      // Add breaks after every 3 periods
+      if (i % 3 === 0 && i < num) {
+        const breakStart = currentTime;
+        const breakEnd = addMinutes(breakStart, 15);
         
         newPeriods.push({
-          id: `break-${i}`,
+          id: `break${i}`,
           number: 0,
           startTime: breakStart,
           endTime: breakEnd,
           type: 'break',
-          label: i === 3 ? 'Short Break' : 'Lunch Break'
+          label: i === 3 ? 'Short Break' : 'Break'
         });
+
+        currentTime = breakEnd;
       }
     }
-    
+
     setPeriods(newPeriods);
   };
 
-  const updatePeriodTime = (id: string, field: 'startTime' | 'endTime', value: string) => {
-    setPeriods(prev => prev.map(period => 
-      period.id === id ? { ...period, [field]: value } : period
-    ));
+  const addMinutes = (time: string, minutes: number): string => {
+    const [hours, mins] = time.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, mins + minutes);
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
 
-  const addBreakAfterPeriod = (afterPeriodId: string) => {
-    const periodIndex = periods.findIndex(p => p.id === afterPeriodId);
-    if (periodIndex === -1) return;
+  const updatePeriodTime = (periodId: string, field: 'startTime' | 'endTime', value: string) => {
+    setPeriods(prevPeriods => 
+      prevPeriods.map(period => 
+        period.id === periodId ? { ...period, [field]: value } : period
+      )
+    );
+  };
 
-    const afterPeriod = periods[periodIndex];
-    const breakId = `break-after-${afterPeriodId}`;
-    
-    const [hours, minutes] = afterPeriod.endTime.split(':').map(Number);
-    const breakEndTime = new Date();
-    breakEndTime.setHours(hours, minutes + 15);
-    
+  const addBreakAfterPeriod = (periodId: string) => {
+    const period = periods.find(p => p.id === periodId);
+    if (!period) return;
+
+    const breakId = `break-${Date.now()}`;
     const newBreak: Period = {
       id: breakId,
       number: 0,
-      startTime: afterPeriod.endTime,
-      endTime: `${breakEndTime.getHours().toString().padStart(2, '0')}:${breakEndTime.getMinutes().toString().padStart(2, '0')}`,
+      startTime: period.endTime,
+      endTime: addMinutes(period.endTime, 15),
       type: 'break',
       label: 'Break'
     };
 
-    const newPeriods = [...periods];
-    newPeriods.splice(periodIndex + 1, 0, newBreak);
-    setPeriods(newPeriods);
-    
-    toast({
-      title: "Break Added",
-      description: `Break added after Period ${afterPeriod.number}`
+    setPeriods(prevPeriods => {
+      const periodIndex = prevPeriods.findIndex(p => p.id === periodId);
+      return [
+        ...prevPeriods.slice(0, periodIndex + 1),
+        newBreak,
+        ...prevPeriods.slice(periodIndex + 1)
+      ];
     });
   };
 
   const removeBreak = (breakId: string) => {
-    setPeriods(prev => prev.filter(p => p.id !== breakId));
-    toast({
-      title: "Break Removed",
-      description: "Break has been removed from the timetable"
-    });
+    setPeriods(prevPeriods => prevPeriods.filter(p => p.id !== breakId));
   };
 
-  const updateBreakLabel = (id: string, label: string) => {
-    setPeriods(prev => prev.map(period => 
-      period.id === id ? { ...period, label } : period
-    ));
+  const updateBreakLabel = (breakId: string, label: string) => {
+    setPeriods(prevPeriods =>
+      prevPeriods.map(period =>
+        period.id === breakId ? { ...period, label } : period
+      )
+    );
   };
 
-  const handleUpdateDayPeriods = (dayId: string, dayPeriods: Period[]) => {
+  const handleUpdateDayPeriods = (day: string, updatedPeriods: Period[]) => {
     setDaySpecificPeriods(prev => ({
       ...prev,
-      [dayId]: dayPeriods
+      [day]: updatedPeriods
     }));
   };
 
-  // Enhanced validation function that checks all configurations
-  const getComprehensiveValidationStatus = () => {
-    const issues: string[] = [];
-    
-    // Validate default periods
-    const defaultErrors = validatePeriodTimings(periods);
-    if (defaultErrors.length > 0) {
-      issues.push(`Default schedule has ${defaultErrors.length} timing conflicts`);
-    }
-    
-    // Validate day-specific periods
-    let daySpecificErrorCount = 0;
-    const daySpecificIssues: string[] = [];
-    
-    Object.entries(daySpecificPeriods).forEach(([dayId, dayPeriods]) => {
-      const dayErrors = validatePeriodTimings(dayPeriods);
-      if (dayErrors.length > 0) {
-        daySpecificErrorCount += dayErrors.length;
-        daySpecificIssues.push(`${dayId}: ${dayErrors.length} conflicts`);
+  const validatePeriods = (): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+    days.forEach(day => {
+      const dayPeriods = periods.filter(p => p.dayOfWeek === day);
+      
+      // Sort periods by start time
+      dayPeriods.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+      // Check for gaps and overlaps
+      for (let i = 0; i < dayPeriods.length - 1; i++) {
+        const current = dayPeriods[i];
+        const next = dayPeriods[i + 1];
+
+        if (current.endTime !== next.startTime) {
+          errors.push({
+            id: current.id,
+            message: `Gap between ${current.endTime} and ${next.startTime}`,
+            type: 'invalid_time',
+            day
+          });
+        }
+      }
+
+      // Check for end before start
+      dayPeriods.forEach(period => {
+        if (period.endTime <= period.startTime) {
+          errors.push({
+            id: period.id,
+            message: 'End time must be after start time',
+            type: 'end_before_start',
+            day
+          });
+        }
+      });
+
+      // Check for overlaps
+      for (let i = 0; i < dayPeriods.length; i++) {
+        for (let j = i + 1; j < dayPeriods.length; j++) {
+          const period1 = dayPeriods[i];
+          const period2 = dayPeriods[j];
+          
+          if (
+            (period1.startTime <= period2.startTime && period1.endTime > period2.startTime) ||
+            (period2.startTime <= period1.startTime && period2.endTime > period1.startTime)
+          ) {
+            errors.push({
+              id: period1.id,
+              message: `Overlaps with period ${period2.number}`,
+              type: 'overlap',
+              day
+            });
+          }
+        }
       }
     });
-    
-    if (daySpecificErrorCount > 0) {
-      issues.push(`Day-specific schedules have ${daySpecificErrorCount} timing conflicts`);
-    }
-    
+
+    return errors;
+  };
+
+  const getComprehensiveValidationStatus = () => {
+    const defaultErrors = validatePeriods();
+    const daySpecificErrors = validatePeriods();
+    const allErrors = [...defaultErrors, ...daySpecificErrors];
+
     return {
-      hasErrors: issues.length > 0,
-      totalErrors: defaultErrors.length + daySpecificErrorCount,
-      issues,
-      daySpecificIssues
+      hasErrors: allErrors.length > 0,
+      totalErrors: allErrors.length,
+      errors: allErrors
     };
   };
 
-  const handleSaveConfiguration = () => {
+  const handleSaveConfiguration = async () => {
     if (!timetableName.trim()) {
       toast({
         title: "Error",
@@ -222,25 +297,53 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
       return;
     }
 
-    console.log('Saving configuration:', {
-      configId,
-      timetableName,
-      totalPeriods,
-      periods,
-      selectedDays,
-      isWeeklyMode,
-      fortnightStartDate,
-      daySpecificPeriods
+    // Create periods for each selected day
+    const allPeriods: Period[] = [];
+    selectedDays.forEach(day => {
+      const dayPeriods = daySpecificPeriods[day] || periods;
+      dayPeriods.forEach(period => {
+        allPeriods.push({
+          ...period,
+          dayOfWeek: day,
+          isFortnightly: !isWeeklyMode,
+          fortnightWeek: fortnightWeeks[period.id] || 1
+        });
+      });
     });
 
-    toast({
-      title: "Configuration Saved",
-      description: `${timetableName} has been saved successfully`
-    });
+    const config: TimetableConfiguration = {
+      id: configId,
+      name: timetableName,
+      isActive: true,
+      isDefault: false,
+      academicYearId: selectedAcademicYear,
+      schoolId: user?.schoolId,
+      periods: allPeriods,
+      batchIds: []
+    };
 
-    // Call the onSave callback to close the configuration
-    if (onSave) {
-      onSave();
+    setIsSaving(true);
+    try {
+      if (onSave) {
+        await onSave(config);
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Timetable configuration saved successfully'
+      });
+
+      if (onClose) {
+        onClose();
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save timetable configuration',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -271,47 +374,33 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Global Validation Alert */}
-        {validationStatus.hasErrors && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="space-y-2">
-                <p className="font-medium">Configuration has timing conflicts that must be resolved:</p>
-                <ul className="list-disc list-inside text-sm space-y-1">
-                  {validationStatus.issues.map((issue, index) => (
-                    <li key={index}>{issue}</li>
-                  ))}
-                  {validationStatus.daySpecificIssues.slice(0, 3).map((issue, index) => (
-                    <li key={`day-${index}`} className="ml-4">• {issue}</li>
-                  ))}
-                  {validationStatus.daySpecificIssues.length > 3 && (
-                    <li className="ml-4">• ... and {validationStatus.daySpecificIssues.length - 3} more day-specific conflicts</li>
-                  )}
-                </ul>
-                <p className="text-sm font-medium">Fix all conflicts before saving the configuration.</p>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Timetable Name */}
-        <div className="space-y-2">
-          <Label htmlFor="timetable-name">Timetable Name</Label>
-          <Input
-            id="timetable-name"
-            value={timetableName}
-            onChange={(e) => setTimetableName(e.target.value)}
-            placeholder="e.g., Grade 10 Science Stream"
-            className="max-w-md"
-          />
-        </div>
-
-        {/* Default Period Configuration */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Label className="text-base font-medium">Default Schedule</Label>
-            <span className="text-sm text-muted-foreground">(applies to all days unless customized)</span>
+            <Label htmlFor="timetable-name" className="text-base font-medium">Timetable Name</Label>
+            <Input
+              id="timetable-name"
+              value={timetableName}
+              onChange={(e) => setTimetableName(e.target.value)}
+              placeholder="Enter timetable name"
+              className="max-w-md"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Label className="text-base font-medium">Default Schedule</Label>
+              <span className="text-sm text-muted-foreground">(applies to all days unless customized)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="day-specific-timings">Enable Different Timings Per Day</Label>
+              <Switch
+                id="day-specific-timings"
+                checked={enableDaySpecificTimings}
+                onCheckedChange={setEnableDaySpecificTimings}
+              />
+            </div>
           </div>
           <PeriodConfigurationForm
             totalPeriods={totalPeriods}
@@ -333,14 +422,33 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
           isWeeklyMode={isWeeklyMode}
         />
 
-        {/* Day-Specific Configuration */}
-        <DaySpecificConfig
-          selectedDays={selectedDays}
-          isWeeklyMode={isWeeklyMode}
-          defaultPeriods={periods}
-          onUpdateDayPeriods={handleUpdateDayPeriods}
-          daySpecificPeriods={daySpecificPeriods}
-        />
+        {/* Day-Specific Configuration - Only show when enabled */}
+        {enableDaySpecificTimings && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-base font-medium">Day-Specific Timings</Label>
+              <span className="text-sm text-muted-foreground">(override default schedule for specific days)</span>
+            </div>
+            {periods.map((period) => (
+              <DaySpecificConfig
+                key={period.id}
+                period={period}
+                onUpdate={(updatedPeriod) => {
+                  setPeriods(prevPeriods =>
+                    prevPeriods.map(p => p.id === updatedPeriod.id ? updatedPeriod : p)
+                  );
+                }}
+                fortnightWeeks={[1, 2]}
+                onUpdateFortnightWeek={(week) => {
+                  setFortnightWeeks(prev => ({
+                    ...prev,
+                    [period.id]: week
+                  }));
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Mode Selection & Actions */}
         <TimetableActions
@@ -350,6 +458,19 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
           fortnightStartDate={fortnightStartDate}
           onFortnightStartDateChange={setFortnightStartDate}
         />
+
+        {validationErrors.length > 0 && (
+          <div className="bg-destructive/10 p-4 rounded-md">
+            <h4 className="text-destructive font-medium mb-2">Validation Errors</h4>
+            <ul className="list-disc list-inside space-y-1">
+              {validationErrors.map((error) => (
+                <li key={error.id} className="text-destructive">
+                  {error.day ? `[${error.day}] ` : ''}{error.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

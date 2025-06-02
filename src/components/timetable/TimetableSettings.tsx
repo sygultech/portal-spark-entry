@@ -9,13 +9,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { BatchTaggingDialog } from "./components/BatchTaggingDialog";
 import { AcademicYearSelector } from "./components/AcademicYearSelector";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
-
-interface TimePeriodConfig {
-  id: string;
-  name: string;
-  isActive: boolean;
-  isDefault: boolean;
-}
+import { useTimetableSettings } from "@/hooks/useTimetableSettings";
+import { TimetableConfiguration } from "@/types/timetable";
 
 export const TimetableSettings = () => {
   const { 
@@ -26,37 +21,39 @@ export const TimetableSettings = () => {
     isLoading: academicYearLoading 
   } = useAcademicYearSelector();
 
-  const [periodConfigurations, setPeriodConfigurations] = useState<TimePeriodConfig[]>([]);
+  const {
+    configurations,
+    isLoading: configurationsLoading,
+    error,
+    saveConfiguration,
+    deleteConfiguration,
+    updateConfiguration
+  } = useTimetableSettings(selectedAcademicYear);
+
   const [activeConfigId, setActiveConfigId] = useState<string | null>(null);
   const [batchTaggingDialogOpen, setBatchTaggingDialogOpen] = useState(false);
   const [selectedConfigForTagging, setSelectedConfigForTagging] = useState<string | null>(null);
 
   const handleAddPeriodConfiguration = () => {
-    const newConfig: TimePeriodConfig = {
+    const newConfig: TimetableConfiguration = {
       id: `config-${Date.now()}`,
-      name: `Configuration ${periodConfigurations.length + 1}`,
+      name: `Configuration ${configurations.length + 1}`,
       isActive: false,
-      isDefault: false
+      isDefault: false,
+      academicYearId: selectedAcademicYear,
+      periods: []
     };
-    setPeriodConfigurations(prev => [...prev, newConfig]);
     setActiveConfigId(newConfig.id);
-    toast({
-      title: "New Configuration Added",
-      description: `${newConfig.name} has been created`
-    });
   };
 
-  const handleRemoveConfiguration = (configId: string) => {
-    const config = periodConfigurations.find(c => c.id === configId);
-    setPeriodConfigurations(prev => prev.filter(c => c.id !== configId));
-    if (activeConfigId === configId) {
-      setActiveConfigId(null);
-    }
-    if (config) {
-      toast({
-        title: "Configuration Removed",
-        description: `${config.name} has been deleted`
-      });
+  const handleRemoveConfiguration = async (configId: string) => {
+    try {
+      await deleteConfiguration(configId);
+      if (activeConfigId === configId) {
+        setActiveConfigId(null);
+      }
+    } catch (err) {
+      console.error('Error removing configuration:', err);
     }
   };
 
@@ -68,40 +65,63 @@ export const TimetableSettings = () => {
     }
   };
 
-  const handleConfigurationSaved = () => {
-    setActiveConfigId(null);
-    toast({
-      title: "Configuration Saved",
-      description: "Period configuration has been saved successfully"
-    });
+  const handleConfigurationSaved = async (config: TimetableConfiguration) => {
+    try {
+      if (config.id.startsWith('config-')) {
+        // New configuration
+        await saveConfiguration({
+          schoolId: config.schoolId!,
+          name: config.name,
+          isActive: config.isActive,
+          isDefault: config.isDefault,
+          academicYearId: config.academicYearId,
+          periods: config.periods,
+          batchIds: config.batchIds
+        });
+      } else {
+        // Update existing configuration
+        await updateConfiguration(config.id, {
+          name: config.name,
+          isActive: config.isActive,
+          isDefault: config.isDefault,
+          periods: config.periods,
+          batchIds: config.batchIds
+        });
+      }
+      setActiveConfigId(null);
+    } catch (err) {
+      console.error('Error saving configuration:', err);
+    }
   };
 
-  const handleToggleActive = (configId: string) => {
-    setPeriodConfigurations(prev => prev.map(config => 
-      config.id === configId ? { ...config, isActive: !config.isActive } : config
-    ));
-    const config = periodConfigurations.find(c => c.id === configId);
-    toast({
-      title: config?.isActive ? "Configuration Deactivated" : "Configuration Activated",
-      description: `${config?.name} is now ${config?.isActive ? 'inactive' : 'active'}`
-    });
+  const handleToggleActive = async (configId: string) => {
+    const config = configurations.find(c => c.id === configId);
+    if (!config) return;
+
+    try {
+      await updateConfiguration(configId, {
+        isActive: !config.isActive
+      });
+    } catch (err) {
+      console.error('Error toggling active status:', err);
+    }
   };
 
-  const handleToggleDefault = (configId: string) => {
-    setPeriodConfigurations(prev => prev.map(config => 
-      config.id === configId 
-        ? { ...config, isDefault: !config.isDefault }
-        : { ...config, isDefault: false }
-    ));
-    const config = periodConfigurations.find(c => c.id === configId);
-    toast({
-      title: config?.isDefault ? "Default Removed" : "Default Set",
-      description: `${config?.name} is ${config?.isDefault ? 'no longer' : 'now'} the default configuration`
-    });
+  const handleToggleDefault = async (configId: string) => {
+    const config = configurations.find(c => c.id === configId);
+    if (!config) return;
+
+    try {
+      await updateConfiguration(configId, {
+        isDefault: !config.isDefault
+      });
+    } catch (err) {
+      console.error('Error toggling default status:', err);
+    }
   };
 
   const handleBatchTagging = (configId: string) => {
-    const config = periodConfigurations.find(c => c.id === configId);
+    const config = configurations.find(c => c.id === configId);
     if (config?.isDefault) {
       return;
     }
@@ -132,6 +152,7 @@ export const TimetableSettings = () => {
           </CardDescription>
         </CardHeader>
       </Card>
+
       <Tabs defaultValue="time-periods" className="space-y-6">
         <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="time-periods" className="flex items-center gap-2">
@@ -157,7 +178,17 @@ export const TimetableSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {periodConfigurations.length === 0 ? (
+              {configurationsLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Timer className="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
+                  <p>Loading configurations...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-destructive">
+                  <p>Error loading configurations</p>
+                  <p className="text-sm">{error}</p>
+                </div>
+              ) : configurations.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Timer className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No period configurations created yet.</p>
@@ -165,7 +196,7 @@ export const TimetableSettings = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {periodConfigurations.map(config => (
+                  {configurations.map(config => (
                     <div key={config.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <Timer className="h-4 w-4 text-muted-foreground" />
@@ -242,17 +273,19 @@ export const TimetableSettings = () => {
             <TimePeriodConfiguration 
               key={activeConfigId}
               configId={activeConfigId}
+              selectedAcademicYear={selectedAcademicYear}
               onClose={() => setActiveConfigId(null)}
               onSave={handleConfigurationSaved}
             />
           )}
         </TabsContent>
       </Tabs>
+
       <BatchTaggingDialog
         open={batchTaggingDialogOpen}
         onOpenChange={setBatchTaggingDialogOpen}
         configurationId={selectedConfigForTagging}
-        configurationName={periodConfigurations.find(c => c.id === selectedConfigForTagging)?.name || ''}
+        configurationName={configurations.find(c => c.id === selectedConfigForTagging)?.name || ''}
       />
     </div>
   );
