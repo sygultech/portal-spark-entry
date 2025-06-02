@@ -1,3 +1,4 @@
+
 export interface Period {
   id: string;
   number: number;
@@ -5,9 +6,6 @@ export interface Period {
   endTime: string;
   type: 'period' | 'break';
   label?: string;
-  dayOfWeek: string | null;
-  isFortnightly?: boolean;
-  fortnightWeek?: number | null;
 }
 
 export interface TimePeriodConfigurationProps {

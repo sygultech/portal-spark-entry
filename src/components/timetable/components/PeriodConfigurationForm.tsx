@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,6 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { Period } from "../types/TimePeriodTypes";
 import { validatePeriodTimings, ValidationError } from "../utils/timeValidation";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PeriodConfigurationFormProps {
   totalPeriods: number;
@@ -25,17 +25,23 @@ interface PeriodConfigurationFormProps {
   isPeriodsExpanded: boolean;
   onTotalPeriodsChange: (value: string) => void;
   onPeriodsExpandedChange: (expanded: boolean) => void;
-  onPeriodsChange: (periods: Period[]) => void;
+  onUpdatePeriodTime: (id: string, field: 'startTime' | 'endTime', value: string) => void;
+  onAddBreakAfterPeriod: (afterPeriodId: string) => void;
+  onRemoveBreak: (breakId: string) => void;
+  onUpdateBreakLabel: (id: string, label: string) => void;
 }
 
-export const PeriodConfigurationForm: React.FC<PeriodConfigurationFormProps> = ({
+export const PeriodConfigurationForm = ({
   totalPeriods,
   periods,
   isPeriodsExpanded,
   onTotalPeriodsChange,
   onPeriodsExpandedChange,
-  onPeriodsChange
-}) => {
+  onUpdatePeriodTime,
+  onAddBreakAfterPeriod,
+  onRemoveBreak,
+  onUpdateBreakLabel
+}: PeriodConfigurationFormProps) => {
   const validationErrors = validatePeriodTimings(periods);
   const hasErrors = validationErrors.length > 0;
 
@@ -43,62 +49,8 @@ export const PeriodConfigurationForm: React.FC<PeriodConfigurationFormProps> = (
     return validationErrors.filter(error => error.id === periodId);
   };
 
-  const handlePeriodChange = (index: number, field: keyof Period, value: any) => {
-    const updatedPeriods = [...periods];
-    updatedPeriods[index] = {
-      ...updatedPeriods[index],
-      [field]: value
-    };
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const addPeriod = () => {
-    const newPeriod: Period = {
-      id: crypto.randomUUID(),
-      number: periods.length + 1,
-      startTime: '',
-      endTime: '',
-      type: 'period',
-      dayOfWeek: periods[0]?.dayOfWeek || null,
-      isFortnightly: periods[0]?.isFortnightly || false,
-      fortnightWeek: periods[0]?.fortnightWeek || null
-    };
-    onPeriodsChange([...periods, newPeriod]);
-  };
-
-  const removePeriod = (index: number) => {
-    const updatedPeriods = periods.filter((_, i) => i !== index);
-    // Renumber remaining periods
-    updatedPeriods.forEach((period, i) => {
-      period.number = i + 1;
-    });
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const addBreak = (afterPeriodIndex: number) => {
-    const newBreak: Period = {
-      id: crypto.randomUUID(),
-      number: periods[afterPeriodIndex].number + 0.5,
-      startTime: periods[afterPeriodIndex].endTime,
-      endTime: periods[afterPeriodIndex + 1]?.startTime || '',
-      type: 'break',
-      label: 'Break',
-      dayOfWeek: periods[0]?.dayOfWeek || null,
-      isFortnightly: periods[0]?.isFortnightly || false,
-      fortnightWeek: periods[0]?.fortnightWeek || null
-    };
-
-    const updatedPeriods = [
-      ...periods.slice(0, afterPeriodIndex + 1),
-      newBreak,
-      ...periods.slice(afterPeriodIndex + 1)
-    ];
-
-    onPeriodsChange(updatedPeriods);
-  };
-
   const handleTimeChange = (id: string, field: 'startTime' | 'endTime', value: string) => {
-    handlePeriodChange(periods.findIndex(p => p.id === id), field, value);
+    onUpdatePeriodTime(id, field, value);
     
     // Show toast for validation errors after a brief delay to allow state to update
     setTimeout(() => {
@@ -167,77 +119,75 @@ export const PeriodConfigurationForm: React.FC<PeriodConfigurationFormProps> = (
               const hasError = periodErrors.length > 0;
               
               return (
-                <div key={period.id} className={`flex items-start gap-4 p-4 border rounded-lg ${
+                <div key={period.id} className={`flex items-center gap-3 p-3 rounded-lg border ${
                   hasError 
                     ? 'bg-red-50 border-red-200' 
                     : period.type === 'break' 
                       ? 'bg-orange-50 border-orange-200' 
                       : 'bg-blue-50 border-blue-200'
                 }`}>
-                  <div className="flex-1 space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-24">
-                        <Label>Type</Label>
-                        <Select
-                          value={period.type}
-                          onValueChange={(value: 'period' | 'break') => handlePeriodChange(index, 'type', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="period">Period</SelectItem>
-                            <SelectItem value="break">Break</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {period.type === 'break' && (
-                        <div className="flex-1">
-                          <Label>Label</Label>
-                          <Input
-                            value={period.label || ''}
-                            onChange={(e) => handlePeriodChange(index, 'label', e.target.value)}
-                            placeholder="e.g., Lunch Break"
-                          />
-                        </div>
-                      )}
-
-                      <div className="w-32">
-                        <Label>Start Time</Label>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {period.type === 'period' ? (
+                      <>
+                        <BookOpen className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-sm">Period {period.number}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Coffee className="h-4 w-4 text-orange-600" />
                         <Input
-                          type="time"
-                          value={period.startTime}
-                          onChange={(e) => handleTimeChange(period.id, 'startTime', e.target.value)}
+                          value={period.label || ''}
+                          onChange={(e) => onUpdateBreakLabel(period.id, e.target.value)}
+                          placeholder="Break name"
+                          className="text-sm h-8 max-w-32"
                         />
-                      </div>
-
-                      <div className="w-32">
-                        <Label>End Time</Label>
-                        <Input
-                          type="time"
-                          value={period.endTime}
-                          onChange={(e) => handleTimeChange(period.id, 'endTime', e.target.value)}
-                        />
-                      </div>
-                    </div>
+                      </>
+                    )}
+                    {hasError && (
+                      <span title={periodErrors[0].message}>
+                        <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={period.startTime}
+                      onChange={(e) => handleTimeChange(period.id, 'startTime', e.target.value)}
+                      className={`w-24 h-8 text-sm ${hasError ? 'border-red-300 focus:border-red-500' : ''}`}
+                    />
+                    <span className="text-muted-foreground">to</span>
+                    <Input
+                      type="time"
+                      value={period.endTime}
+                      onChange={(e) => handleTimeChange(period.id, 'endTime', e.target.value)}
+                      className={`w-24 h-8 text-sm ${hasError ? 'border-red-300 focus:border-red-500' : ''}`}
+                    />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => removePeriod(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex gap-1">
                     {period.type === 'period' && (
                       <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => addBreak(index)}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onAddBreakAfterPeriod(period.id)}
+                        className="h-8 w-8 p-0"
+                        title="Add break after this period"
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    )}
+                    
+                    {period.type === 'break' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemoveBreak(period.id)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        title="Remove break"
+                      >
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
@@ -247,10 +197,6 @@ export const PeriodConfigurationForm: React.FC<PeriodConfigurationFormProps> = (
           </div>
         </CollapsibleContent>
       </Collapsible>
-
-      <Button onClick={addPeriod} className="w-full">
-        Add Period
-      </Button>
     </div>
   );
 };

@@ -7,8 +7,8 @@ import { Period } from "./types/TimePeriodTypes";
 import { PeriodConfigurationForm } from "./components/PeriodConfigurationForm";
 import { WeekDaysSelector } from "./components/WeekDaysSelector";
 import { DaySpecificConfig } from "./components/DaySpecificConfig";
-import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
-import { validatePeriodTimings } from "./utils/timeValidation";
+import { TimetableActions } from "./components/TimetableActions";
+import { toast } from "@/components/ui/use-toast";
 
 interface TimePeriodConfigurationProps {
   configId: string;
@@ -16,22 +16,13 @@ interface TimePeriodConfigurationProps {
   onSave: () => void;
 }
 
-export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePeriodConfigurationPropsExtended) => {
-  const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
-  const [totalPeriods, setTotalPeriods] = useState(8);
-  const [periods, setPeriods] = useState<Period[]>([
-    { id: '1', number: 1, startTime: '08:00', endTime: '08:45', type: 'period' },
-    { id: '2', number: 2, startTime: '08:45', endTime: '09:30', type: 'period' },
-    { id: '3', number: 3, startTime: '09:30', endTime: '10:15', type: 'period' },
-    { id: 'break1', number: 0, startTime: '10:15', endTime: '10:30', type: 'break', label: 'Short Break' },
-    { id: '4', number: 4, startTime: '10:30', endTime: '11:15', type: 'period' },
-    { id: '5', number: 5, startTime: '11:15', endTime: '12:00', type: 'period' },
-    { id: 'lunch', number: 0, startTime: '12:00', endTime: '12:45', type: 'break', label: 'Lunch Break' },
-    { id: '6', number: 6, startTime: '12:45', endTime: '13:30', type: 'period' },
-    { id: '7', number: 7, startTime: '13:30', endTime: '14:15', type: 'period' },
-    { id: '8', number: 8, startTime: '14:15', endTime: '15:00', type: 'period' }
-  ]);
-  const [selectedDays, setSelectedDays] = useState(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']);
+export const TimePeriodConfiguration = ({
+  configId,
+  onClose,
+  onSave
+}: TimePeriodConfigurationProps) => {
+  const [totalPeriods, setTotalPeriods] = useState(6);
+  const [periods, setPeriods] = useState<Period[]>([]);
   const [isPeriodsExpanded, setIsPeriodsExpanded] = useState(true);
   const [selectedDays, setSelectedDays] = useState<string[]>([
     'monday', 'tuesday', 'wednesday', 'thursday', 'friday'
@@ -64,7 +55,8 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
   }, [totalPeriods]);
 
   const handleSaveConfiguration = () => {
-    if (!timetableName.trim()) {
+    // Validate configuration before saving
+    if (!isWeeklyMode && !fortnightStartDate) {
       toast({
         title: "Validation Error",
         description: "Fortnight start date is required for fortnightly mode",
@@ -82,29 +74,9 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
       return;
     }
 
-    if (!isWeeklyMode && !fortnightStartDate) {
-      toast({
-        title: "Error",
-        description: "Fortnight Start Date is required for fortnightly mode",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Comprehensive validation
-    const validationStatus = getComprehensiveValidationStatus();
-    if (validationStatus.hasErrors) {
-      toast({
-        title: "Cannot Save Configuration",
-        description: `Please fix all ${validationStatus.totalErrors} timing conflicts before saving`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    console.log('Saving configuration:', {
+    // Save the configuration
+    console.log("Saving configuration:", {
       configId,
-      timetableName,
       totalPeriods,
       periods,
       selectedDays,
@@ -115,13 +87,17 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
 
     toast({
       title: "Configuration Saved",
-      description: `${timetableName} has been saved successfully`
+      description: "Period configuration has been saved successfully"
     });
 
-    // Call the onSave callback to close the configuration
-    if (onSave) {
-      onSave();
-    }
+    onSave();
+  };
+
+  const handleUpdateDayPeriods = (dayId: string, dayPeriods: Period[]) => {
+    setDaySpecificPeriods(prev => ({
+      ...prev,
+      [dayId]: dayPeriods
+    }));
   };
 
   const updatePeriodTime = (periodId: string, field: 'startTime' | 'endTime', value: string) => {
@@ -171,43 +147,27 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
     );
   };
 
-  // Handler to convert string to number for totalPeriods
-  const handleTotalPeriodsChange = (value: string) => {
-    const numValue = parseInt(value, 10);
-    if (!isNaN(numValue)) {
-      setTotalPeriods(numValue);
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5" />
-            Time & Period Configuration
-            {validationStatus.hasErrors && (
-              <span className="flex items-center gap-1 text-destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">{validationStatus.totalErrors} conflicts</span>
-              </span>
-            )}
+            <Clock className="h-5 w-5" />
+            Configure Period Configuration
           </span>
-          {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </CardTitle>
         <CardDescription>
-          Set up your school's daily schedule with periods, breaks, and working days
+          Set up periods, timings, and scheduling options for this configuration.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Week Days Selector */}
         <WeekDaysSelector
           selectedDays={selectedDays}
-          onSelectedDaysChange={setSelectedDays}
+          onDaysChange={setSelectedDays}
           isWeeklyMode={isWeeklyMode}
         />
 
@@ -216,7 +176,7 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
           totalPeriods={totalPeriods}
           periods={periods}
           isPeriodsExpanded={isPeriodsExpanded}
-          onTotalPeriodsChange={handleTotalPeriodsChange}
+          onTotalPeriodsChange={setTotalPeriods}
           onPeriodsExpandedChange={setIsPeriodsExpanded}
           onUpdatePeriodTime={updatePeriodTime}
           onAddBreakAfterPeriod={addBreakAfterPeriod}
@@ -240,7 +200,6 @@ export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePerio
           onSaveConfiguration={handleSaveConfiguration}
           fortnightStartDate={fortnightStartDate}
           onFortnightStartDateChange={setFortnightStartDate}
-          isLoading={isLoading}
         />
       </CardContent>
     </Card>

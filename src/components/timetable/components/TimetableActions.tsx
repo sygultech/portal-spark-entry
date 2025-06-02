@@ -1,10 +1,11 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Calendar, Loader2 } from "lucide-react";
+import { AlertTriangle, Calendar } from "lucide-react";
 
 interface TimetableActionsProps {
   isWeeklyMode: boolean;
@@ -12,7 +13,6 @@ interface TimetableActionsProps {
   onSaveConfiguration: () => void;
   fortnightStartDate?: string;
   onFortnightStartDateChange?: (date: string) => void;
-  isLoading?: boolean;
 }
 
 export const TimetableActions = ({
@@ -20,8 +20,7 @@ export const TimetableActions = ({
   onModeChange,
   onSaveConfiguration,
   fortnightStartDate,
-  onFortnightStartDateChange,
-  isLoading = false
+  onFortnightStartDateChange
 }: TimetableActionsProps) => {
   const handleModeChange = (checked: boolean) => {
     if (checked && isWeeklyMode) {
@@ -106,7 +105,6 @@ export const TimetableActions = ({
               id="timetable-mode"
               checked={!isWeeklyMode}
               onCheckedChange={handleModeChange}
-              disabled={isLoading}
             />
             <span className={`text-sm ${!isWeeklyMode ? 'font-medium text-orange-600' : 'text-muted-foreground'}`}>
               Fortnightly
@@ -115,21 +113,11 @@ export const TimetableActions = ({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" disabled={isLoading}>
+          <Button variant="outline">
             Save as Template
           </Button>
-          <Button 
-            onClick={onSaveConfiguration} 
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Configuration'
-            )}
+          <Button onClick={onSaveConfiguration}>
+            Save Configuration
           </Button>
         </div>
       </div>
