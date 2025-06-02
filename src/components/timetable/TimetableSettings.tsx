@@ -241,7 +241,6 @@ export const TimetableSettings = () => {
                           <Switch
                             checked={config.isActive}
                             onCheckedChange={() => handleToggleActive(config.id)}
-                            size="sm"
                           />
                         </div>
                         
@@ -251,7 +250,6 @@ export const TimetableSettings = () => {
                           <Switch
                             checked={config.isDefault}
                             onCheckedChange={() => handleToggleDefault(config.id)}
-                            size="sm"
                           />
                         </div>
 
