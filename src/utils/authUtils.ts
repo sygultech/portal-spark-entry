@@ -294,12 +294,12 @@ export const getUserRolesInSchool = async (userId: string, schoolId: string): Pr
   try {
     const { data: roles, error } = await supabase
       .from('user_role_cache')
-      .select('role')
+      .select('user_role')
       .eq('user_id', userId)
       .eq('school_id', schoolId);
 
     if (error) throw error;
-    return roles.map(r => r.role);
+    return roles.map(r => r.user_role);
   } catch (error) {
     console.error('Error getting user roles:', error);
     return [];

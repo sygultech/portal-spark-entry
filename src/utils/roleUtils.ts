@@ -1,3 +1,4 @@
+
 import { Profile, UserRole } from "@/types/common";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/lib/database.types";
@@ -164,7 +165,7 @@ export const getUserPrimaryRole = async (userId: string): Promise<UserRole | nul
   try {
     const { data, error } = await supabase
       .from('user_role_cache')
-      .select('role')
+      .select('user_role')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -175,7 +176,7 @@ export const getUserPrimaryRole = async (userId: string): Promise<UserRole | nul
       return null;
     }
 
-    return data?.role || null;
+    return data?.user_role || null;
   } catch (error) {
     console.error('Error in getUserPrimaryRole:', error);
     return null;
