@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { PeriodConfigurationForm } from "./components/PeriodConfigurationForm";
 import { WeekDaysSelector } from "./components/WeekDaysSelector";
 import { TimetableActions } from "./components/TimetableActions";
 import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
+import { validatePeriodTimings } from "./utils/timeValidation";
 
 export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigurationProps) => {
   const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
@@ -148,6 +148,17 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       toast({
         title: "Error", 
         description: "Please select at least one school day",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate timings before saving
+    const validationErrors = validatePeriodTimings(periods);
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Cannot Save Configuration",
+        description: "Please fix all timing conflicts before saving",
         variant: "destructive"
       });
       return;
