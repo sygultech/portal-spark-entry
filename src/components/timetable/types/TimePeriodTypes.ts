@@ -1,3 +1,4 @@
+
 export interface Period {
   id: string;
   number: number;
@@ -5,27 +6,12 @@ export interface Period {
   endTime: string;
   type: 'period' | 'break';
   label?: string;
-  dayOfWeek?: string;
-  isFortnightly?: boolean;
-  fortnightWeek?: number;
-}
-
-export interface TimetableConfiguration {
-  id: string;
-  name: string;
-  isActive: boolean;
-  isDefault: boolean;
-  academicYearId: string;
-  schoolId?: string;
-  periods: Period[];
-  batchIds?: string[];
 }
 
 export interface TimePeriodConfigurationProps {
   configId: string;
-  selectedAcademicYear: string;
   onClose?: () => void;
-  onSave?: (config: TimetableConfiguration) => void;
+  onSave?: () => void;
 }
 
 export interface WeekDay {
@@ -47,11 +33,5 @@ export const weekDays: WeekDay[] = [
 export interface ValidationError {
   id: string;
   message: string;
-  type: 'overlap' | 'invalid_time' | 'end_before_start';
-  day?: string;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
+  type: 'overlap' | 'invalid_time' | 'missing_time';
 }

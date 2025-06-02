@@ -1,211 +1,244 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { TimetableConfiguration, SaveTimetableConfigurationParams } from '@/types/timetable';
 import { useAuth } from '@/contexts/AuthContext';
+import { refreshUserRoleCache } from '@/utils/authUtils';
 
-export const useTimetableSettings = (academicYearId: string) => {
-  const [configurations, setConfigurations] = useState<TimetableConfiguration[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+export interface TimetableSettings {
+  id: string;
+  school_id: string;
+  period_duration: number;
+  break_duration: number;
+  lunch_duration: number;
+  school_start_time: string;
+  school_end_time: string;
+  half_day_end_time: string;
+  created_at: string;
+  updated_at: string;
+}
 
-  const fetchConfigurations = async () => {
-    if (!user?.schoolId || !academicYearId) return;
+export interface WorkingDays {
+  monday: boolean;
+  tuesday: boolean;
+  wednesday: boolean;
+  thursday: boolean;
+  friday: boolean;
+  saturday: boolean;
+  sunday: boolean;
+}
 
+export const useTimetableSettings = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, profile } = useAuth();
+
+  // Helper function to ensure role cache is populated
+  const ensureRoleCache = async () => {
+    if (!user?.id) return false;
+    return await refreshUserRoleCache(user.id);
+  };
+
+  // Fetch timetable settings for the current school
+  const getTimetableSettings = async () => {
     setIsLoading(true);
-    setError(null);
-
     try {
-      const { data, error } = await supabase.rpc(
-        'get_timetable_configurations',
-        {
-          p_school_id: user.schoolId,
-          p_academic_year_id: academicYearId
+      if (!profile?.school_id) {
+        throw new Error('School ID not found');
+      }
+
+      // Ensure role cache is populated
+      await ensureRoleCache();
+
+      const { data: settings, error } = await supabase
+        .from('timetable_settings')
+        .select('*')
+        .eq('school_id', profile.school_id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No settings found, create default settings
+          return await createDefaultSettings(profile.school_id);
         }
-      );
-
-      if (error) throw error;
-
-      setConfigurations(data || []);
-    } catch (err: any) {
-      console.error('Error fetching timetable configurations:', err);
-      setError(err.message);
+        throw error;
+      }
+      return settings;
+    } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load timetable configurations',
+        title: 'Error fetching timetable settings',
+        description: error.message,
         variant: 'destructive'
       });
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const saveConfiguration = async (params: SaveTimetableConfigurationParams) => {
-    if (!user?.schoolId) return;
+  // Create default settings
+  const createDefaultSettings = async (schoolId: string) => {
+    const defaultSettings = {
+      school_id: schoolId,
+      period_duration: 45,
+      break_duration: 15,
+      lunch_duration: 45,
+      school_start_time: '08:00:00',
+      school_end_time: '15:00:00',
+      half_day_end_time: '12:00:00',
+      working_days: {
+        monday: true,
+        tuesday: true,
+        wednesday: true,
+        thursday: true,
+        friday: true,
+        saturday: false,
+        sunday: false
+      }
+    };
 
+    const { data, error } = await supabase
+      .from('timetable_settings')
+      .insert(defaultSettings)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  };
+
+  // Update timetable settings
+  const updateTimetableSettings = async (settings: Partial<TimetableSettings>) => {
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc(
-        'save_timetable_configuration',
-        {
-          p_school_id: user.schoolId,
-          p_name: params.name,
-          p_is_active: params.isActive,
-          p_is_default: params.isDefault,
-          p_academic_year_id: params.academicYearId,
-          p_periods: params.periods,
-          p_batch_ids: params.batchIds
-        }
-      );
+      if (!profile?.school_id) {
+        throw new Error('School ID not found');
+      }
+
+      // Ensure role cache is populated
+      await ensureRoleCache();
+
+      // Validate time ranges
+      if (settings.period_duration && (settings.period_duration < 30 || settings.period_duration > 60)) {
+        throw new Error('Period duration must be between 30 and 60 minutes');
+      }
+      if (settings.break_duration && (settings.break_duration < 10 || settings.break_duration > 30)) {
+        throw new Error('Break duration must be between 10 and 30 minutes');
+      }
+      if (settings.lunch_duration && (settings.lunch_duration < 30 || settings.lunch_duration > 60)) {
+        throw new Error('Lunch duration must be between 30 and 60 minutes');
+      }
+
+      const { data, error } = await supabase
+        .from('timetable_settings')
+        .upsert({
+          ...settings,
+          school_id: profile.school_id
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Refresh configurations after saving
-      await fetchConfigurations();
-
       toast({
         title: 'Success',
-        description: 'Timetable configuration saved successfully'
+        description: 'Timetable settings updated successfully'
       });
 
       return data;
-    } catch (err: any) {
-      console.error('Error saving timetable configuration:', err);
+    } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to save timetable configuration',
+        title: 'Error updating timetable settings',
+        description: error.message,
         variant: 'destructive'
       });
-      throw err;
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const deleteConfiguration = async (configId: string) => {
+  // Create or update working days configuration
+  const updateWorkingDays = async (workingDays: WorkingDays) => {
+    setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('timetable_configurations')
-        .delete()
-        .eq('id', configId);
+      if (!profile?.school_id) {
+        throw new Error('School ID not found');
+      }
+
+      // Ensure role cache is populated
+      await ensureRoleCache();
+
+      const { data, error } = await supabase
+        .from('timetable_settings')
+        .upsert({
+          school_id: profile.school_id,
+          working_days: workingDays
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Refresh configurations after deletion
-      await fetchConfigurations();
-
       toast({
         title: 'Success',
-        description: 'Timetable configuration deleted successfully'
+        description: 'Working days configuration updated successfully'
       });
-    } catch (err: any) {
-      console.error('Error deleting timetable configuration:', err);
+
+      return data;
+    } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete timetable configuration',
+        title: 'Error updating working days',
+        description: error.message,
         variant: 'destructive'
       });
-      throw err;
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updateConfiguration = async (configId: string, params: Partial<SaveTimetableConfigurationParams>) => {
-    if (!user?.schoolId) return;
-
+  // Get working days configuration
+  const getWorkingDays = async () => {
+    setIsLoading(true);
     try {
-      // First update the configuration
-      const { error: configError } = await supabase
-        .from('timetable_configurations')
-        .update({
-          name: params.name,
-          is_active: params.isActive,
-          is_default: params.isDefault
-        })
-        .eq('id', configId);
-
-      if (configError) throw configError;
-
-      // If periods are provided, update them
-      if (params.periods) {
-        // Delete existing periods
-        const { error: deleteError } = await supabase
-          .from('period_settings')
-          .delete()
-          .eq('configuration_id', configId);
-
-        if (deleteError) throw deleteError;
-
-        // Insert new periods
-        const { error: insertError } = await supabase
-          .from('period_settings')
-          .insert(
-            params.periods.map(period => ({
-              configuration_id: configId,
-              period_number: period.number,
-              start_time: period.startTime,
-              end_time: period.endTime,
-              type: period.type,
-              label: period.label,
-              day_of_week: period.dayOfWeek,
-              is_fortnightly: period.isFortnightly,
-              fortnight_week: period.fortnightWeek
-            }))
-          );
-
-        if (insertError) throw insertError;
+      if (!profile?.school_id) {
+        throw new Error('School ID not found');
       }
 
-      // If batch IDs are provided, update them
-      if (params.batchIds) {
-        // Delete existing mappings
-        const { error: deleteError } = await supabase
-          .from('batch_configuration_mapping')
-          .delete()
-          .eq('configuration_id', configId);
+      // Ensure role cache is populated
+      await ensureRoleCache();
 
-        if (deleteError) throw deleteError;
+      const { data, error } = await supabase
+        .from('timetable_settings')
+        .select('working_days')
+        .eq('school_id', profile.school_id)
+        .single();
 
-        // Insert new mappings
-        const { error: insertError } = await supabase
-          .from('batch_configuration_mapping')
-          .insert(
-            params.batchIds.map(batchId => ({
-              configuration_id: configId,
-              batch_id: batchId
-            }))
-          );
-
-        if (insertError) throw insertError;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No settings found, create default settings
+          const defaultSettings = await createDefaultSettings(profile.school_id);
+          return defaultSettings.working_days as WorkingDays;
+        }
+        throw error;
       }
-
-      // Refresh configurations after update
-      await fetchConfigurations();
-
+      return data?.working_days as WorkingDays;
+    } catch (error: any) {
       toast({
-        title: 'Success',
-        description: 'Timetable configuration updated successfully'
-      });
-    } catch (err: any) {
-      console.error('Error updating timetable configuration:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to update timetable configuration',
+        title: 'Error fetching working days',
+        description: error.message,
         variant: 'destructive'
       });
-      throw err;
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Fetch configurations when academic year changes
-  useEffect(() => {
-    fetchConfigurations();
-  }, [academicYearId, user?.schoolId]);
 
   return {
-    configurations,
     isLoading,
-    error,
-    saveConfiguration,
-    deleteConfiguration,
-    updateConfiguration,
-    refreshConfigurations: fetchConfigurations
+    getTimetableSettings,
+    updateTimetableSettings,
+    updateWorkingDays,
+    getWorkingDays
   };
-};
+}; 

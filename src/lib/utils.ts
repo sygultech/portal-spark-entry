@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -24,12 +25,5 @@ export function getNestedValue(obj: any, path: string, defaultValue: any = undef
   }
   
   return result !== undefined ? result : defaultValue;
-}
-
-export function addMinutes(time: string, minutes: number): string {
-  const [hours, mins] = time.split(':').map(Number);
-  const date = new Date();
-  date.setHours(hours, mins + minutes);
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
