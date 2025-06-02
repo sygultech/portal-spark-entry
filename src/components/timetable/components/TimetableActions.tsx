@@ -23,8 +23,8 @@ export const TimetableActions = ({
   onFortnightStartDateChange
 }: TimetableActionsProps) => {
   const handleModeChange = (checked: boolean) => {
-    if (!checked && !isWeeklyMode) {
-      // Switching to fortnightly mode - show warning
+    if (checked && isWeeklyMode) {
+      // Switching from weekly to fortnightly mode - show warning
       const confirmSwitch = window.confirm(
         "⚠️ ADVANCED CONFIGURATION WARNING ⚠️\n\n" +
         "You are about to enable Fortnightly timetable mode. This is an advanced feature that:\n\n" +
