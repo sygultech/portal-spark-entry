@@ -29,6 +29,7 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
   const [selectedDays, setSelectedDays] = useState(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']);
   const [isPeriodsExpanded, setIsPeriodsExpanded] = useState(true);
   const [isWeeklyMode, setIsWeeklyMode] = useState(true);
+  const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
 
   const handleTotalPeriodsChange = (value: string) => {
     const num = parseInt(value) || 0;
@@ -153,6 +154,15 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       return;
     }
 
+    if (!isWeeklyMode && !fortnightStartDate) {
+      toast({
+        title: "Error",
+        description: "Fortnight Start Date is required for fortnightly mode",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Validate timings before saving
     const validationErrors = validatePeriodTimings(periods);
     if (validationErrors.length > 0) {
@@ -170,7 +180,8 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       totalPeriods,
       periods,
       selectedDays,
-      isWeeklyMode
+      isWeeklyMode,
+      fortnightStartDate
     });
 
     toast({
@@ -227,6 +238,7 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
         <WeekDaysSelector
           selectedDays={selectedDays}
           onSelectedDaysChange={setSelectedDays}
+          isWeeklyMode={isWeeklyMode}
         />
 
         {/* Mode Selection & Actions */}
@@ -234,6 +246,8 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
           isWeeklyMode={isWeeklyMode}
           onModeChange={setIsWeeklyMode}
           onSaveConfiguration={handleSaveConfiguration}
+          fortnightStartDate={fortnightStartDate}
+          onFortnightStartDateChange={setFortnightStartDate}
         />
       </CardContent>
     </Card>
