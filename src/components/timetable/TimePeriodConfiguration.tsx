@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,11 @@ import { DaySpecificConfig } from "./components/DaySpecificConfig";
 import { Period, TimePeriodConfigurationProps } from "./types/TimePeriodTypes";
 import { validatePeriodTimings } from "./utils/timeValidation";
 
-export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigurationProps) => {
+export interface TimePeriodConfigurationPropsExtended extends TimePeriodConfigurationProps {
+  onSave?: () => void;
+}
+
+export const TimePeriodConfiguration = ({ configId, onClose, onSave }: TimePeriodConfigurationPropsExtended) => {
   const [timetableName, setTimetableName] = useState(`Configuration ${configId.split('-')[1]}`);
   const [totalPeriods, setTotalPeriods] = useState(8);
   const [periods, setPeriods] = useState<Period[]>([
@@ -234,6 +237,11 @@ export const TimePeriodConfiguration = ({ configId, onClose }: TimePeriodConfigu
       title: "Configuration Saved",
       description: `${timetableName} has been saved successfully`
     });
+
+    // Call the onSave callback to close the configuration
+    if (onSave) {
+      onSave();
+    }
   };
 
   const validationStatus = getComprehensiveValidationStatus();

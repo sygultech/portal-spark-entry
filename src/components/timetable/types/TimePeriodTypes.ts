@@ -11,6 +11,7 @@ export interface Period {
 export interface TimePeriodConfigurationProps {
   configId: string;
   onClose?: () => void;
+  onSave?: () => void;
 }
 
 export interface WeekDay {
@@ -28,3 +29,9 @@ export const weekDays: WeekDay[] = [
   { id: 'saturday', label: 'Sat', fullName: 'Saturday' },
   { id: 'sunday', label: 'Sun', fullName: 'Sunday' }
 ];
+
+export interface ValidationError {
+  id: string;
+  message: string;
+  type: 'overlap' | 'invalid_time' | 'missing_time';
+}
