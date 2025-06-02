@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Copy, Edit, Trash2, Plus, AlertTriangle, CheckCircle } from "lucide-react";
+import { AcademicYearSelector } from "./components/AcademicYearSelector";
+import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 
 interface TimetableGridEditorProps {
   selectedClass: string;
@@ -52,6 +54,14 @@ const timeSlots = [
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGridEditorProps) => {
+  const { 
+    academicYears, 
+    selectedAcademicYear, 
+    setSelectedAcademicYear, 
+    selectedYear,
+    isLoading: academicYearLoading 
+  } = useAcademicYearSelector();
+  
   const [timetable, setTimetable] = useState<any>({});
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [draggedPeriod, setDraggedPeriod] = useState<any>(null);
@@ -111,9 +121,17 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <div>
-              Timetable Grid Editor - {selectedClass.toUpperCase()}
-              <Badge variant="outline" className="ml-2">{selectedTerm}</Badge>
+            <div className="flex items-center gap-4">
+              <div>
+                Timetable Grid Editor - {selectedClass.toUpperCase()}
+                <Badge variant="outline" className="ml-2">{selectedTerm}</Badge>
+              </div>
+              <AcademicYearSelector
+                academicYears={academicYears}
+                selectedAcademicYear={selectedAcademicYear}
+                onAcademicYearChange={setSelectedAcademicYear}
+                isLoading={academicYearLoading}
+              />
             </div>
             <div className="flex items-center gap-2">
               <Button onClick={copyTimetable} variant="outline" size="sm">
@@ -126,7 +144,9 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
               </Button>
             </div>
           </CardTitle>
-          <CardDescription>Drag and drop subjects to create the weekly schedule. Color-coded periods help identify conflicts.</CardDescription>
+          <CardDescription>
+            Drag and drop subjects to create the weekly schedule for {selectedYear?.name || 'the selected academic year'}. Color-coded periods help identify conflicts.
+          </CardDescription>
         </CardHeader>
       </Card>
 
