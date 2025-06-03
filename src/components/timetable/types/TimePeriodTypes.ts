@@ -1,11 +1,29 @@
-
 export interface Period {
   id: string;
   number: number;
   startTime: string;
   endTime: string;
   type: 'period' | 'break';
-  label?: string;
+  label: string;
+}
+
+export interface DaySpecificPeriods {
+  [dayId: string]: Period[];
+}
+
+export interface TimetableConfiguration {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+  academicYearId: string;
+  isWeeklyMode: boolean;
+  fortnightStartDate?: string | null;
+  selectedDays: string[];
+  defaultPeriods: Period[];
+  daySpecificPeriods: DaySpecificPeriods;
+  enableFlexibleTimings: boolean;
+  batchIds?: string[] | null;
 }
 
 export interface TimePeriodConfigurationProps {
