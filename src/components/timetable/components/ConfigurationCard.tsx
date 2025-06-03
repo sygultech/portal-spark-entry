@@ -43,7 +43,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           </div>
           <div className="flex items-center gap-1">
             {config.isActive && (
-              <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
+              <Badge variant="success" className="bg-green-100 text-green-700 hover:bg-green-100">
                 Active
               </Badge>
             )}
@@ -65,7 +65,6 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
               <Switch
                 checked={config.isActive}
                 onCheckedChange={() => onToggleActive(config.id)}
-                size="sm"
               />
             </div>
             
@@ -74,7 +73,6 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
               <Switch
                 checked={config.isDefault}
                 onCheckedChange={() => onToggleDefault(config.id)}
-                size="sm"
               />
             </div>
           </div>
