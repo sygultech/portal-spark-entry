@@ -1,13 +1,13 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Timer, Plus, Trash2, Tag, Info, Settings, Loader2 } from "lucide-react";
+import { Plus, Settings, Loader2, Timer } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { TimePeriodConfiguration } from "./TimePeriodConfiguration";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BatchTaggingDialog } from "./components/BatchTaggingDialog";
 import { AcademicYearSelector } from "./components/AcademicYearSelector";
+import { ConfigurationCard } from "./components/ConfigurationCard";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +32,7 @@ export const TimetableSettings = () => {
   const { profile } = useAuth();
   const [periodConfigurations, setPeriodConfigurations] = useState<TimePeriodConfig[]>([]);
   const [activeConfigId, setActiveConfigId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'view' | 'edit' | null>(null);
   const [batchTaggingDialogOpen, setBatchTaggingDialogOpen] = useState(false);
   const [selectedConfigForTagging, setSelectedConfigForTagging] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,10 +69,40 @@ export const TimetableSettings = () => {
     };
     setPeriodConfigurations(prev => [...prev, newConfig]);
     setActiveConfigId(newConfig.id);
+    setViewMode('edit');
     
     toast({
       title: "New Configuration Added",
       description: `${newConfig.name} has been created`
+    });
+  };
+
+  const handleEditConfiguration = (configId: string) => {
+    setActiveConfigId(configId);
+    setViewMode('edit');
+  };
+
+  const handleViewConfiguration = (configId: string) => {
+    setActiveConfigId(configId);
+    setViewMode('view');
+  };
+
+  const handleCloneConfiguration = (configId: string) => {
+    const originalConfig = periodConfigurations.find(c => c.id === configId);
+    if (!originalConfig) return;
+
+    const clonedConfig: TimePeriodConfig = {
+      id: `config-${Date.now()}`,
+      name: `${originalConfig.name} (Copy)`,
+      isActive: false,
+      isDefault: false
+    };
+
+    setPeriodConfigurations(prev => [...prev, clonedConfig]);
+    
+    toast({
+      title: "Configuration Cloned",
+      description: `${clonedConfig.name} has been created`
     });
   };
 
@@ -81,6 +112,7 @@ export const TimetableSettings = () => {
     
     if (activeConfigId === configId) {
       setActiveConfigId(null);
+      setViewMode(null);
     }
     
     if (config) {
@@ -88,14 +120,6 @@ export const TimetableSettings = () => {
         title: "Configuration Removed",
         description: `${config.name} has been deleted`
       });
-    }
-  };
-
-  const handleToggleConfiguration = (configId: string) => {
-    if (activeConfigId === configId) {
-      setActiveConfigId(null);
-    } else {
-      setActiveConfigId(configId);
     }
   };
 
@@ -111,6 +135,7 @@ export const TimetableSettings = () => {
       })));
     }
     setActiveConfigId(null);
+    setViewMode(null);
   };
 
   const handleToggleActive = (configId: string) => {
@@ -145,6 +170,11 @@ export const TimetableSettings = () => {
     
     setSelectedConfigForTagging(configId);
     setBatchTaggingDialogOpen(true);
+  };
+
+  const handleCloseConfiguration = () => {
+    setActiveConfigId(null);
+    setViewMode(null);
   };
 
   return (
@@ -200,94 +230,31 @@ export const TimetableSettings = () => {
               <p className="text-sm">Click "Add Configuration" to create your first timetable setup.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {periodConfigurations.map(config => (
-                <div key={config.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Timer className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{config.name}</span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {config.isActive && (
-                          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">Active</span>
-                        )}
-                        {config.isDefault && (
-                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">Default</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {/* Active Toggle */}
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Active</span>
-                      <Switch
-                        checked={config.isActive}
-                        onCheckedChange={() => handleToggleActive(config.id)}
-                      />
-                    </div>
-                    
-                    {/* Default Toggle */}
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Default</span>
-                      <Switch
-                        checked={config.isDefault}
-                        onCheckedChange={() => handleToggleDefault(config.id)}
-                      />
-                    </div>
-
-                    {/* Batch Tagging Icon */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleBatchTagging(config.id)}
-                            disabled={config.isDefault}
-                            className={`${config.isDefault ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <Tag className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {config.isDefault 
-                            ? "Default configurations apply to all batches automatically. Cannot tag specific batches."
-                            : "Tag batches to this configuration"
-                          }
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <Button
-                      variant={activeConfigId === config.id ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleToggleConfiguration(config.id)}
-                    >
-                      {activeConfigId === config.id ? "Hide" : "Configure"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveConfiguration(config.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                <ConfigurationCard
+                  key={config.id}
+                  config={config}
+                  onEdit={handleEditConfiguration}
+                  onClone={handleCloneConfiguration}
+                  onView={handleViewConfiguration}
+                  onToggleActive={handleToggleActive}
+                  onToggleDefault={handleToggleDefault}
+                  onBatchTagging={handleBatchTagging}
+                  onRemove={handleRemoveConfiguration}
+                />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Active Configuration Editor */}
+      {/* Active Configuration Editor/Viewer */}
       {activeConfigId && (
         <TimePeriodConfiguration 
           key={activeConfigId}
           configId={activeConfigId}
-          onClose={() => setActiveConfigId(null)}
+          onClose={handleCloseConfiguration}
           onSave={handleConfigurationSaved}
           academicYearId={selectedAcademicYear}
           configName={periodConfigurations.find(c => c.id === activeConfigId)?.name || ''}

@@ -885,7 +885,6 @@ export type Database = {
           end_time: string
           fortnight_week: number | null
           id: string
-          is_fortnightly: boolean | null
           label: string | null
           period_number: number
           start_time: string
@@ -899,7 +898,6 @@ export type Database = {
           end_time: string
           fortnight_week?: number | null
           id?: string
-          is_fortnightly?: boolean | null
           label?: string | null
           period_number: number
           start_time: string
@@ -913,7 +911,6 @@ export type Database = {
           end_time?: string
           fortnight_week?: number | null
           id?: string
-          is_fortnightly?: boolean | null
           label?: string | null
           period_number?: number
           start_time?: string
@@ -1865,9 +1862,11 @@ export type Database = {
         Row: {
           academic_year_id: string
           created_at: string | null
+          fortnight_start_date: string | null
           id: string
           is_active: boolean | null
           is_default: boolean | null
+          is_fortnightly: boolean | null
           name: string
           school_id: string
           updated_at: string | null
@@ -1875,9 +1874,11 @@ export type Database = {
         Insert: {
           academic_year_id: string
           created_at?: string | null
+          fortnight_start_date?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          is_fortnightly?: boolean | null
           name: string
           school_id: string
           updated_at?: string | null
@@ -1885,9 +1886,11 @@ export type Database = {
         Update: {
           academic_year_id?: string
           created_at?: string | null
+          fortnight_start_date?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          is_fortnightly?: boolean | null
           name?: string
           school_id?: string
           updated_at?: string | null
@@ -2202,6 +2205,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_timetable_configuration: {
+        Args: { p_config_id: string }
+        Returns: Json
+      }
       get_timetable_configurations: {
         Args: { p_school_id: string; p_academic_year_id: string }
         Returns: Json
@@ -2333,15 +2340,30 @@ export type Database = {
         Returns: boolean
       }
       save_timetable_configuration: {
-        Args: {
-          p_school_id: string
-          p_name: string
-          p_is_active: boolean
-          p_is_default: boolean
-          p_academic_year_id: string
-          p_periods: Json
-          p_batch_ids?: string[]
-        }
+        Args:
+          | {
+              p_school_id: string
+              p_name: string
+              p_is_active: boolean
+              p_is_default: boolean
+              p_academic_year_id: string
+              p_is_weekly_mode: boolean
+              p_selected_days: string[]
+              p_default_periods: Json
+              p_fortnight_start_date?: string
+              p_day_specific_periods?: Json
+              p_enable_flexible_timings?: boolean
+              p_batch_ids?: string[]
+            }
+          | {
+              p_school_id: string
+              p_name: string
+              p_is_active: boolean
+              p_is_default: boolean
+              p_academic_year_id: string
+              p_periods: Json
+              p_batch_ids?: string[]
+            }
         Returns: string
       }
       switch_primary_school: {
