@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Period } from '@/components/timetable/types/TimePeriodTypes';
@@ -18,8 +19,22 @@ interface SaveTimetableConfigurationParams {
   batchIds?: string[] | null;
 }
 
+interface TimetableConfiguration {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+  academicYearId: string;
+  isWeeklyMode: boolean;
+  fortnightStartDate?: string;
+  selectedDays: string[];
+  defaultPeriods: Period[];
+  daySpecificPeriods: Record<string, Period[]>;
+  batchIds?: string[];
+}
+
 export const useTimetableConfiguration = () => {
-  const getTimetableConfigurations = useCallback(async (schoolId: string, academicYearId: string) => {
+  const getTimetableConfigurations = useCallback(async (schoolId: string, academicYearId: string): Promise<TimetableConfiguration[]> => {
     try {
       const { data, error } = await supabase.rpc('get_timetable_configurations', {
         p_school_id: schoolId,
@@ -27,7 +42,64 @@ export const useTimetableConfiguration = () => {
       });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our expected format
+      return (data || []).map((config: any) => {
+        console.log('Raw config data:', config);
+        
+        // Extract periods and group by day
+        const periodsData = config.periods || [];
+        const allPeriods: Period[] = [];
+        const daySpecificPeriods: Record<string, Period[]> = {};
+        const selectedDaysSet = new Set<string>();
+
+        // Process periods from the database
+        periodsData.forEach((period: any) => {
+          const periodObj: Period = {
+            id: period.id || `period-${period.number}`,
+            number: period.number,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            type: period.type || 'period',
+            label: period.label || (period.type === 'period' ? `Period ${period.number}` : period.label)
+          };
+
+          // Construct day identifier
+          let dayId = period.dayOfWeek;
+          if (!config.isFortnightly) {
+            // Weekly mode - use day name directly
+            selectedDaysSet.add(dayId);
+          } else {
+            // Fortnightly mode - construct week-specific day ID
+            if (period.fortnightWeek) {
+              dayId = `week${period.fortnightWeek}-${period.dayOfWeek}`;
+              selectedDaysSet.add(dayId);
+            }
+          }
+
+          // Check if this is a day-specific period or default period
+          // For now, we'll treat all periods as default periods
+          // You might need to add logic here to distinguish between default and day-specific periods
+          allPeriods.push(periodObj);
+        });
+
+        // Sort periods by number
+        allPeriods.sort((a, b) => a.number - b.number);
+
+        return {
+          id: config.id,
+          name: config.name,
+          isActive: config.isActive,
+          isDefault: config.isDefault,
+          academicYearId: config.academicYearId,
+          isWeeklyMode: !config.isFortnightly,
+          fortnightStartDate: config.fortnightStartDate,
+          selectedDays: Array.from(selectedDaysSet),
+          defaultPeriods: allPeriods,
+          daySpecificPeriods,
+          batchIds: config.batchIds || []
+        };
+      });
     } catch (error: any) {
       console.error('Error fetching timetable configurations:', error);
       toast({
@@ -132,4 +204,4 @@ export const useTimetableConfiguration = () => {
   }, []);
 
   return { saveTimetableConfiguration, getTimetableConfigurations };
-}; 
+};

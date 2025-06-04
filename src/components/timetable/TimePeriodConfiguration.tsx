@@ -51,15 +51,28 @@ export const TimePeriodConfiguration = ({
   useEffect(() => {
     const fetchConfigurationData = async () => {
       if (mode === 'view' && profile?.school_id && academicYearId) {
+        console.log('Fetching configuration data for view mode...');
         const configs = await getTimetableConfigurations(profile.school_id, academicYearId);
         const currentConfig = configs.find(config => config.id === configId);
+        
         if (currentConfig) {
-          setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
+          console.log('Found configuration:', currentConfig);
+          
+          // Set periods and calculate total periods count
           setPeriods(currentConfig.defaultPeriods);
+          setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
+          
+          // Set selected days
           setSelectedDays(currentConfig.selectedDays);
+          
+          // Set mode and fortnight settings
           setIsWeeklyMode(currentConfig.isWeeklyMode);
           setFortnightStartDate(currentConfig.fortnightStartDate || '');
+          
+          // Set day-specific periods
           setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
+        } else {
+          console.warn('Configuration not found:', configId);
         }
       }
     };
