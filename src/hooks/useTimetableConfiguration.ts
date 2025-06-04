@@ -54,6 +54,16 @@ export const useTimetableConfiguration = () => {
     batchIds
   }: SaveTimetableConfigurationParams) => {
     try {
+      // For fortnightly mode, we need to create periods for both weeks
+      const processedSelectedDays = selectedDays.map(dayId => {
+        if (isWeeklyMode) return { day: dayId, week: null };
+        const [weekPart, dayPart] = dayId.split('-');
+        return {
+          day: dayPart,
+          week: weekPart === 'week1' ? 1 : 2
+        };
+      });
+
       // Convert defaultPeriods to the format expected by the backend
       const formattedDefaultPeriods = defaultPeriods.map(period => ({
         number: period.number,
@@ -65,16 +75,25 @@ export const useTimetableConfiguration = () => {
 
       // Convert daySpecificPeriods to the format expected by the backend
       const formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
-        (acc, [dayId, periods]) => ({
-          ...acc,
-          [dayId]: periods.map(period => ({
-            number: period.number,
-            startTime: period.startTime,
-            endTime: period.endTime,
-            type: period.type,
-            label: period.label
-          }))
-        }),
+        (acc, [dayId, periods]) => {
+          // Extract week number and base day name for fortnightly mode
+          const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
+          const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
+          const baseDayName = isWeeklyMode ? dayId : dayPart;
+
+          return {
+            ...acc,
+            [dayId]: periods.map(period => ({
+              number: period.number,
+              startTime: period.startTime,
+              endTime: period.endTime,
+              type: period.type,
+              label: period.label,
+              day_of_week: baseDayName,
+              fortnight_week: weekNumber
+            }))
+          };
+        },
         {}
       );
 

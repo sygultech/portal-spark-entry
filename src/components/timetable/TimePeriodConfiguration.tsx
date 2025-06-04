@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
 import React, { useState, useEffect } from "react";
+import { TimePeriodConfigurationReadOnly } from "./components/TimePeriodConfigurationReadOnly";
 
 interface TimePeriodConfigurationProps {
   configId: string;
@@ -19,6 +20,7 @@ interface TimePeriodConfigurationProps {
   configName: string;
   isActive: boolean;
   isDefault: boolean;
+  mode?: 'view' | 'edit';
 }
 
 export const TimePeriodConfiguration = ({
@@ -28,10 +30,11 @@ export const TimePeriodConfiguration = ({
   academicYearId,
   configName,
   isActive,
-  isDefault
+  isDefault,
+  mode = 'edit'
 }: TimePeriodConfigurationProps) => {
   const { profile } = useAuth();
-  const { saveTimetableConfiguration } = useTimetableConfiguration();
+  const { saveTimetableConfiguration, getTimetableConfigurations } = useTimetableConfiguration();
   const [totalPeriods, setTotalPeriods] = useState(6);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [isPeriodsExpanded, setIsPeriodsExpanded] = useState(true);
@@ -41,6 +44,26 @@ export const TimePeriodConfiguration = ({
   const [isWeeklyMode, setIsWeeklyMode] = useState(true);
   const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
   const [daySpecificPeriods, setDaySpecificPeriods] = useState<Record<string, Period[]>>({});
+
+  // Fetch configuration data when in view mode
+  useEffect(() => {
+    const fetchConfigurationData = async () => {
+      if (mode === 'view' && profile?.school_id && academicYearId) {
+        const configs = await getTimetableConfigurations(profile.school_id, academicYearId);
+        const currentConfig = configs.find(config => config.id === configId);
+        if (currentConfig) {
+          setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
+          setPeriods(currentConfig.defaultPeriods);
+          setSelectedDays(currentConfig.selectedDays);
+          setIsWeeklyMode(currentConfig.isWeeklyMode);
+          setFortnightStartDate(currentConfig.fortnightStartDate || '');
+          setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
+        }
+      }
+    };
+
+    fetchConfigurationData();
+  }, [mode, configId, profile?.school_id, academicYearId, getTimetableConfigurations]);
 
   // Generate default periods based on total periods count
   useEffect(() => {
@@ -66,14 +89,25 @@ export const TimePeriodConfiguration = ({
   }, [totalPeriods]);
 
   const handleSaveConfiguration = async () => {
+    // Validate that all period numbers are integers
+    const hasNonIntegerNumbers = periods.some(period => !Number.isInteger(period.number));
+    if (hasNonIntegerNumbers) {
+        toast({
+            title: "Validation Error",
+            description: "All period numbers must be integers",
+            variant: "destructive"
+        });
+        return;
+    }
+
     // Validate configuration before saving
     if (!isWeeklyMode && !fortnightStartDate) {
-      toast({
-        title: "Validation Error",
-        description: "Fortnight start date is required for fortnightly mode",
-        variant: "destructive"
-      });
-      return;
+        toast({
+            title: "Validation Error",
+            description: "Fortnight start date is required for fortnightly mode",
+            variant: "destructive"
+        });
+        return;
     }
 
     if (selectedDays.length === 0) {
@@ -94,6 +128,15 @@ export const TimePeriodConfiguration = ({
       return;
     }
 
+    // Process day-specific periods to preserve week information
+    const processedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce((acc, [dayId, periods]) => {
+      // For fortnightly mode, keep the full dayId (e.g., 'week1-monday')
+      return {
+        ...acc,
+        [dayId]: periods
+      };
+    }, {});
+
     const result = await saveTimetableConfiguration({
       schoolId: profile.school_id,
       name: configName,
@@ -102,9 +145,9 @@ export const TimePeriodConfiguration = ({
       academicYearId,
       isWeeklyMode,
       fortnightStartDate: isWeeklyMode ? null : fortnightStartDate,
-      selectedDays,
+      selectedDays, // Keep the full day IDs (e.g., 'week1-monday')
       defaultPeriods: periods,
-      daySpecificPeriods,
+      daySpecificPeriods: processedDaySpecificPeriods,
       enableFlexibleTimings: Object.keys(daySpecificPeriods).length > 0,
       batchIds: null // Handle this if batch tagging is needed
     });
@@ -131,23 +174,57 @@ export const TimePeriodConfiguration = ({
     const periodIndex = periods.findIndex(p => p.id === periodId);
     if (periodIndex === -1) return;
 
-    const breakNumber = periods[periodIndex].number + 0.5;
+    // Create the break period with the next number in sequence
+    const breakNumber = periods[periodIndex].number + 1;
+    
     const breakPeriod: Period = {
-      id: `break-${Date.now()}`,
-      number: breakNumber,
-      startTime: periods[periodIndex].endTime,
-      endTime: periods[periodIndex + 1]?.startTime || '09:00',
-      type: 'break',
-      label: 'Break'
+        id: `break-${Date.now()}`,
+        number: breakNumber,
+        startTime: periods[periodIndex].endTime,
+        endTime: periods[periodIndex + 1]?.startTime || '09:00',
+        type: 'break',
+        label: 'Break'
     };
 
-    const newPeriods = [...periods];
+    // Create new periods array with shifted numbers
+    const newPeriods = periods.map(period => {
+        if (period.number <= periods[periodIndex].number) {
+            // Keep numbers the same for periods before the break
+            return period;
+        } else {
+            // Shift numbers up by 1 for all periods after the break
+            return {
+                ...period,
+                number: period.number + 1
+            };
+        }
+    });
+
+    // Insert the break period at the correct position
     newPeriods.splice(periodIndex + 1, 0, breakPeriod);
     setPeriods(newPeriods);
   };
 
   const removeBreak = (breakId: string) => {
-    setPeriods(prev => prev.filter(period => period.id !== breakId));
+    // Find the break's index
+    const breakIndex = periods.findIndex(period => period.id === breakId);
+    if (breakIndex === -1) return;
+
+    // Create new periods array with adjusted numbers
+    const newPeriods = periods
+        .filter(period => period.id !== breakId) // Remove the break
+        .map((period, idx, array) => {
+            if (period.number > periods[breakIndex].number) {
+                // Shift numbers down by 1 for all periods after the break
+                return {
+                    ...period,
+                    number: period.number - 1
+                };
+            }
+            return period;
+        });
+
+    setPeriods(newPeriods);
   };
 
   const updateBreakLabel = (breakId: string, label: string) => {
@@ -162,6 +239,19 @@ export const TimePeriodConfiguration = ({
       [dayId]: updatedPeriods
     }));
   };
+
+  if (mode === 'view') {
+    return (
+      <TimePeriodConfigurationReadOnly
+        configName={configName}
+        onClose={onClose}
+        periods={periods}
+        selectedDays={selectedDays}
+        isWeeklyMode={isWeeklyMode}
+        daySpecificPeriods={daySpecificPeriods}
+      />
+    );
+  }
 
   return (
     <Card>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ const generateFortnightDays = (): WeekDay[] => {
   
   weekDays.forEach((day) => {
     fortnightDays.push({
-      id: `week1-${day.id}`,
+      id: `week1-${day.id.toLowerCase()}`,
       label: `W1-${day.label}`,
       fullName: `Week 1 ${day.fullName}`
     });
@@ -34,7 +33,7 @@ const generateFortnightDays = (): WeekDay[] => {
   
   weekDays.forEach((day) => {
     fortnightDays.push({
-      id: `week2-${day.id}`,
+      id: `week2-${day.id.toLowerCase()}`,
       label: `W2-${day.label}`,
       fullName: `Week 2 ${day.fullName}`
     });
@@ -62,13 +61,17 @@ export const DaySpecificConfig = ({
       setActiveDay(null);
       // Reset all day-specific configurations when disabled
       activeDays.forEach(day => {
-        onUpdateDayPeriods(day.id, []);
+        // Extract base day name for fortnightly mode
+        const dayId = isWeeklyMode ? day.id : day.id.split('-')[1];
+        onUpdateDayPeriods(dayId, []);
       });
     }
   };
 
   const copyFromDefault = (dayId: string) => {
-    onUpdateDayPeriods(dayId, [...defaultPeriods]);
+    // Ensure we're using the correct day ID format
+    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    onUpdateDayPeriods(targetDayId, [...defaultPeriods]);
     
     // Validate the copied periods immediately
     const validationErrors = validatePeriodTimings(defaultPeriods);
@@ -87,8 +90,12 @@ export const DaySpecificConfig = ({
   };
 
   const copyFromAnotherDay = (dayId: string, sourceDayId: string) => {
-    const sourcePeriods = daySpecificPeriods[sourceDayId] || defaultPeriods;
-    onUpdateDayPeriods(dayId, [...sourcePeriods]);
+    // Ensure we're using the correct day ID format
+    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    const sourceDay = isWeeklyMode ? sourceDayId : sourceDayId.split('-')[1];
+    
+    const sourcePeriods = daySpecificPeriods[sourceDay] || defaultPeriods;
+    onUpdateDayPeriods(targetDayId, [...sourcePeriods]);
     
     // Validate the copied periods immediately
     const validationErrors = validatePeriodTimings(sourcePeriods);

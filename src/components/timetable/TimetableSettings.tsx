@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -260,6 +259,7 @@ export const TimetableSettings = () => {
           configName={periodConfigurations.find(c => c.id === activeConfigId)?.name || ''}
           isActive={periodConfigurations.find(c => c.id === activeConfigId)?.isActive || false}
           isDefault={periodConfigurations.find(c => c.id === activeConfigId)?.isDefault || false}
+          mode={viewMode}
         />
       )}
 
