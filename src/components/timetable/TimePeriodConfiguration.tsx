@@ -67,6 +67,45 @@ export const TimePeriodConfiguration = ({
     fetchConfigurationData();
   }, [mode, configId, profile?.school_id, academicYearId, getTimetableConfigurations]);
 
+  // Handle mode changes and reset selected days appropriately
+  useEffect(() => {
+    if (mode === 'edit') {
+      if (isWeeklyMode) {
+        // Convert fortnightly days back to weekly days if switching from fortnightly to weekly
+        const weeklyDays = selectedDays
+          .map(dayId => {
+            if (dayId.includes('-')) {
+              const [_, dayPart] = dayId.split('-');
+              return dayPart;
+            }
+            return dayId;
+          })
+          .filter((day, index, array) => array.indexOf(day) === index); // Remove duplicates
+        
+        if (weeklyDays.length !== selectedDays.length || selectedDays.some(day => day.includes('-'))) {
+          setSelectedDays(weeklyDays);
+          setDaySpecificPeriods({}); // Reset day-specific periods when switching modes
+        }
+      } else {
+        // Convert weekly days to fortnightly days if switching from weekly to fortnightly
+        if (selectedDays.length > 0 && !selectedDays.some(day => day.includes('-'))) {
+          const fortnightDays: string[] = [];
+          selectedDays.forEach(day => {
+            fortnightDays.push(`week1-${day}`);
+            fortnightDays.push(`week2-${day}`);
+          });
+          setSelectedDays(fortnightDays);
+          setDaySpecificPeriods({}); // Reset day-specific periods when switching modes
+        }
+      }
+      
+      // Reset validation state when mode changes
+      if (hasTriedToSubmit) {
+        setHasTriedToSubmit(false);
+      }
+    }
+  }, [isWeeklyMode, mode]);
+
   // Generate default periods based on total periods count
   useEffect(() => {
     const newPeriods: Period[] = [];
@@ -254,6 +293,14 @@ export const TimePeriodConfiguration = ({
     }
   };
 
+  const handleModeChange = (newMode: boolean) => {
+    setIsWeeklyMode(newMode);
+    // Reset validation state when mode changes
+    if (hasTriedToSubmit) {
+      setHasTriedToSubmit(false);
+    }
+  };
+
   if (mode === 'view') {
     return (
       <TimePeriodConfigurationReadOnly
@@ -317,7 +364,7 @@ export const TimePeriodConfiguration = ({
         {/* Timetable Actions */}
         <TimetableActions
           isWeeklyMode={isWeeklyMode}
-          onModeChange={setIsWeeklyMode}
+          onModeChange={handleModeChange}
           onSaveConfiguration={handleSaveConfiguration}
           fortnightStartDate={fortnightStartDate}
           onFortnightStartDateChange={setFortnightStartDate}
