@@ -79,6 +79,19 @@ const ConfigurationStats = ({ periods, selectedDays, isWeeklyMode, daySpecificPe
   );
 };
 
+// Helper function to convert time string to minutes for comparison
+const timeToMinutes = (timeString: string): number => {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+// Helper function to convert minutes back to time string
+const minutesToTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
 export const TimePeriodConfigurationReadOnly = ({
   configName,
   onClose,
@@ -94,12 +107,26 @@ export const TimePeriodConfigurationReadOnly = ({
 
   const hasFlexibleTimings = Object.keys(daySpecificPeriods).length > 0;
 
-  // Calculate time range
+  // Calculate time range with proper time string comparison
   const allPeriods = hasFlexibleTimings 
     ? Object.values(daySpecificPeriods).flat()
     : periods;
-  const startTime = allPeriods.length > 0 ? Math.min(...allPeriods.map(p => p.startTime)).toString() : 'N/A';
-  const endTime = allPeriods.length > 0 ? Math.max(...allPeriods.map(p => p.endTime)).toString() : 'N/A';
+  
+  let startTime = 'N/A';
+  let endTime = 'N/A';
+  
+  if (allPeriods.length > 0) {
+    const timeInMinutes = allPeriods.map(p => ({
+      start: timeToMinutes(p.startTime),
+      end: timeToMinutes(p.endTime)
+    }));
+    
+    const earliestStart = Math.min(...timeInMinutes.map(t => t.start));
+    const latestEnd = Math.max(...timeInMinutes.map(t => t.end));
+    
+    startTime = minutesToTime(earliestStart);
+    endTime = minutesToTime(latestEnd);
+  }
 
   return (
     <Card className="w-full max-w-6xl mx-auto">
