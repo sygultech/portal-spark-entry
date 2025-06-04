@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Period } from '@/components/timetable/types/TimePeriodTypes';
@@ -49,9 +48,14 @@ export const useTimetableConfiguration = () => {
         
         // Extract periods and group by day
         const periodsData = config.periods || [];
-        const allPeriods: Period[] = [];
-        const daySpecificPeriods: Record<string, Period[]> = {};
         const selectedDaysSet = new Set<string>();
+        const daySpecificPeriods: Record<string, Period[]> = {};
+        
+        // Check if this configuration has flexible timings (different schedules per day)
+        const hasFlexibleTimings = periodsData.length > 0 && 
+          new Set(periodsData.map((p: any) => p.dayOfWeek)).size > 1;
+
+        console.log('Has flexible timings:', hasFlexibleTimings);
 
         // Process periods from the database
         periodsData.forEach((period: any) => {
@@ -77,14 +81,45 @@ export const useTimetableConfiguration = () => {
             }
           }
 
-          // Check if this is a day-specific period or default period
-          // For now, we'll treat all periods as default periods
-          // You might need to add logic here to distinguish between default and day-specific periods
-          allPeriods.push(periodObj);
+          // Group periods by day for flexible timings
+          if (hasFlexibleTimings) {
+            if (!daySpecificPeriods[dayId]) {
+              daySpecificPeriods[dayId] = [];
+            }
+            daySpecificPeriods[dayId].push(periodObj);
+          }
         });
 
-        // Sort periods by number
-        allPeriods.sort((a, b) => a.number - b.number);
+        // Sort periods within each day by period number
+        Object.keys(daySpecificPeriods).forEach(dayId => {
+          daySpecificPeriods[dayId].sort((a, b) => a.number - b.number);
+        });
+
+        // For configurations without flexible timings, use the first day's schedule as default
+        let defaultPeriods: Period[] = [];
+        if (!hasFlexibleTimings && periodsData.length > 0) {
+          // Group all periods and use them as default (assuming all days have same schedule)
+          const allPeriods: Period[] = [];
+          const uniquePeriods = new Map<number, Period>();
+
+          periodsData.forEach((period: any) => {
+            const periodObj: Period = {
+              id: period.id || `period-${period.number}`,
+              number: period.number,
+              startTime: period.startTime,
+              endTime: period.endTime,
+              type: period.type || 'period',
+              label: period.label || (period.type === 'period' ? `Period ${period.number}` : period.label)
+            };
+
+            // Use the first occurrence of each period number
+            if (!uniquePeriods.has(period.number)) {
+              uniquePeriods.set(period.number, periodObj);
+            }
+          });
+
+          defaultPeriods = Array.from(uniquePeriods.values()).sort((a, b) => a.number - b.number);
+        }
 
         return {
           id: config.id,
@@ -95,8 +130,8 @@ export const useTimetableConfiguration = () => {
           isWeeklyMode: !config.isFortnightly,
           fortnightStartDate: config.fortnightStartDate,
           selectedDays: Array.from(selectedDaysSet),
-          defaultPeriods: allPeriods,
-          daySpecificPeriods,
+          defaultPeriods: defaultPeriods,
+          daySpecificPeriods: daySpecificPeriods,
           batchIds: config.batchIds || []
         };
       });
