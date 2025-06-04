@@ -56,6 +56,9 @@ export const useTimetableConfiguration = () => {
         const allPeriods: Period[] = [];
         const periodsByDayAndWeek: Record<string, Period[]> = {};
 
+        // Determine if this is a weekly or fortnightly configuration
+        const isWeeklyConfig = periodsData.every((period: any) => period.fortnightWeek === null);
+        
         periodsData.forEach((period: any) => {
           const periodObj: Period = {
             id: period.id || `period-${period.number}`,
@@ -68,9 +71,10 @@ export const useTimetableConfiguration = () => {
 
           allPeriods.push(periodObj);
 
-          // Construct day identifier based on mode
+          // Construct day identifier based on fortnight_week value
           let dayId = period.dayOfWeek;
-          if (config.isFortnightly && period.fortnightWeek) {
+          
+          if (!isWeeklyConfig && period.fortnightWeek !== null) {
             // Fortnightly mode - construct week-specific day ID
             dayId = `week${period.fortnightWeek}-${period.dayOfWeek}`;
           }
@@ -111,6 +115,7 @@ export const useTimetableConfiguration = () => {
           });
         }
 
+        console.log('Is weekly config:', isWeeklyConfig);
         console.log('Has flexible timings:', hasFlexibleTimings);
 
         if (hasFlexibleTimings) {
@@ -142,7 +147,7 @@ export const useTimetableConfiguration = () => {
           isActive: config.isActive,
           isDefault: config.isDefault,
           academicYearId: config.academicYearId,
-          isWeeklyMode: !config.isFortnightly,
+          isWeeklyMode: isWeeklyConfig,
           fortnightStartDate: config.fortnightStartDate,
           selectedDays: Array.from(selectedDaysSet),
           defaultPeriods: defaultPeriods,
