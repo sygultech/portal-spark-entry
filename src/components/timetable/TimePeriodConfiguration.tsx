@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Save, X } from "lucide-react";
@@ -44,6 +45,7 @@ export const TimePeriodConfiguration = ({
   const [isWeeklyMode, setIsWeeklyMode] = useState(true);
   const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
   const [daySpecificPeriods, setDaySpecificPeriods] = useState<Record<string, Period[]>>({});
+  const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
 
   // Fetch configuration data when in view mode
   useEffect(() => {
@@ -89,6 +91,18 @@ export const TimePeriodConfiguration = ({
   }, [totalPeriods]);
 
   const handleSaveConfiguration = async () => {
+    setHasTriedToSubmit(true);
+
+    // Validate school days selection
+    if (selectedDays.length === 0) {
+      toast({
+        title: "School Days Required",
+        description: "Please select at least one school day before submitting the configuration.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Validate that all period numbers are integers
     const hasNonIntegerNumbers = periods.some(period => !Number.isInteger(period.number));
     if (hasNonIntegerNumbers) {
@@ -108,15 +122,6 @@ export const TimePeriodConfiguration = ({
             variant: "destructive"
         });
         return;
-    }
-
-    if (selectedDays.length === 0) {
-      toast({
-        title: "Validation Error", 
-        description: "At least one school day must be selected",
-        variant: "destructive"
-      });
-      return;
     }
 
     if (!profile?.school_id) {
@@ -153,6 +158,7 @@ export const TimePeriodConfiguration = ({
     });
 
     if (result) {
+      setHasTriedToSubmit(false);
       onSave();
     }
   };
@@ -240,6 +246,14 @@ export const TimePeriodConfiguration = ({
     }));
   };
 
+  const handleSelectedDaysChange = (days: string[]) => {
+    setSelectedDays(days);
+    // Reset hasTriedToSubmit when user makes changes to school days
+    if (hasTriedToSubmit && days.length > 0) {
+      setHasTriedToSubmit(false);
+    }
+  };
+
   if (mode === 'view') {
     return (
       <TimePeriodConfigurationReadOnly
@@ -270,11 +284,12 @@ export const TimePeriodConfiguration = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Week Days Selector */}
+        {/* Week Days Selector with validation */}
         <WeekDaysSelector
           selectedDays={selectedDays}
-          onSelectedDaysChange={setSelectedDays}
+          onSelectedDaysChange={handleSelectedDaysChange}
           isWeeklyMode={isWeeklyMode}
+          hasError={hasTriedToSubmit && selectedDays.length === 0}
         />
 
         {/* Period Configuration Form */}

@@ -1,15 +1,18 @@
 
+
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "lucide-react";
 import { weekDays, WeekDay } from "../types/TimePeriodTypes";
+import { cn } from "@/lib/utils";
 
 interface WeekDaysSelectorProps {
   selectedDays: string[];
   onSelectedDaysChange: (days: string[]) => void;
   isWeeklyMode: boolean;
+  hasError?: boolean;
 }
 
 // Generate fortnight days (14 days)
@@ -40,38 +43,55 @@ const generateFortnightDays = (): WeekDay[] => {
 export const WeekDaysSelector = ({ 
   selectedDays, 
   onSelectedDaysChange, 
-  isWeeklyMode 
+  isWeeklyMode,
+  hasError = false
 }: WeekDaysSelectorProps) => {
   const daysToShow = isWeeklyMode ? weekDays : generateFortnightDays();
   
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <Label>School Days</Label>
-        <p className="text-sm text-muted-foreground">
+        <Label className={cn(hasError && "text-destructive")}>
+          School Days *
+        </Label>
+        <p className={cn(
+          "text-sm text-muted-foreground",
+          hasError && "text-destructive"
+        )}>
           {isWeeklyMode 
             ? "Select the days your school operates during a normal week" 
             : "Select the days your school operates during a 2-week cycle"
           }
         </p>
-        <ToggleGroup 
-          type="multiple" 
-          value={selectedDays} 
-          onValueChange={onSelectedDaysChange}
-          className="flex flex-wrap justify-start gap-2"
-        >
-          {daysToShow.map((day) => (
-            <ToggleGroupItem
-              key={day.id}
-              value={day.id}
-              aria-label={day.fullName}
-              className="flex-col h-16 w-16 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-            >
-              <Calendar className="h-4 w-4 mb-1" />
-              <span className="text-xs">{day.label}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <div className={cn(
+          "border rounded-lg p-3",
+          hasError && "border-destructive bg-destructive/5"
+        )}>
+          <ToggleGroup 
+            type="multiple" 
+            value={selectedDays} 
+            onValueChange={onSelectedDaysChange}
+            className="flex flex-wrap justify-start gap-2"
+          >
+            {daysToShow.map((day) => (
+              <ToggleGroupItem
+                key={day.id}
+                value={day.id}
+                aria-label={day.fullName}
+                className="flex-col h-16 w-16 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                <Calendar className="h-4 w-4 mb-1" />
+                <span className="text-xs">{day.label}</span>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {hasError && selectedDays.length === 0 && (
+            <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+              <span>⚠️</span>
+              Please select at least one school day
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -87,7 +107,9 @@ export const WeekDaysSelector = ({
               );
             })
           ) : (
-            <Badge variant="secondary">None selected</Badge>
+            <Badge variant="secondary" className={cn(hasError && "border-destructive text-destructive")}>
+              None selected
+            </Badge>
           )}
         </div>
       </div>
