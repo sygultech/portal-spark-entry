@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, X, Calendar, Settings2, Users } from "lucide-react";
+import { Clock, X, Calendar, Settings2, Users, Grid3X3 } from "lucide-react";
 import { Period } from "../types/TimePeriodTypes";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -42,20 +42,26 @@ const PeriodDisplay = ({ period }: { period: Period }) => (
   </div>
 );
 
-const ConfigurationStats = ({ periods, selectedDays, isWeeklyMode }: { 
+const ConfigurationStats = ({ periods, selectedDays, isWeeklyMode, daySpecificPeriods }: { 
   periods: Period[], 
   selectedDays: string[], 
-  isWeeklyMode: boolean 
+  isWeeklyMode: boolean,
+  daySpecificPeriods: Record<string, Period[]>
 }) => {
-  const totalPeriods = periods.filter(p => p.type === 'period').length;
-  const totalBreaks = periods.filter(p => p.type === 'break').length;
+  const hasFlexibleTimings = Object.keys(daySpecificPeriods).length > 0;
+  const totalPeriods = hasFlexibleTimings 
+    ? Math.max(...Object.values(daySpecificPeriods).map(p => p.filter(period => period.type === 'period').length))
+    : periods.filter(p => p.type === 'period').length;
+  const totalBreaks = hasFlexibleTimings
+    ? Math.max(...Object.values(daySpecificPeriods).map(p => p.filter(period => period.type === 'break').length))
+    : periods.filter(p => p.type === 'break').length;
   const schoolDays = selectedDays.length;
   
   return (
-    <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+    <div className="grid grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
       <div className="text-center">
         <div className="text-2xl font-bold text-primary">{totalPeriods}</div>
-        <div className="text-sm text-muted-foreground">Total Periods</div>
+        <div className="text-sm text-muted-foreground">Max Periods</div>
       </div>
       <div className="text-center">
         <div className="text-2xl font-bold text-primary">{totalBreaks}</div>
@@ -64,6 +70,10 @@ const ConfigurationStats = ({ periods, selectedDays, isWeeklyMode }: {
       <div className="text-center">
         <div className="text-2xl font-bold text-primary">{schoolDays}</div>
         <div className="text-sm text-muted-foreground">School Days</div>
+      </div>
+      <div className="text-center">
+        <div className="text-2xl font-bold text-primary">{hasFlexibleTimings ? 'Yes' : 'No'}</div>
+        <div className="text-sm text-muted-foreground">Flexible Timings</div>
       </div>
     </div>
   );
@@ -82,12 +92,17 @@ export const TimePeriodConfigurationReadOnly = ({
     { id: `week2-${day.id}`, label: `W2-${day.label}`, fullName: `Week 2 ${day.fullName}` }
   ]);
 
+  const hasFlexibleTimings = Object.keys(daySpecificPeriods).length > 0;
+
   // Calculate time range
-  const startTime = periods.length > 0 ? periods[0].startTime : 'N/A';
-  const endTime = periods.length > 0 ? periods[periods.length - 1].endTime : 'N/A';
+  const allPeriods = hasFlexibleTimings 
+    ? Object.values(daySpecificPeriods).flat()
+    : periods;
+  const startTime = allPeriods.length > 0 ? Math.min(...allPeriods.map(p => p.startTime)).toString() : 'N/A';
+  const endTime = allPeriods.length > 0 ? Math.max(...allPeriods.map(p => p.endTime)).toString() : 'N/A';
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
+    <Card className="w-full max-w-6xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -115,7 +130,8 @@ export const TimePeriodConfigurationReadOnly = ({
         <ConfigurationStats 
           periods={periods} 
           selectedDays={selectedDays} 
-          isWeeklyMode={isWeeklyMode} 
+          isWeeklyMode={isWeeklyMode}
+          daySpecificPeriods={daySpecificPeriods}
         />
 
         {/* School Days */}
@@ -138,36 +154,18 @@ export const TimePeriodConfigurationReadOnly = ({
 
         <Separator />
 
-        {/* Default Periods */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-primary" />
-            <Label className="text-base font-medium">Period Schedule</Label>
-          </div>
-          {periods.length > 0 ? (
-            <div className="space-y-2">
-              {periods.map(period => (
-                <PeriodDisplay key={period.id} period={period} />
-              ))}
+        {hasFlexibleTimings ? (
+          /* Day-Specific Periods Layout */
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Grid3X3 className="h-5 w-5 text-primary" />
+              <Label className="text-base font-medium">Day-Specific Schedules</Label>
+              <Badge variant="secondary" className="text-xs">Flexible Timings Enabled</Badge>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No periods configured</p>
-            </div>
-          )}
-        </div>
-
-        {/* Day-Specific Periods */}
-        {Object.keys(daySpecificPeriods).length > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <Label className="text-base font-medium">Day-Specific Schedules</Label>
-              </div>
-              <div className="space-y-4">
+            
+            {isWeeklyMode ? (
+              /* Weekly mode with flexible timings */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(daySpecificPeriods).map(([dayId, dayPeriods]) => {
                   const day = daysToShow.find(d => d.id === dayId);
                   return (
@@ -180,7 +178,7 @@ export const TimePeriodConfigurationReadOnly = ({
                           {dayPeriods.length} periods
                         </span>
                       </div>
-                      <div className="space-y-2 ml-4">
+                      <div className="space-y-2">
                         {dayPeriods.map(period => (
                           <PeriodDisplay key={period.id} period={period} />
                         ))}
@@ -189,8 +187,64 @@ export const TimePeriodConfigurationReadOnly = ({
                   );
                 })}
               </div>
+            ) : (
+              /* Fortnightly mode with flexible timings */
+              <div className="space-y-6">
+                {[1, 2].map(week => (
+                  <div key={week} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-medium">Week {week}</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(daySpecificPeriods)
+                        .filter(([dayId]) => dayId.startsWith(`week${week}-`))
+                        .map(([dayId, dayPeriods]) => {
+                          const day = daysToShow.find(d => d.id === dayId);
+                          return (
+                            <div key={dayId} className="space-y-3 p-4 border rounded-lg bg-muted/20">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="default" className="font-medium">
+                                  {day?.fullName || dayId}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {dayPeriods.length} periods
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {dayPeriods.map(period => (
+                                  <PeriodDisplay key={period.id} period={period} />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Uniform Schedule Layout */
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-primary" />
+              <Label className="text-base font-medium">Uniform Schedule</Label>
+              <Badge variant="secondary" className="text-xs">Same for all days</Badge>
             </div>
-          </>
+            {periods.length > 0 ? (
+              <div className="space-y-2 max-w-2xl">
+                {periods.map(period => (
+                  <PeriodDisplay key={period.id} period={period} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No periods configured</p>
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

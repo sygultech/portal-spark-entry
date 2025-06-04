@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Period } from '@/components/timetable/types/TimePeriodTypes';
@@ -51,13 +52,10 @@ export const useTimetableConfiguration = () => {
         const selectedDaysSet = new Set<string>();
         const daySpecificPeriods: Record<string, Period[]> = {};
         
-        // Check if this configuration has flexible timings (different schedules per day)
-        const hasFlexibleTimings = periodsData.length > 0 && 
-          new Set(periodsData.map((p: any) => p.dayOfWeek)).size > 1;
+        // Process periods from the database and create period objects
+        const allPeriods: Period[] = [];
+        const periodsByDayAndWeek: Record<string, Period[]> = {};
 
-        console.log('Has flexible timings:', hasFlexibleTimings);
-
-        // Process periods from the database
         periodsData.forEach((period: any) => {
           const periodObj: Period = {
             id: period.id || `period-${period.number}`,
@@ -68,57 +66,74 @@ export const useTimetableConfiguration = () => {
             label: period.label || (period.type === 'period' ? `Period ${period.number}` : period.label)
           };
 
-          // Construct day identifier
+          allPeriods.push(periodObj);
+
+          // Construct day identifier based on mode
           let dayId = period.dayOfWeek;
-          if (!config.isFortnightly) {
-            // Weekly mode - use day name directly
-            selectedDaysSet.add(dayId);
-          } else {
+          if (config.isFortnightly && period.fortnightWeek) {
             // Fortnightly mode - construct week-specific day ID
-            if (period.fortnightWeek) {
-              dayId = `week${period.fortnightWeek}-${period.dayOfWeek}`;
-              selectedDaysSet.add(dayId);
-            }
+            dayId = `week${period.fortnightWeek}-${period.dayOfWeek}`;
           }
 
-          // Group periods by day for flexible timings
-          if (hasFlexibleTimings) {
-            if (!daySpecificPeriods[dayId]) {
-              daySpecificPeriods[dayId] = [];
-            }
-            daySpecificPeriods[dayId].push(periodObj);
+          // Add to selected days
+          selectedDaysSet.add(dayId);
+
+          // Group periods by day (and week for fortnightly)
+          if (!periodsByDayAndWeek[dayId]) {
+            periodsByDayAndWeek[dayId] = [];
           }
+          periodsByDayAndWeek[dayId].push(periodObj);
         });
 
         // Sort periods within each day by period number
-        Object.keys(daySpecificPeriods).forEach(dayId => {
-          daySpecificPeriods[dayId].sort((a, b) => a.number - b.number);
+        Object.keys(periodsByDayAndWeek).forEach(dayId => {
+          periodsByDayAndWeek[dayId].sort((a, b) => a.number - b.number);
         });
 
-        // For configurations without flexible timings, use the first day's schedule as default
+        // Determine if flexible timings are enabled
+        let hasFlexibleTimings = false;
         let defaultPeriods: Period[] = [];
-        if (!hasFlexibleTimings && periodsData.length > 0) {
-          // Group all periods and use them as default (assuming all days have same schedule)
-          const allPeriods: Period[] = [];
-          const uniquePeriods = new Map<number, Period>();
 
-          periodsData.forEach((period: any) => {
-            const periodObj: Period = {
-              id: period.id || `period-${period.number}`,
-              number: period.number,
-              startTime: period.startTime,
-              endTime: period.endTime,
-              type: period.type || 'period',
-              label: period.label || (period.type === 'period' ? `Period ${period.number}` : period.label)
-            };
-
-            // Use the first occurrence of each period number
-            if (!uniquePeriods.has(period.number)) {
-              uniquePeriods.set(period.number, periodObj);
-            }
+        if (Object.keys(periodsByDayAndWeek).length > 1) {
+          // Check if different days have different schedules
+          const dayKeys = Object.keys(periodsByDayAndWeek);
+          const firstDaySchedule = periodsByDayAndWeek[dayKeys[0]];
+          
+          hasFlexibleTimings = dayKeys.some(dayKey => {
+            const daySchedule = periodsByDayAndWeek[dayKey];
+            if (daySchedule.length !== firstDaySchedule.length) return true;
+            
+            return daySchedule.some((period, index) => {
+              const firstPeriod = firstDaySchedule[index];
+              return period.startTime !== firstPeriod.startTime || 
+                     period.endTime !== firstPeriod.endTime;
+            });
           });
+        }
 
-          defaultPeriods = Array.from(uniquePeriods.values()).sort((a, b) => a.number - b.number);
+        console.log('Has flexible timings:', hasFlexibleTimings);
+
+        if (hasFlexibleTimings) {
+          // For flexible timings, each day has its own schedule
+          Object.entries(periodsByDayAndWeek).forEach(([dayId, periods]) => {
+            daySpecificPeriods[dayId] = periods;
+          });
+        } else {
+          // For uniform timings, create default periods from first day
+          if (Object.keys(periodsByDayAndWeek).length > 0) {
+            const firstDayKey = Object.keys(periodsByDayAndWeek)[0];
+            const periodsFromFirstDay = periodsByDayAndWeek[firstDayKey];
+            
+            // Create unique periods based on period number
+            const uniquePeriods = new Map<number, Period>();
+            periodsFromFirstDay.forEach(period => {
+              if (!uniquePeriods.has(period.number)) {
+                uniquePeriods.set(period.number, period);
+              }
+            });
+            
+            defaultPeriods = Array.from(uniquePeriods.values()).sort((a, b) => a.number - b.number);
+          }
         }
 
         return {
