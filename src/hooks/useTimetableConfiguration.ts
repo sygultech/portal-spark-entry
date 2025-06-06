@@ -180,13 +180,6 @@ export const useTimetableConfiguration = () => {
     batchIds
   }: SaveTimetableConfigurationParams) => {
     try {
-      // For fortnightly mode, we need to extract the base day names
-      const processedSelectedDays = selectedDays.map(dayId => {
-        if (isWeeklyMode) return dayId;
-        const [weekPart, dayPart] = dayId.split('-');
-        return dayPart;
-      });
-
       // Convert defaultPeriods to the format expected by the backend
       const formattedDefaultPeriods = defaultPeriods.map(period => ({
         number: period.number,
@@ -196,18 +189,14 @@ export const useTimetableConfiguration = () => {
         label: period.label
       }));
 
-      // Enhanced logic for daySpecificPeriods when flexible timings is enabled
+      // Handle daySpecificPeriods - only send custom configurations, not defaults
       let formattedDaySpecificPeriods = {};
       
-      if (enableFlexibleTimings) {
-        // First, add any existing custom day-specific periods
+      if (enableFlexibleTimings && Object.keys(daySpecificPeriods).length > 0) {
+        // Only include days that actually have custom configurations
+        // The backend will handle adding default periods for other selected days
         formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
           (acc, [dayId, periods]) => {
-            // Extract week number and base day name for fortnightly mode
-            const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
-            const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
-            const baseDayName = isWeeklyMode ? dayId : dayPart;
-
             return {
               ...acc,
               [dayId]: periods.map(period => ({
@@ -215,53 +204,7 @@ export const useTimetableConfiguration = () => {
                 startTime: period.startTime,
                 endTime: period.endTime,
                 type: period.type,
-                label: period.label,
-                day_of_week: baseDayName,
-                fortnight_week: weekNumber
-              }))
-            };
-          },
-          {}
-        );
-
-        // Then, add default periods for selected days that don't have custom configurations
-        const daysWithCustomConfig = Object.keys(daySpecificPeriods);
-        const daysWithoutCustomConfig = selectedDays.filter(dayId => !daysWithCustomConfig.includes(dayId));
-        
-        // Add default periods for days without custom configuration
-        daysWithoutCustomConfig.forEach(dayId => {
-          const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
-          const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
-          const baseDayName = isWeeklyMode ? dayId : dayPart;
-
-          formattedDaySpecificPeriods[dayId] = defaultPeriods.map(period => ({
-            number: period.number,
-            startTime: period.startTime,
-            endTime: period.endTime,
-            type: period.type,
-            label: period.label,
-            day_of_week: baseDayName,
-            fortnight_week: weekNumber
-          }));
-        });
-      } else {
-        // When flexible timings is disabled, keep the original logic
-        formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
-          (acc, [dayId, periods]) => {
-            const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
-            const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
-            const baseDayName = isWeeklyMode ? dayId : dayPart;
-
-            return {
-              ...acc,
-              [dayId]: periods.map(period => ({
-                number: period.number,
-                startTime: period.startTime,
-                endTime: period.endTime,
-                type: period.type,
-                label: period.label,
-                day_of_week: baseDayName,
-                fortnight_week: weekNumber
+                label: period.label
               }))
             };
           },
