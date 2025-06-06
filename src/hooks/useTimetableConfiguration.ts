@@ -196,29 +196,78 @@ export const useTimetableConfiguration = () => {
         label: period.label
       }));
 
-      // Convert daySpecificPeriods to the format expected by the backend
-      const formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
-        (acc, [dayId, periods]) => {
-          // Extract week number and base day name for fortnightly mode
+      // Enhanced logic for daySpecificPeriods when flexible timings is enabled
+      let formattedDaySpecificPeriods = {};
+      
+      if (enableFlexibleTimings) {
+        // First, add any existing custom day-specific periods
+        formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
+          (acc, [dayId, periods]) => {
+            // Extract week number and base day name for fortnightly mode
+            const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
+            const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
+            const baseDayName = isWeeklyMode ? dayId : dayPart;
+
+            return {
+              ...acc,
+              [dayId]: periods.map(period => ({
+                number: period.number,
+                startTime: period.startTime,
+                endTime: period.endTime,
+                type: period.type,
+                label: period.label,
+                day_of_week: baseDayName,
+                fortnight_week: weekNumber
+              }))
+            };
+          },
+          {}
+        );
+
+        // Then, add default periods for selected days that don't have custom configurations
+        const daysWithCustomConfig = Object.keys(daySpecificPeriods);
+        const daysWithoutCustomConfig = selectedDays.filter(dayId => !daysWithCustomConfig.includes(dayId));
+        
+        // Add default periods for days without custom configuration
+        daysWithoutCustomConfig.forEach(dayId => {
           const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
           const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
           const baseDayName = isWeeklyMode ? dayId : dayPart;
 
-          return {
-            ...acc,
-            [dayId]: periods.map(period => ({
-              number: period.number,
-              startTime: period.startTime,
-              endTime: period.endTime,
-              type: period.type,
-              label: period.label,
-              day_of_week: baseDayName,
-              fortnight_week: weekNumber
-            }))
-          };
-        },
-        {}
-      );
+          formattedDaySpecificPeriods[dayId] = defaultPeriods.map(period => ({
+            number: period.number,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            type: period.type,
+            label: period.label,
+            day_of_week: baseDayName,
+            fortnight_week: weekNumber
+          }));
+        });
+      } else {
+        // When flexible timings is disabled, keep the original logic
+        formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
+          (acc, [dayId, periods]) => {
+            const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
+            const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
+            const baseDayName = isWeeklyMode ? dayId : dayPart;
+
+            return {
+              ...acc,
+              [dayId]: periods.map(period => ({
+                number: period.number,
+                startTime: period.startTime,
+                endTime: period.endTime,
+                type: period.type,
+                label: period.label,
+                day_of_week: baseDayName,
+                fortnight_week: weekNumber
+              }))
+            };
+          },
+          {}
+        );
+      }
 
       const { data, error } = await supabase.rpc('save_timetable_configuration', {
         p_school_id: schoolId,
@@ -227,7 +276,7 @@ export const useTimetableConfiguration = () => {
         p_is_default: isDefault,
         p_academic_year_id: academicYearId,
         p_is_weekly_mode: isWeeklyMode,
-        p_selected_days: processedSelectedDays,
+        p_selected_days: selectedDays, // Send the full day IDs (including week info for fortnightly)
         p_default_periods: formattedDefaultPeriods,
         p_fortnight_start_date: fortnightStartDate,
         p_day_specific_periods: formattedDaySpecificPeriods,
