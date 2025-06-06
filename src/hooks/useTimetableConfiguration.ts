@@ -32,6 +32,58 @@ interface TimetableConfiguration {
   batchIds?: string[];
 }
 
+// Valid day names that the database accepts
+const VALID_DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+// Helper function to extract day name from various formats
+const extractDayName = (dayId: string): string | null => {
+  const normalized = dayId.toLowerCase().trim();
+  
+  // Direct match
+  if (VALID_DAY_NAMES.includes(normalized)) {
+    return normalized;
+  }
+  
+  // week1-monday, week2-tuesday format
+  const weekDayMatch = normalized.match(/^week[12]-(.+)$/);
+  if (weekDayMatch && VALID_DAY_NAMES.includes(weekDayMatch[1])) {
+    return weekDayMatch[1];
+  }
+  
+  // w1-monday, w2-tuesday format
+  const shortWeekMatch = normalized.match(/^w[12]-(.+)$/);
+  if (shortWeekMatch && VALID_DAY_NAMES.includes(shortWeekMatch[1])) {
+    return shortWeekMatch[1];
+  }
+  
+  // Check if any valid day is contained in the string
+  for (const validDay of VALID_DAY_NAMES) {
+    if (normalized.includes(validDay)) {
+      return validDay;
+    }
+  }
+  
+  return null;
+};
+
+// Validate selected days before sending to backend
+const validateSelectedDays = (selectedDays: string[]): string[] => {
+  const invalidDays: string[] = [];
+  
+  for (const day of selectedDays) {
+    const extractedDay = extractDayName(day);
+    if (!extractedDay) {
+      invalidDays.push(day);
+    }
+  }
+  
+  if (invalidDays.length > 0) {
+    throw new Error(`Invalid day identifiers detected: ${invalidDays.join(', ')}. Valid days are: ${VALID_DAY_NAMES.join(', ')}`);
+  }
+  
+  return selectedDays;
+};
+
 export const useTimetableConfiguration = () => {
   const getTimetableConfigurations = useCallback(async (schoolId: string, academicYearId: string): Promise<TimetableConfiguration[]> => {
     try {
@@ -180,6 +232,10 @@ export const useTimetableConfiguration = () => {
     batchIds
   }: SaveTimetableConfigurationParams) => {
     try {
+      // Validate selected days before processing
+      console.log('Validating selected days:', selectedDays);
+      validateSelectedDays(selectedDays);
+      
       // Convert defaultPeriods to the format expected by the backend
       const formattedDefaultPeriods = defaultPeriods.map(period => ({
         number: period.number,
@@ -193,6 +249,14 @@ export const useTimetableConfiguration = () => {
       let formattedDaySpecificPeriods = {};
       
       if (enableFlexibleTimings && Object.keys(daySpecificPeriods).length > 0) {
+        // Validate day-specific periods
+        Object.keys(daySpecificPeriods).forEach(dayId => {
+          const extractedDay = extractDayName(dayId);
+          if (!extractedDay) {
+            throw new Error(`Invalid day identifier in custom periods: ${dayId}`);
+          }
+        });
+        
         // Only include days that actually have custom configurations
         // The backend will handle adding default periods for other selected days
         formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
@@ -211,6 +275,9 @@ export const useTimetableConfiguration = () => {
           {}
         );
       }
+
+      console.log('Sending to backend - Selected days:', selectedDays);
+      console.log('Sending to backend - Day specific periods keys:', Object.keys(formattedDaySpecificPeriods));
 
       const { data, error } = await supabase.rpc('save_timetable_configuration', {
         p_school_id: schoolId,
