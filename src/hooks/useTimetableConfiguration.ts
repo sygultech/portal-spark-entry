@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Period } from '@/components/timetable/types/TimePeriodTypes';
@@ -181,14 +180,11 @@ export const useTimetableConfiguration = () => {
     batchIds
   }: SaveTimetableConfigurationParams) => {
     try {
-      // For fortnightly mode, we need to create periods for both weeks
+      // For fortnightly mode, we need to extract the base day names
       const processedSelectedDays = selectedDays.map(dayId => {
-        if (isWeeklyMode) return { day: dayId, week: null };
+        if (isWeeklyMode) return dayId;
         const [weekPart, dayPart] = dayId.split('-');
-        return {
-          day: dayPart,
-          week: weekPart === 'week1' ? 1 : 2
-        };
+        return dayPart;
       });
 
       // Convert defaultPeriods to the format expected by the backend
@@ -231,9 +227,9 @@ export const useTimetableConfiguration = () => {
         p_is_default: isDefault,
         p_academic_year_id: academicYearId,
         p_is_weekly_mode: isWeeklyMode,
-        p_fortnight_start_date: fortnightStartDate,
-        p_selected_days: selectedDays,
+        p_selected_days: processedSelectedDays,
         p_default_periods: formattedDefaultPeriods,
+        p_fortnight_start_date: fortnightStartDate,
         p_day_specific_periods: formattedDaySpecificPeriods,
         p_enable_flexible_timings: enableFlexibleTimings,
         p_batch_ids: batchIds

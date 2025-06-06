@@ -1,7 +1,28 @@
--- Fix get_timetable_configurations function to reference is_fortnightly from correct table
-CREATE OR REPLACE FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
+-- Drop existing function first
+DO $$ 
+BEGIN
+    EXECUTE (
+        SELECT string_agg(
+            format('DROP FUNCTION IF EXISTS %s(%s);',
+                   p.oid::regproc,
+                   oidvectortypes(p.proargtypes)),
+            E'\n'
+        )
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE n.nspname = 'public'
+          AND p.proname = 'get_timetable_configurations'
+    );
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END $$;
+
+-- Create updated function
+CREATE OR REPLACE FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") 
+RETURNS "jsonb"
+LANGUAGE "plpgsql" 
+SECURITY DEFINER
+AS $$
 DECLARE
     v_result jsonb;
 BEGIN
@@ -12,8 +33,8 @@ BEGIN
             'isActive', tc.is_active,
             'isDefault', tc.is_default,
             'academicYearId', tc.academic_year_id,
-            'isFortnightly', tc.is_fortnightly,
-            'fortnightStartDate', tc.Fortnight_Start_Date,
+            'isWeeklyMode', tc.is_weekly_mode,
+            'fortnightStartDate', tc.fortnight_start_date,
             'periods', (
                 SELECT jsonb_agg(
                     jsonb_build_object(
@@ -46,7 +67,6 @@ BEGIN
 END;
 $$;
 
--- Update function permissions
-GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") TO "service_role"; 
+-- Grant permissions
+GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") 
+TO "anon", "authenticated", "service_role"; 

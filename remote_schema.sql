@@ -1181,6 +1181,57 @@ $$;
 ALTER FUNCTION "public"."get_current_user_school_id"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_timetable_configuration"("p_config_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_result jsonb;
+BEGIN
+    SELECT jsonb_build_object(
+        'id', tc.id,
+        'name', tc.name,
+        'isActive', tc.is_active,
+        'isDefault', tc.is_default,
+        'academicYearId', tc.academic_year_id,
+        'isWeeklyMode', NOT tc.is_fortnightly,
+        'fortnightStartDate', tc.fortnight_start_date,
+        'periods', (
+            SELECT jsonb_object_agg(
+                ps.day_of_week,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'id', ps.id,
+                        'number', ps.period_number,
+                        'startTime', ps.start_time,
+                        'endTime', ps.end_time,
+                        'type', ps.type,
+                        'label', ps.label,
+                        'fortnightWeek', ps.fortnight_week
+                    )
+                    ORDER BY ps.period_number
+                )
+            )
+            FROM period_settings ps
+            WHERE ps.configuration_id = tc.id
+            GROUP BY ps.day_of_week
+        ),
+        'batchIds', (
+            SELECT jsonb_agg(bcm.batch_id)
+            FROM batch_configuration_mapping bcm
+            WHERE bcm.configuration_id = tc.id
+        )
+    ) INTO v_result
+    FROM timetable_configurations tc
+    WHERE tc.id = p_config_id;
+
+    RETURN COALESCE(v_result, '{}'::jsonb);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_timetable_configuration"("p_config_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -1194,6 +1245,8 @@ BEGIN
             'isActive', tc.is_active,
             'isDefault', tc.is_default,
             'academicYearId', tc.academic_year_id,
+            'isWeeklyMode', NOT tc.is_fortnightly,
+            'fortnightStartDate', tc.fortnight_start_date,
             'periods', (
                 SELECT jsonb_agg(
                     jsonb_build_object(
@@ -1204,7 +1257,6 @@ BEGIN
                         'type', ps.type,
                         'label', ps.label,
                         'dayOfWeek', ps.day_of_week,
-                        'isFortnightly', ps.is_fortnightly,
                         'fortnightWeek', ps.fortnight_week
                     )
                 )
@@ -1813,53 +1865,141 @@ COMMENT ON FUNCTION "public"."refresh_user_roles"("p_user_id" "uuid") IS 'Refres
 
 
 
-CREATE OR REPLACE FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_periods" "jsonb", "p_batch_ids" "uuid"[] DEFAULT NULL::"uuid"[]) RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_is_weekly_mode" boolean, "p_selected_days" "text"[], "p_default_periods" "jsonb", "p_fortnight_start_date" "date" DEFAULT NULL::"date", "p_day_specific_periods" "jsonb" DEFAULT NULL::"jsonb", "p_enable_flexible_timings" boolean DEFAULT false, "p_batch_ids" "uuid"[] DEFAULT NULL::"uuid"[]) RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
     v_config_id uuid;
+    v_base_day text;
+    v_week_number integer;
 BEGIN
+    -- Validate inputs
+    IF NOT p_is_weekly_mode AND p_fortnight_start_date IS NULL THEN
+        RAISE EXCEPTION 'Fortnight start date is required for fortnightly mode';
+    END IF;
+
+    IF array_length(p_selected_days, 1) = 0 THEN
+        RAISE EXCEPTION 'At least one school day must be selected';
+    END IF;
+
     -- Insert timetable configuration
     INSERT INTO timetable_configurations (
         school_id,
         name,
         is_active,
         is_default,
-        academic_year_id
+        academic_year_id,
+        is_fortnightly,
+        fortnight_start_date
     ) VALUES (
         p_school_id,
         p_name,
         p_is_active,
         p_is_default,
-        p_academic_year_id
+        p_academic_year_id,
+        NOT p_is_weekly_mode,
+        p_fortnight_start_date
     ) RETURNING id INTO v_config_id;
 
-    -- Insert period settings
-    INSERT INTO period_settings (
-        configuration_id,
-        period_number,
-        start_time,
-        end_time,
-        type,
-        label,
-        day_of_week,
-        is_fortnightly,
-        fortnight_week
-    )
-    SELECT
-        v_config_id,
-        (period->>'number')::integer,
-        (period->>'startTime')::time,
-        (period->>'endTime')::time,
-        period->>'type',
-        period->>'label',
-        period->>'dayOfWeek',
-        (period->>'isFortnightly')::boolean,
-        (period->>'fortnightWeek')::integer
-    FROM jsonb_array_elements(p_periods) AS period;
+    -- Delete existing period settings for this configuration
+    DELETE FROM period_settings WHERE configuration_id = v_config_id;
 
-    -- Insert batch mappings if provided
-    IF p_batch_ids IS NOT NULL THEN
+    -- Handle period settings based on flexible timings mode
+    IF NOT p_enable_flexible_timings THEN
+        -- When flexible timings are disabled, use default periods for all selected days
+        WITH selected_days AS (
+            SELECT 
+                day,
+                CASE 
+                    WHEN NOT p_is_weekly_mode AND day LIKE 'week%-%' THEN 
+                        lower(split_part(day, '-', 2))  -- Extract base day name and convert to lowercase
+                    ELSE 
+                        lower(day)  -- Convert day to lowercase for consistency
+                END AS base_day,
+                CASE 
+                    WHEN NOT p_is_weekly_mode AND day LIKE 'week%-%' THEN 
+                        CASE split_part(day, '-', 1)
+                            WHEN 'week1' THEN 1
+                            WHEN 'week2' THEN 2
+                            ELSE NULL
+                        END
+                    ELSE 
+                        NULL  -- No fortnight week for weekly mode
+                END AS week_num
+            FROM unnest(p_selected_days) AS day
+        )
+        INSERT INTO period_settings (
+            configuration_id,
+            period_number,
+            start_time,
+            end_time,
+            type,
+            label,
+            day_of_week,
+            fortnight_week
+        )
+        SELECT DISTINCT ON (v_config_id, (period->>'number')::integer, sd.base_day, sd.week_num)
+            v_config_id,
+            (period->>'number')::integer,
+            (period->>'startTime')::time,
+            (period->>'endTime')::time,
+            period->>'type',
+            period->>'label',
+            sd.base_day,
+            sd.week_num
+        FROM jsonb_array_elements(p_default_periods) AS period
+        CROSS JOIN selected_days sd
+        ORDER BY v_config_id, (period->>'number')::integer, sd.base_day, sd.week_num;
+    ELSE
+        -- When flexible timings are enabled, use day-specific periods
+        WITH day_specific AS (
+            SELECT 
+                day_key,
+                CASE 
+                    WHEN NOT p_is_weekly_mode AND day_key LIKE 'week%-%' THEN 
+                        lower(split_part(day_key, '-', 2))
+                    ELSE 
+                        lower(day_key)
+                END AS base_day,
+                CASE 
+                    WHEN NOT p_is_weekly_mode AND day_key LIKE 'week%-%' THEN 
+                        CASE split_part(day_key, '-', 1)
+                            WHEN 'week1' THEN 1
+                            WHEN 'week2' THEN 2
+                            ELSE NULL
+                        END
+                    ELSE 
+                        NULL
+                END AS week_num,
+                day_periods
+            FROM jsonb_each(p_day_specific_periods) AS days(day_key, day_periods)
+        )
+        INSERT INTO period_settings (
+            configuration_id,
+            period_number,
+            start_time,
+            end_time,
+            type,
+            label,
+            day_of_week,
+            fortnight_week
+        )
+        SELECT DISTINCT ON (v_config_id, (period->>'number')::integer, ds.base_day, ds.week_num)
+            v_config_id,
+            (period->>'number')::integer,
+            (period->>'startTime')::time,
+            (period->>'endTime')::time,
+            period->>'type',
+            period->>'label',
+            ds.base_day,
+            ds.week_num
+        FROM day_specific ds,
+             jsonb_array_elements(ds.day_periods) AS period
+        ORDER BY v_config_id, (period->>'number')::integer, ds.base_day, ds.week_num;
+    END IF;
+
+    -- Insert batch mappings if provided and not default
+    IF NOT p_is_default AND p_batch_ids IS NOT NULL AND array_length(p_batch_ids, 1) > 0 THEN
         INSERT INTO batch_configuration_mapping (
             configuration_id,
             batch_id
@@ -1875,7 +2015,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_periods" "jsonb", "p_batch_ids" "uuid"[]) OWNER TO "postgres";
+ALTER FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_is_weekly_mode" boolean, "p_selected_days" "text"[], "p_default_periods" "jsonb", "p_fortnight_start_date" "date", "p_day_specific_periods" "jsonb", "p_enable_flexible_timings" boolean, "p_batch_ids" "uuid"[]) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."switch_primary_school"("p_school_id" "uuid") RETURNS boolean
@@ -2829,7 +2969,7 @@ CREATE TABLE IF NOT EXISTS "public"."timetable_configurations" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "is_fortnightly" boolean DEFAULT false,
-    "Fortnight_Start_Date" "date"
+    "fortnight_start_date" "date"
 );
 
 
@@ -3734,17 +3874,25 @@ CREATE POLICY "School admins can manage academic settings" ON "public"."academic
 
 
 
-CREATE POLICY "School admins can manage batch mappings" ON "public"."batch_configuration_mapping" TO "authenticated" USING (("configuration_id" IN ( SELECT "timetable_configurations"."id"
-   FROM "public"."timetable_configurations"
-  WHERE ("timetable_configurations"."school_id" IN ( SELECT "profiles"."school_id"
+CREATE POLICY "School admins can manage batch mappings" ON "public"."batch_configuration_mapping" TO "authenticated" USING (("configuration_id" IN ( SELECT "tc"."id"
+   FROM "public"."timetable_configurations" "tc"
+  WHERE ("tc"."school_id" IN ( SELECT "profiles"."school_id"
+           FROM "public"."profiles"
+          WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles")))))))) WITH CHECK (("configuration_id" IN ( SELECT "tc"."id"
+   FROM "public"."timetable_configurations" "tc"
+  WHERE ("tc"."school_id" IN ( SELECT "profiles"."school_id"
            FROM "public"."profiles"
           WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles"))))))));
 
 
 
-CREATE POLICY "School admins can manage period settings" ON "public"."period_settings" TO "authenticated" USING (("configuration_id" IN ( SELECT "timetable_configurations"."id"
-   FROM "public"."timetable_configurations"
-  WHERE ("timetable_configurations"."school_id" IN ( SELECT "profiles"."school_id"
+CREATE POLICY "School admins can manage period settings" ON "public"."period_settings" TO "authenticated" USING (("configuration_id" IN ( SELECT "tc"."id"
+   FROM "public"."timetable_configurations" "tc"
+  WHERE ("tc"."school_id" IN ( SELECT "profiles"."school_id"
+           FROM "public"."profiles"
+          WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles")))))))) WITH CHECK (("configuration_id" IN ( SELECT "tc"."id"
+   FROM "public"."timetable_configurations" "tc"
+  WHERE ("tc"."school_id" IN ( SELECT "profiles"."school_id"
            FROM "public"."profiles"
           WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles"))))))));
 
@@ -3755,6 +3903,14 @@ CREATE POLICY "School admins can manage school settings" ON "public"."school_set
 
 
 CREATE POLICY "School admins can manage their timetable configurations" ON "public"."timetable_configurations" TO "authenticated" USING (("school_id" IN ( SELECT "profiles"."school_id"
+   FROM "public"."profiles"
+  WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles"))))));
+
+
+
+CREATE POLICY "School admins can manage timetable configurations" ON "public"."timetable_configurations" TO "authenticated" USING (("school_id" IN ( SELECT "profiles"."school_id"
+   FROM "public"."profiles"
+  WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles")))))) WITH CHECK (("school_id" IN ( SELECT "profiles"."school_id"
    FROM "public"."profiles"
   WHERE (("profiles"."id" = "auth"."uid"()) AND ('school_admin'::"public"."user_role" = ANY ("profiles"."roles"))))));
 
@@ -3777,6 +3933,20 @@ CREATE POLICY "Service role can update staff_details" ON "public"."staff_details
 
 
 COMMENT ON POLICY "Service role can update staff_details" ON "public"."staff_details" IS 'Allows the service role to update any column in staff_details table.';
+
+
+
+CREATE POLICY "Teachers can view period settings" ON "public"."period_settings" FOR SELECT TO "authenticated" USING (("configuration_id" IN ( SELECT "tc"."id"
+   FROM "public"."timetable_configurations" "tc"
+  WHERE ("tc"."school_id" IN ( SELECT "profiles"."school_id"
+           FROM "public"."profiles"
+          WHERE (("profiles"."id" = "auth"."uid"()) AND ('teacher'::"public"."user_role" = ANY ("profiles"."roles"))))))));
+
+
+
+CREATE POLICY "Teachers can view timetable configurations" ON "public"."timetable_configurations" FOR SELECT TO "authenticated" USING (("school_id" IN ( SELECT "profiles"."school_id"
+   FROM "public"."profiles"
+  WHERE (("profiles"."id" = "auth"."uid"()) AND ('teacher'::"public"."user_role" = ANY ("profiles"."roles"))))));
 
 
 
@@ -4328,6 +4498,12 @@ GRANT ALL ON FUNCTION "public"."get_current_user_school_id"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."get_timetable_configuration"("p_config_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_timetable_configuration"("p_config_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_timetable_configuration"("p_config_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_timetable_configurations"("p_school_id" "uuid", "p_academic_year_id" "uuid") TO "service_role";
@@ -4499,9 +4675,9 @@ GRANT ALL ON FUNCTION "public"."refresh_user_roles"("p_user_id" "uuid") TO "serv
 
 
 
-GRANT ALL ON FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_periods" "jsonb", "p_batch_ids" "uuid"[]) TO "anon";
-GRANT ALL ON FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_periods" "jsonb", "p_batch_ids" "uuid"[]) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_periods" "jsonb", "p_batch_ids" "uuid"[]) TO "service_role";
+GRANT ALL ON FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_is_weekly_mode" boolean, "p_selected_days" "text"[], "p_default_periods" "jsonb", "p_fortnight_start_date" "date", "p_day_specific_periods" "jsonb", "p_enable_flexible_timings" boolean, "p_batch_ids" "uuid"[]) TO "anon";
+GRANT ALL ON FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_is_weekly_mode" boolean, "p_selected_days" "text"[], "p_default_periods" "jsonb", "p_fortnight_start_date" "date", "p_day_specific_periods" "jsonb", "p_enable_flexible_timings" boolean, "p_batch_ids" "uuid"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."save_timetable_configuration"("p_school_id" "uuid", "p_name" "text", "p_is_active" boolean, "p_is_default" boolean, "p_academic_year_id" "uuid", "p_is_weekly_mode" boolean, "p_selected_days" "text"[], "p_default_periods" "jsonb", "p_fortnight_start_date" "date", "p_day_specific_periods" "jsonb", "p_enable_flexible_timings" boolean, "p_batch_ids" "uuid"[]) TO "service_role";
 
 
 

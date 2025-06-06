@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Save, X } from "lucide-react";
@@ -158,22 +157,22 @@ export const TimePeriodConfiguration = ({
     // Validate that all period numbers are integers
     const hasNonIntegerNumbers = periods.some(period => !Number.isInteger(period.number));
     if (hasNonIntegerNumbers) {
-        toast({
-            title: "Validation Error",
-            description: "All period numbers must be integers",
-            variant: "destructive"
-        });
-        return;
+      toast({
+        title: "Validation Error",
+        description: "All period numbers must be integers",
+        variant: "destructive"
+      });
+      return;
     }
 
     // Validate configuration before saving
     if (!isWeeklyMode && !fortnightStartDate) {
-        toast({
-            title: "Validation Error",
-            description: "Fortnight start date is required for fortnightly mode",
-            variant: "destructive"
-        });
-        return;
+      toast({
+        title: "Validation Error",
+        description: "Fortnight start date is required for fortnightly mode",
+        variant: "destructive"
+      });
+      return;
     }
 
     if (!profile?.school_id) {
@@ -185,15 +184,6 @@ export const TimePeriodConfiguration = ({
       return;
     }
 
-    // Process day-specific periods to preserve week information
-    const processedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce((acc, [dayId, periods]) => {
-      // For fortnightly mode, keep the full dayId (e.g., 'week1-monday')
-      return {
-        ...acc,
-        [dayId]: periods
-      };
-    }, {});
-
     const result = await saveTimetableConfiguration({
       schoolId: profile.school_id,
       name: configName,
@@ -204,7 +194,7 @@ export const TimePeriodConfiguration = ({
       fortnightStartDate: isWeeklyMode ? null : fortnightStartDate,
       selectedDays, // Keep the full day IDs (e.g., 'week1-monday')
       defaultPeriods: periods,
-      daySpecificPeriods: processedDaySpecificPeriods,
+      daySpecificPeriods,
       enableFlexibleTimings: Object.keys(daySpecificPeriods).length > 0,
       batchIds: null // Handle this if batch tagging is needed
     });
