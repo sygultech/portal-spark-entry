@@ -2209,6 +2209,10 @@ export type Database = {
         Args: { day_string: string }
         Returns: string
       }
+      extract_day_name: {
+        Args: { input_day: string }
+        Returns: string
+      }
       extract_week_number: {
         Args: { day_string: string }
         Returns: number
@@ -2358,23 +2362,6 @@ export type Database = {
       refresh_user_roles: {
         Args: { p_user_id: string }
         Returns: boolean
-      }
-      save_timetable_configuration: {
-        Args: {
-          p_school_id: string
-          p_name: string
-          p_is_active: boolean
-          p_is_default: boolean
-          p_academic_year_id: string
-          p_is_weekly_mode: boolean
-          p_selected_days: string[]
-          p_default_periods: Json
-          p_fortnight_start_date?: string
-          p_day_specific_periods?: Json
-          p_enable_flexible_timings?: boolean
-          p_batch_ids?: string[]
-        }
-        Returns: string
       }
       switch_primary_school: {
         Args: { p_school_id: string }

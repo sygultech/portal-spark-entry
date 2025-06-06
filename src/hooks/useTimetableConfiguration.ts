@@ -36,7 +36,7 @@ interface TimetableConfiguration {
 // Valid day names that the database accepts
 const VALID_DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-// Helper function to extract day name from various formats - matches backend logic
+// Helper function to extract day name from various formats - matches backend logic exactly
 const extractDayName = (dayId: string): string | null => {
   const normalized = dayId.toLowerCase().trim();
   
@@ -301,7 +301,10 @@ export const useTimetableConfiguration = () => {
         p_batch_ids: batchIds
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",

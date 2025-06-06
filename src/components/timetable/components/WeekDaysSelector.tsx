@@ -52,7 +52,7 @@ export const WeekDaysSelector = ({
     // Log for debugging
     console.log('WeekDaysSelector - Selected days changed:', newDays);
     
-    // Ensure all selected days are valid
+    // Ensure all selected days are valid for the current mode
     const validDays = newDays.filter(day => {
       const isValid = daysToShow.some(d => d.id === day);
       if (!isValid) {
@@ -61,7 +61,16 @@ export const WeekDaysSelector = ({
       return isValid;
     });
     
-    onSelectedDaysChange(validDays);
+    // Additional validation: ensure consistency with mode
+    if (isWeeklyMode) {
+      // For weekly mode, remove any day IDs with week prefixes
+      const weeklyDays = validDays.filter(day => !day.includes('week'));
+      onSelectedDaysChange(weeklyDays);
+    } else {
+      // For fortnightly mode, ensure we have proper week prefixes
+      const fortnightDays = validDays.filter(day => day.includes('week'));
+      onSelectedDaysChange(fortnightDays);
+    }
   };
   
   return (
