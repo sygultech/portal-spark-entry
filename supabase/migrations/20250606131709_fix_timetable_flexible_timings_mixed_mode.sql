@@ -18,7 +18,7 @@ EXCEPTION WHEN OTHERS THEN
     NULL;
 END $$;
 
--- Create updated function to handle mixed flexible timings correctly
+-- Create updated function with improved day name extraction and validation
 CREATE OR REPLACE FUNCTION "public"."save_timetable_configuration"(
     "p_school_id" "uuid",
     "p_name" "text",
@@ -38,6 +38,7 @@ CREATE OR REPLACE FUNCTION "public"."save_timetable_configuration"(
 DECLARE
     v_config_id uuid;
     v_days_with_custom text[];
+    v_valid_days text[] := ARRAY['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 BEGIN
     -- Input validation
     IF NOT p_is_weekly_mode AND p_fortnight_start_date IS NULL THEN
@@ -97,26 +98,27 @@ BEGIN
                 (period->>'endTime')::time as end_time,
                 period->>'type' as type,
                 period->>'label' as label,
-                -- Extract base day name (e.g., 'monday' from 'week1-monday' or just 'monday')
+                -- Improved base day name extraction with validation
                 CASE 
-                    WHEN day_key LIKE 'week%-%' THEN 
-                        lower(split_part(day_key, '-', 2))
+                    WHEN day_key ~* '^week[12]-(.+)$' THEN 
+                        lower(regexp_replace(day_key, '^week[12]-', ''))
                     ELSE 
                         lower(day_key)
                 END as base_day,
                 -- Extract week number for fortnightly mode
                 CASE 
-                    WHEN NOT p_is_weekly_mode AND day_key LIKE 'week%-%' THEN 
-                        CASE split_part(day_key, '-', 1)
-                            WHEN 'week1' THEN 1
-                            WHEN 'week2' THEN 2
-                            ELSE NULL
-                        END
+                    WHEN NOT p_is_weekly_mode AND day_key ~* '^week([12])-' THEN 
+                        CAST(substring(day_key from '^week([12])-') AS integer)
                     ELSE 
                         NULL
                 END as week_num
             FROM jsonb_each(p_day_specific_periods) AS days(day_key, day_periods),
                  jsonb_array_elements(day_periods) AS period
+        ),
+        validated_custom_periods AS (
+            SELECT *
+            FROM custom_periods
+            WHERE base_day = ANY(v_valid_days)  -- Only include valid day names
         )
         INSERT INTO period_settings (
             configuration_id,
@@ -137,7 +139,7 @@ BEGIN
             label,
             base_day,
             week_num
-        FROM custom_periods
+        FROM validated_custom_periods
         ORDER BY v_config_id, period_number, base_day, week_num;
     END IF;
 
@@ -146,21 +148,17 @@ BEGIN
     WITH selected_days_processed AS (
         SELECT 
             day,
-            -- Extract base day name
+            -- Improved base day name extraction with validation
             CASE 
-                WHEN NOT p_is_weekly_mode AND day LIKE 'week%-%' THEN 
-                    lower(split_part(day, '-', 2))
+                WHEN day ~* '^week[12]-(.+)$' THEN 
+                    lower(regexp_replace(day, '^week[12]-', ''))
                 ELSE 
                     lower(day)
             END AS base_day,
             -- Extract week number for fortnightly mode
             CASE 
-                WHEN NOT p_is_weekly_mode AND day LIKE 'week%-%' THEN 
-                    CASE split_part(day, '-', 1)
-                        WHEN 'week1' THEN 1
-                        WHEN 'week2' THEN 2
-                        ELSE NULL
-                    END
+                WHEN NOT p_is_weekly_mode AND day ~* '^week([12])-' THEN 
+                    CAST(substring(day from '^week([12])-') AS integer)
                 ELSE 
                     NULL
             END AS week_num
@@ -169,6 +167,11 @@ BEGIN
             NOT p_enable_flexible_timings  -- Include all days when flexible timings is disabled
             OR NOT (day = ANY(COALESCE(v_days_with_custom, ARRAY[]::text[])))  -- Include days without custom timings when flexible timings is enabled
         )
+    ),
+    validated_selected_days AS (
+        SELECT *
+        FROM selected_days_processed
+        WHERE base_day = ANY(v_valid_days)  -- Only include valid day names
     ),
     default_periods AS (
         SELECT
@@ -189,18 +192,18 @@ BEGIN
         day_of_week,
         fortnight_week
     )
-    SELECT DISTINCT ON (v_config_id, dp.period_number, sdp.base_day, sdp.week_num)
+    SELECT DISTINCT ON (v_config_id, dp.period_number, vsd.base_day, vsd.week_num)
         v_config_id,
         dp.period_number,
         dp.start_time,
         dp.end_time,
         dp.type,
         dp.label,
-        sdp.base_day,
-        sdp.week_num
+        vsd.base_day,
+        vsd.week_num
     FROM default_periods dp
-    CROSS JOIN selected_days_processed sdp
-    ORDER BY v_config_id, dp.period_number, sdp.base_day, sdp.week_num;
+    CROSS JOIN validated_selected_days vsd
+    ORDER BY v_config_id, dp.period_number, vsd.base_day, vsd.week_num;
 
     -- Insert batch mappings if provided and not default
     IF NOT p_is_default AND p_batch_ids IS NOT NULL AND array_length(p_batch_ids, 1) > 0 THEN
