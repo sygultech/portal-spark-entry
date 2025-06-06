@@ -1,4 +1,5 @@
 
+
 -- Drop existing function first
 DO $$ 
 BEGIN
@@ -18,7 +19,7 @@ EXCEPTION WHEN OTHERS THEN
     NULL;
 END $$;
 
--- Create updated function with improved day name extraction and validation
+-- Create updated function with comprehensive debugging and validation
 CREATE OR REPLACE FUNCTION "public"."save_timetable_configuration"(
     "p_school_id" "uuid",
     "p_name" "text",
@@ -39,7 +40,14 @@ DECLARE
     v_config_id uuid;
     v_days_with_custom text[];
     v_valid_days text[] := ARRAY['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    v_debug_info text;
+    v_invalid_days text[];
 BEGIN
+    -- Debug logging: Log input parameters
+    RAISE NOTICE 'Starting save_timetable_configuration with parameters:';
+    RAISE NOTICE 'p_school_id: %, p_name: %, p_is_weekly_mode: %', p_school_id, p_name, p_is_weekly_mode;
+    RAISE NOTICE 'p_selected_days: %, p_enable_flexible_timings: %', p_selected_days, p_enable_flexible_timings;
+    
     -- Input validation
     IF NOT p_is_weekly_mode AND p_fortnight_start_date IS NULL THEN
         RAISE EXCEPTION 'Fortnight start date is required for fortnightly mode';
@@ -47,6 +55,39 @@ BEGIN
 
     IF array_length(p_selected_days, 1) = 0 THEN
         RAISE EXCEPTION 'At least one school day must be selected';
+    END IF;
+
+    -- Enhanced day name validation with detailed logging
+    WITH day_validation AS (
+        SELECT 
+            original_day,
+            CASE 
+                WHEN original_day ~* '^week[12]-(.+)$' THEN 
+                    lower(regexp_replace(original_day, '^week[12]-', ''))
+                ELSE 
+                    lower(original_day)
+            END as extracted_day,
+            CASE 
+                WHEN original_day ~* '^week[12]-(.+)$' THEN 
+                    CAST(substring(original_day from '^week([12])-') AS integer)
+                ELSE 
+                    NULL
+            END as week_num
+        FROM unnest(p_selected_days) AS original_day
+    )
+    SELECT array_agg(dv.original_day) 
+    INTO v_invalid_days
+    FROM day_validation dv
+    WHERE dv.extracted_day IS NULL 
+       OR dv.extracted_day = '' 
+       OR NOT (dv.extracted_day = ANY(v_valid_days));
+
+    -- Log validation results
+    RAISE NOTICE 'Day validation results: invalid days = %', v_invalid_days;
+    
+    IF v_invalid_days IS NOT NULL AND array_length(v_invalid_days, 1) > 0 THEN
+        RAISE EXCEPTION 'Invalid day names found: %. Valid days are: %', 
+            v_invalid_days, v_valid_days;
     END IF;
 
     -- Create timetable configuration
@@ -77,19 +118,26 @@ BEGIN
     )
     RETURNING id INTO v_config_id;
 
+    RAISE NOTICE 'Created timetable configuration with ID: %', v_config_id;
+
     -- Delete existing period settings for this configuration
     DELETE FROM period_settings WHERE configuration_id = v_config_id;
+    RAISE NOTICE 'Deleted existing period settings for configuration %', v_config_id;
 
     -- Get array of days with custom timings (if any)
     IF p_enable_flexible_timings AND p_day_specific_periods IS NOT NULL THEN
         SELECT array_agg(key) INTO v_days_with_custom
         FROM jsonb_object_keys(p_day_specific_periods) AS key;
+        RAISE NOTICE 'Days with custom timings: %', v_days_with_custom;
     ELSE
         v_days_with_custom := ARRAY[]::text[];
+        RAISE NOTICE 'No custom timings enabled or provided';
     END IF;
 
     -- Handle custom timings if enabled and provided
     IF p_enable_flexible_timings AND p_day_specific_periods IS NOT NULL THEN
+        RAISE NOTICE 'Processing custom period timings...';
+        
         WITH custom_periods AS (
             SELECT
                 day_key,
@@ -98,7 +146,7 @@ BEGIN
                 (period->>'endTime')::time as end_time,
                 period->>'type' as type,
                 period->>'label' as label,
-                -- Improved base day name extraction with validation
+                -- Robust day name extraction with fallback
                 CASE 
                     WHEN day_key ~* '^week[12]-(.+)$' THEN 
                         lower(regexp_replace(day_key, '^week[12]-', ''))
@@ -116,9 +164,18 @@ BEGIN
                  jsonb_array_elements(day_periods) AS period
         ),
         validated_custom_periods AS (
+            SELECT 
+                cp.*,
+                CASE 
+                    WHEN cp.base_day = ANY(v_valid_days) THEN true
+                    ELSE false
+                END as is_valid_day
+            FROM custom_periods cp
+        ),
+        final_custom_periods AS (
             SELECT *
-            FROM custom_periods
-            WHERE base_day = ANY(v_valid_days)  -- Only include valid day names
+            FROM validated_custom_periods vcp
+            WHERE vcp.is_valid_day = true
         )
         INSERT INTO period_settings (
             configuration_id,
@@ -139,16 +196,20 @@ BEGIN
             label,
             base_day,
             week_num
-        FROM validated_custom_periods
+        FROM final_custom_periods
         ORDER BY v_config_id, period_number, base_day, week_num;
+
+        GET DIAGNOSTICS v_debug_info = ROW_COUNT;
+        RAISE NOTICE 'Inserted % custom period settings', v_debug_info;
     END IF;
 
     -- Handle default timings for remaining selected days 
-    -- (either when flexible timings is disabled, or for days without custom timings)
+    RAISE NOTICE 'Processing default period timings...';
+    
     WITH selected_days_processed AS (
         SELECT 
             day,
-            -- Improved base day name extraction with validation
+            -- Robust day name extraction with validation
             CASE 
                 WHEN day ~* '^week[12]-(.+)$' THEN 
                     lower(regexp_replace(day, '^week[12]-', ''))
@@ -169,9 +230,18 @@ BEGIN
         )
     ),
     validated_selected_days AS (
+        SELECT 
+            sdp.*,
+            CASE 
+                WHEN sdp.base_day = ANY(v_valid_days) THEN true
+                ELSE false
+            END as is_valid_day
+        FROM selected_days_processed sdp
+    ),
+    final_selected_days AS (
         SELECT *
-        FROM selected_days_processed
-        WHERE base_day = ANY(v_valid_days)  -- Only include valid day names
+        FROM validated_selected_days vsd
+        WHERE vsd.is_valid_day = true
     ),
     default_periods AS (
         SELECT
@@ -192,18 +262,21 @@ BEGIN
         day_of_week,
         fortnight_week
     )
-    SELECT DISTINCT ON (v_config_id, dp.period_number, vsd.base_day, vsd.week_num)
+    SELECT DISTINCT ON (v_config_id, dp.period_number, fsd.base_day, fsd.week_num)
         v_config_id,
         dp.period_number,
         dp.start_time,
         dp.end_time,
         dp.type,
         dp.label,
-        vsd.base_day,
-        vsd.week_num
+        fsd.base_day,
+        fsd.week_num
     FROM default_periods dp
-    CROSS JOIN validated_selected_days vsd
-    ORDER BY v_config_id, dp.period_number, vsd.base_day, vsd.week_num;
+    CROSS JOIN final_selected_days fsd
+    ORDER BY v_config_id, dp.period_number, fsd.base_day, fsd.week_num;
+
+    GET DIAGNOSTICS v_debug_info = ROW_COUNT;
+    RAISE NOTICE 'Inserted % default period settings', v_debug_info;
 
     -- Insert batch mappings if provided and not default
     IF NOT p_is_default AND p_batch_ids IS NOT NULL AND array_length(p_batch_ids, 1) > 0 THEN
@@ -216,9 +289,17 @@ BEGIN
             batch_id
         FROM unnest(p_batch_ids) AS batch_id
         ON CONFLICT (configuration_id, batch_id) DO NOTHING;
+
+        GET DIAGNOSTICS v_debug_info = ROW_COUNT;
+        RAISE NOTICE 'Inserted % batch mappings', v_debug_info;
     END IF;
 
+    RAISE NOTICE 'Successfully completed save_timetable_configuration for config ID: %', v_config_id;
     RETURN v_config_id;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Error in save_timetable_configuration: % (SQLSTATE: %)', SQLERRM, SQLSTATE;
+        RAISE;
 END;
 $$;
 
@@ -237,3 +318,4 @@ GRANT ALL ON FUNCTION "public"."save_timetable_configuration"(
     "p_enable_flexible_timings" boolean,
     "p_batch_ids" "uuid"[]
 ) TO "anon", "authenticated", "service_role";
+
