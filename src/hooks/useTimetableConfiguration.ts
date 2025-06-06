@@ -36,7 +36,7 @@ interface TimetableConfiguration {
 // Valid day names that the database accepts
 const VALID_DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-// Helper function to extract day name from various formats
+// Helper function to extract day name from various formats - matches backend logic
 const extractDayName = (dayId: string): string | null => {
   const normalized = dayId.toLowerCase().trim();
   
@@ -55,6 +55,12 @@ const extractDayName = (dayId: string): string | null => {
   const shortWeekMatch = normalized.match(/^w[12]-(.+)$/);
   if (shortWeekMatch && VALID_DAY_NAMES.includes(shortWeekMatch[1])) {
     return shortWeekMatch[1];
+  }
+  
+  // monday-week1, tuesday-week2 format
+  const dayWeekMatch = normalized.match(/^(.+)-week[12]$/);
+  if (dayWeekMatch && VALID_DAY_NAMES.includes(dayWeekMatch[1])) {
+    return dayWeekMatch[1];
   }
   
   // Check if any valid day is contained in the string

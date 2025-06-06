@@ -14,7 +14,7 @@ interface WeekDaysSelectorProps {
   hasError?: boolean;
 }
 
-// Generate fortnight days (14 days) with consistent naming
+// Generate fortnight days (14 days) with consistent naming that matches backend expectations
 const generateFortnightDays = (): WeekDay[] => {
   const fortnightDays: WeekDay[] = [];
   
