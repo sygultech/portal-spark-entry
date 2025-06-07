@@ -236,30 +236,110 @@ export const TimetableSettings = () => {
     setViewMode(null);
   };
 
-  const handleToggleActive = (configId: string) => {
-    setPeriodConfigurations(prev => prev.map(config => 
-      config.id === configId ? { ...config, isActive: !config.isActive } : config
-    ));
-    
-    const config = periodConfigurations.find(c => c.id === configId);
-    toast({
-      title: config?.isActive ? "Configuration Deactivated" : "Configuration Activated",
-      description: `${config?.name} is now ${config?.isActive ? 'inactive' : 'active'}`
-    });
+  const handleToggleActive = async (configId: string, isActive: boolean) => {
+    // For temporary configurations, just update the state
+    if (configId.startsWith('config-')) {
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId ? { ...config, isActive } : config
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isActive ? "Configuration Activated" : "Configuration Deactivated",
+        description: `${config?.name} is now ${isActive ? 'active' : 'inactive'}`
+      });
+      return;
+    }
+
+    // For existing configurations, update in database
+    try {
+      const { error } = await supabase
+        .from('timetable_configurations')
+        .update({ is_active: isActive })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId ? { ...config, isActive } : config
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isActive ? "Configuration Activated" : "Configuration Deactivated",
+        description: `${config?.name} is now ${isActive ? 'active' : 'inactive'}`
+      });
+    } catch (error) {
+      console.error('Error updating active status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update configuration status. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleToggleDefault = (configId: string) => {
-    setPeriodConfigurations(prev => prev.map(config => 
-      config.id === configId 
-        ? { ...config, isDefault: !config.isDefault }
-        : { ...config, isDefault: false }
-    ));
-    
-    const config = periodConfigurations.find(c => c.id === configId);
-    toast({
-      title: config?.isDefault ? "Default Removed" : "Default Set",
-      description: `${config?.name} is ${config?.isDefault ? 'no longer' : 'now'} the default configuration`
-    });
+  const handleToggleDefault = async (configId: string, isDefault: boolean) => {
+    // For temporary configurations, just update the state
+    if (configId.startsWith('config-')) {
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId 
+          ? { ...config, isDefault }
+          : { ...config, isDefault: false } // Only one can be default
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isDefault ? "Default Set" : "Default Removed",
+        description: `${config?.name} is ${isDefault ? 'now' : 'no longer'} the default configuration`
+      });
+      return;
+    }
+
+    // For existing configurations, update in database
+    try {
+      if (isDefault) {
+        // First, unset any other default configuration for this school and academic year
+        await supabase
+          .from('timetable_configurations')
+          .update({ is_default: false })
+          .eq('school_id', profile?.school_id)
+          .eq('academic_year_id', selectedAcademicYear);
+      }
+
+      // Then set this configuration as default (or remove default)
+      const { error } = await supabase
+        .from('timetable_configurations')
+        .update({ is_default: isDefault })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId 
+          ? { ...config, isDefault }
+          : { ...config, isDefault: false } // Only one can be default
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isDefault ? "Default Set" : "Default Removed",
+        description: `${config?.name} is ${isDefault ? 'now' : 'no longer'} the default configuration`
+      });
+    } catch (error) {
+      console.error('Error updating default status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update default configuration. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleBatchTagging = (configId: string) => {
