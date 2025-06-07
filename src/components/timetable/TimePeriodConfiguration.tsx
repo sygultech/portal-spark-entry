@@ -48,7 +48,7 @@ export const TimePeriodConfiguration = ({
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isExistingConfig, setIsExistingConfig] = useState(false);
-  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(false); // Add this state
+  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(false);
 
   console.log('TimePeriodConfiguration render:', {
     configId,
@@ -238,6 +238,14 @@ export const TimePeriodConfiguration = ({
       return;
     }
 
+    console.log('Saving configuration:', {
+      configId,
+      isExistingConfig,
+      configName,
+      isActive,
+      isDefault
+    });
+
     const result = await saveTimetableConfiguration({
       schoolId: profile.school_id,
       name: configName,
@@ -246,11 +254,12 @@ export const TimePeriodConfiguration = ({
       academicYearId,
       isWeeklyMode,
       fortnightStartDate: isWeeklyMode ? null : fortnightStartDate,
-      selectedDays, // Keep the full day IDs (e.g., 'week1-monday')
+      selectedDays,
       defaultPeriods: periods,
       daySpecificPeriods,
       enableFlexibleTimings: enableFlexibleTimings,
-      batchIds: null // Handle this if batch tagging is needed
+      batchIds: null,
+      configId: isExistingConfig ? configId : undefined // Pass configId only for existing configs
     });
 
     if (result) {
@@ -420,7 +429,7 @@ export const TimePeriodConfiguration = ({
           defaultPeriods={periods}
           onUpdateDayPeriods={handleUpdateDayPeriods}
           daySpecificPeriods={daySpecificPeriods}
-          initialFlexibleTimings={enableFlexibleTimings} // Pass the flexible timings state
+          initialFlexibleTimings={enableFlexibleTimings}
         />
 
         {/* Timetable Actions */}

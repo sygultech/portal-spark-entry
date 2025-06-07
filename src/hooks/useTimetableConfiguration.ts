@@ -216,14 +216,14 @@ export const useTimetableConfiguration = () => {
 
       console.log('Sending to backend - Selected days:', selectedDays);
       console.log('Sending to backend - Day specific periods keys:', Object.keys(formattedDaySpecificPeriods));
+      console.log('Sending to backend - Config ID for update:', configId);
 
       let result;
       
-      if (configId && !configId.startsWith('config-')) {
+      if (configId) {
         // Update existing configuration
         console.log('Updating existing configuration:', configId);
         
-        // For updates, we need to handle the process differently
         // First, delete the existing configuration and its related data
         const { error: deleteError } = await supabase
           .from('timetable_configurations')
@@ -234,7 +234,9 @@ export const useTimetableConfiguration = () => {
           throw deleteError;
         }
 
-        // Then create a new one with the same data
+        console.log('Deleted existing configuration, now creating new one with same data');
+
+        // Then create a new one with the updated data
         const { data, error } = await supabase.rpc('save_timetable_configuration', {
           p_school_id: schoolId,
           p_name: name,
@@ -256,6 +258,7 @@ export const useTimetableConfiguration = () => {
         result = data;
       } else {
         // Create new configuration
+        console.log('Creating new configuration');
         const { data, error } = await supabase.rpc('save_timetable_configuration', {
           p_school_id: schoolId,
           p_name: name,
@@ -279,7 +282,7 @@ export const useTimetableConfiguration = () => {
 
       toast({
         title: "Success",
-        description: configId && !configId.startsWith('config-') ? 
+        description: configId ? 
           "Timetable configuration updated successfully" : 
           "Timetable configuration saved successfully"
       });
