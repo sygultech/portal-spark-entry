@@ -86,27 +86,120 @@ export const TimetableSettings = () => {
     setViewMode('view');
   };
 
-  const handleCloneConfiguration = (configId: string) => {
+  const handleCloneConfiguration = async (configId: string) => {
     const originalConfig = periodConfigurations.find(c => c.id === configId);
     if (!originalConfig) return;
 
-    const clonedConfig: TimePeriodConfig = {
-      id: `config-${Date.now()}`,
-      name: `${originalConfig.name} (Copy)`,
-      isActive: false,
-      isDefault: false
-    };
+    // If it's an existing config (not a temp one), fetch its full data and clone it
+    if (!configId.startsWith('config-') && profile?.school_id && selectedAcademicYear) {
+      try {
+        const configs = await getTimetableConfigurations(profile.school_id, selectedAcademicYear);
+        const configToClone = configs.find(c => c.id === configId);
+        
+        if (configToClone) {
+          // Create the clone with updated details
+          const clonedConfig: TimePeriodConfig = {
+            id: `config-${Date.now()}`, // Temporary ID for new config
+            name: `${originalConfig.name} (Copy)`,
+            isActive: false,
+            isDefault: false
+          };
 
-    setPeriodConfigurations(prev => [...prev, clonedConfig]);
-    
-    toast({
-      title: "Configuration Cloned",
-      description: `${clonedConfig.name} has been created`
-    });
+          // Save the cloned configuration
+          const result = await saveTimetableConfiguration({
+            schoolId: profile.school_id,
+            name: clonedConfig.name,
+            isActive: clonedConfig.isActive,
+            isDefault: clonedConfig.isDefault,
+            academicYearId: selectedAcademicYear,
+            isWeeklyMode: configToClone.isWeeklyMode,
+            fortnightStartDate: configToClone.fortnightStartDate,
+            selectedDays: configToClone.selectedDays,
+            defaultPeriods: configToClone.defaultPeriods,
+            daySpecificPeriods: configToClone.daySpecificPeriods,
+            enableFlexibleTimings: Object.keys(configToClone.daySpecificPeriods || {}).length > 0,
+            batchIds: null
+          });
+
+          if (result) {
+            // Refresh configurations to show the new cloned one
+            await fetchConfigurations();
+            toast({
+              title: "Configuration Cloned",
+              description: `${clonedConfig.name} has been created successfully`
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error cloning configuration:', error);
+        toast({
+          title: "Error Cloning Configuration",
+          description: "Failed to clone the configuration. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // For temporary configs, just create a simple clone
+      const clonedConfig: TimePeriodConfig = {
+        id: `config-${Date.now()}`,
+        name: `${originalConfig.name} (Copy)`,
+        isActive: false,
+        isDefault: false
+      };
+
+      setPeriodConfigurations(prev => [...prev, clonedConfig]);
+      
+      toast({
+        title: "Configuration Cloned",
+        description: `${clonedConfig.name} has been created`
+      });
+    }
   };
 
-  const handleRemoveConfiguration = (configId: string) => {
+  const fetchConfigurations = async () => {
+    if (!profile?.school_id || !selectedAcademicYear) return;
+    
+    setIsLoading(true);
+    try {
+      const configs = await getTimetableConfigurations(profile.school_id, selectedAcademicYear);
+      setPeriodConfigurations(configs.map(config => ({
+        id: config.id,
+        name: config.name,
+        isActive: config.isActive,
+        isDefault: config.isDefault
+      })));
+    } catch (error) {
+      console.error('Error fetching configurations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveConfiguration = async (configId: string) => {
     const config = periodConfigurations.find(c => c.id === configId);
+    
+    // If it's an existing configuration (not temporary), delete from database
+    if (!configId.startsWith('config-') && profile?.school_id) {
+      try {
+        const { error } = await supabase
+          .from('timetable_configurations')
+          .delete()
+          .eq('id', configId);
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        console.error('Error deleting configuration:', error);
+        toast({
+          title: "Error Deleting Configuration",
+          description: "Failed to delete the configuration. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setPeriodConfigurations(prev => prev.filter(c => c.id !== configId));
     
     if (activeConfigId === configId) {
@@ -124,15 +217,7 @@ export const TimetableSettings = () => {
 
   const handleConfigurationSaved = async () => {
     // Refresh configurations after saving
-    if (profile?.school_id && selectedAcademicYear) {
-      const configs = await getTimetableConfigurations(profile.school_id, selectedAcademicYear);
-      setPeriodConfigurations(configs.map(config => ({
-        id: config.id,
-        name: config.name,
-        isActive: config.isActive,
-        isDefault: config.isDefault
-      })));
-    }
+    await fetchConfigurations();
     setActiveConfigId(null);
     setViewMode(null);
   };

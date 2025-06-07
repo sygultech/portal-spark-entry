@@ -17,6 +17,7 @@ interface SaveTimetableConfigurationParams {
   daySpecificPeriods: Record<string, Period[]>;
   enableFlexibleTimings: boolean;
   batchIds?: string[] | null;
+  configId?: string; // Add configId for updates
 }
 
 interface TimetableConfiguration {
@@ -178,7 +179,8 @@ export const useTimetableConfiguration = () => {
     defaultPeriods,
     daySpecificPeriods,
     enableFlexibleTimings,
-    batchIds
+    batchIds,
+    configId
   }: SaveTimetableConfigurationParams) => {
     try {
       // Convert defaultPeriods to the format expected by the backend
@@ -215,32 +217,74 @@ export const useTimetableConfiguration = () => {
       console.log('Sending to backend - Selected days:', selectedDays);
       console.log('Sending to backend - Day specific periods keys:', Object.keys(formattedDaySpecificPeriods));
 
-      const { data, error } = await supabase.rpc('save_timetable_configuration', {
-        p_school_id: schoolId,
-        p_name: name,
-        p_is_active: isActive,
-        p_is_default: isDefault,
-        p_academic_year_id: academicYearId,
-        p_is_weekly_mode: isWeeklyMode,
-        p_selected_days: selectedDays,
-        p_default_periods: formattedDefaultPeriods,
-        p_fortnight_start_date: fortnightStartDate,
-        p_day_specific_periods: formattedDaySpecificPeriods,
-        p_enable_flexible_timings: enableFlexibleTimings,
-        p_batch_ids: batchIds
-      });
+      let result;
+      
+      if (configId && !configId.startsWith('config-')) {
+        // Update existing configuration
+        console.log('Updating existing configuration:', configId);
+        
+        // For updates, we need to handle the process differently
+        // First, delete the existing configuration and its related data
+        const { error: deleteError } = await supabase
+          .from('timetable_configurations')
+          .delete()
+          .eq('id', configId);
 
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
+        if (deleteError) {
+          throw deleteError;
+        }
+
+        // Then create a new one with the same data
+        const { data, error } = await supabase.rpc('save_timetable_configuration', {
+          p_school_id: schoolId,
+          p_name: name,
+          p_is_active: isActive,
+          p_is_default: isDefault,
+          p_academic_year_id: academicYearId,
+          p_is_weekly_mode: isWeeklyMode,
+          p_selected_days: selectedDays,
+          p_default_periods: formattedDefaultPeriods,
+          p_fortnight_start_date: fortnightStartDate,
+          p_day_specific_periods: formattedDaySpecificPeriods,
+          p_enable_flexible_timings: enableFlexibleTimings,
+          p_batch_ids: batchIds
+        });
+
+        if (error) {
+          throw error;
+        }
+        result = data;
+      } else {
+        // Create new configuration
+        const { data, error } = await supabase.rpc('save_timetable_configuration', {
+          p_school_id: schoolId,
+          p_name: name,
+          p_is_active: isActive,
+          p_is_default: isDefault,
+          p_academic_year_id: academicYearId,
+          p_is_weekly_mode: isWeeklyMode,
+          p_selected_days: selectedDays,
+          p_default_periods: formattedDefaultPeriods,
+          p_fortnight_start_date: fortnightStartDate,
+          p_day_specific_periods: formattedDaySpecificPeriods,
+          p_enable_flexible_timings: enableFlexibleTimings,
+          p_batch_ids: batchIds
+        });
+
+        if (error) {
+          throw error;
+        }
+        result = data;
       }
 
       toast({
         title: "Success",
-        description: "Timetable configuration saved successfully"
+        description: configId && !configId.startsWith('config-') ? 
+          "Timetable configuration updated successfully" : 
+          "Timetable configuration saved successfully"
       });
 
-      return data;
+      return result;
     } catch (error: any) {
       console.error('Error saving timetable configuration:', error);
       toast({

@@ -46,43 +46,70 @@ export const TimePeriodConfiguration = ({
   const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
   const [daySpecificPeriods, setDaySpecificPeriods] = useState<Record<string, Period[]>>({});
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExistingConfig, setIsExistingConfig] = useState(false);
 
-  // Fetch configuration data when in view mode
+  // Check if this is an existing configuration (not a new one)
+  useEffect(() => {
+    // If configId doesn't start with 'config-' (our new config pattern), it's an existing config
+    setIsExistingConfig(!configId.startsWith('config-'));
+  }, [configId]);
+
+  // Fetch configuration data when editing existing configuration or in view mode
   useEffect(() => {
     const fetchConfigurationData = async () => {
-      if (mode === 'view' && profile?.school_id && academicYearId) {
-        console.log('Fetching configuration data for view mode...');
-        const configs = await getTimetableConfigurations(profile.school_id, academicYearId);
-        const currentConfig = configs.find(config => config.id === configId);
+      if ((mode === 'edit' && isExistingConfig) || mode === 'view') {
+        if (!profile?.school_id || !academicYearId) return;
         
-        if (currentConfig) {
-          console.log('Found configuration:', currentConfig);
+        setIsLoading(true);
+        try {
+          console.log('Fetching configuration data for editing/viewing...', { configId, mode, isExistingConfig });
+          const configs = await getTimetableConfigurations(profile.school_id, academicYearId);
+          const currentConfig = configs.find(config => config.id === configId);
           
-          // Set periods and calculate total periods count
-          setPeriods(currentConfig.defaultPeriods);
-          setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
-          
-          // Set selected days
-          setSelectedDays(currentConfig.selectedDays);
-          
-          // Set mode and fortnight settings
-          setIsWeeklyMode(currentConfig.isWeeklyMode);
-          setFortnightStartDate(currentConfig.fortnightStartDate || '');
-          
-          // Set day-specific periods
-          setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
-        } else {
-          console.warn('Configuration not found:', configId);
+          if (currentConfig) {
+            console.log('Found configuration for editing:', currentConfig);
+            
+            // Set periods and calculate total periods count
+            setPeriods(currentConfig.defaultPeriods);
+            setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
+            
+            // Set selected days
+            setSelectedDays(currentConfig.selectedDays);
+            
+            // Set mode and fortnight settings
+            setIsWeeklyMode(currentConfig.isWeeklyMode);
+            setFortnightStartDate(currentConfig.fortnightStartDate || '');
+            
+            // Set day-specific periods
+            setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
+          } else {
+            console.warn('Configuration not found for editing:', configId);
+            toast({
+              title: "Configuration Not Found",
+              description: "The requested configuration could not be loaded.",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching configuration for editing:', error);
+          toast({
+            title: "Error Loading Configuration",
+            description: "Failed to load configuration data for editing.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
         }
       }
     };
 
     fetchConfigurationData();
-  }, [mode, configId, profile?.school_id, academicYearId, getTimetableConfigurations]);
+  }, [mode, configId, isExistingConfig, profile?.school_id, academicYearId, getTimetableConfigurations]);
 
   // Handle mode changes and reset selected days appropriately
   useEffect(() => {
-    if (mode === 'edit') {
+    if (mode === 'edit' && !isLoading) {
       if (isWeeklyMode) {
         // Convert fortnightly days back to weekly days if switching from fortnightly to weekly
         const weeklyDays = selectedDays
@@ -117,30 +144,32 @@ export const TimePeriodConfiguration = ({
         setHasTriedToSubmit(false);
       }
     }
-  }, [isWeeklyMode, mode]);
+  }, [isWeeklyMode, mode, isLoading]);
 
-  // Generate default periods based on total periods count
+  // Generate default periods based on total periods count (only for new configurations)
   useEffect(() => {
-    const newPeriods: Period[] = [];
-    
-    for (let i = 1; i <= totalPeriods; i++) {
-      const startHour = 8 + Math.floor((i - 1) * 0.75); // Roughly 45 min periods
-      const startMinute = ((i - 1) * 45) % 60;
-      const endMinute = (i * 45) % 60;
-      const endHour = 8 + Math.floor((i * 45) / 60);
+    if (!isExistingConfig && mode === 'edit' && !isLoading) {
+      const newPeriods: Period[] = [];
       
-      newPeriods.push({
-        id: `period-${i}`,
-        number: i,
-        startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
-        endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`,
-        type: 'period',
-        label: `Period ${i}`
-      });
+      for (let i = 1; i <= totalPeriods; i++) {
+        const startHour = 8 + Math.floor((i - 1) * 0.75); // Roughly 45 min periods
+        const startMinute = ((i - 1) * 45) % 60;
+        const endMinute = (i * 45) % 60;
+        const endHour = 8 + Math.floor((i * 45) / 60);
+        
+        newPeriods.push({
+          id: `period-${i}`,
+          number: i,
+          startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
+          endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`,
+          type: 'period',
+          label: `Period ${i}`
+        });
+      }
+      
+      setPeriods(newPeriods);
     }
-    
-    setPeriods(newPeriods);
-  }, [totalPeriods]);
+  }, [totalPeriods, isExistingConfig, mode, isLoading]);
 
   const handleSaveConfiguration = async () => {
     setHasTriedToSubmit(true);
@@ -290,20 +319,46 @@ export const TimePeriodConfiguration = ({
     );
   }
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Loading Configuration...
+            </span>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Configure Period Configuration
+            {isExistingConfig ? `Edit: ${configName}` : 'Configure Period Configuration'}
           </span>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </CardTitle>
         <CardDescription>
-          Set up periods, timings, and scheduling options for this configuration.
+          {isExistingConfig ? 
+            `Modify the settings and timings for ${configName}.` :
+            "Set up periods, timings, and scheduling options for this configuration."
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
