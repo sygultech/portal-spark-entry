@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ export const TeacherScheduleView = ({ selectedTerm }: TeacherScheduleViewProps) 
   const { subjectTeachers, isLoading: subjectTeachersLoading, assignTeacher, removeTeacher } = useSubjectTeachers(
     undefined, 
     undefined, 
-    selectedAcademicYear?.id || ''
+    selectedYear?.id || ''
   );
 
   const [searchTerm, setSearchTerm] = useState("");

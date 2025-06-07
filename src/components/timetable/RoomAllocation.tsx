@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,11 +44,11 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
   useEffect(() => {
     if (profile?.school_id) {
       fetchRooms();
-      if (selectedAcademicYear?.id) {
-        fetchAllocations(selectedAcademicYear.id, selectedTerm);
+      if (selectedYear?.id) {
+        fetchAllocations(selectedYear.id, selectedTerm);
       }
     }
-  }, [profile?.school_id, selectedAcademicYear?.id, selectedTerm, fetchRooms, fetchAllocations]);
+  }, [profile?.school_id, selectedYear?.id, selectedTerm, fetchRooms, fetchAllocations]);
 
   // Filter rooms based on search and type
   const filteredRooms = rooms.filter(room => {
@@ -101,7 +100,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
       const allocationWithDetails = {
         ...allocationData,
         school_id: profile?.school_id || '',
-        academic_year_id: selectedAcademicYear?.id || '',
+        academic_year_id: selectedYear?.id || '',
         term: selectedTerm
       };
 
