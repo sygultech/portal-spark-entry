@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, MapPin, Search, Filter, Building, Users, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Search, Filter, Building, Users, Settings, Calendar } from "lucide-react";
 import { AcademicYearSelector } from "./components/AcademicYearSelector";
 import { RoomManagementDialog } from "./components/RoomManagementDialog";
+import { RoomAllocationDialog } from "./components/RoomAllocationDialog";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 import { useRooms, Room } from "@/hooks/useRooms";
+import { useRoomAllocations, RoomAllocationData } from "@/hooks/useRoomAllocations";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
@@ -30,10 +32,12 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
   } = useAcademicYearSelector();
 
   const { rooms, isLoading, fetchRooms, addRoom, updateRoom, deleteRoom } = useRooms(profile?.school_id || '');
+  const { allocations, isLoading: allocationsLoading, fetchAllocations, addAllocation } = useRoomAllocations(profile?.school_id || '');
   
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [roomDialogMode, setRoomDialogMode] = useState<'create' | 'edit'>('create');
+  const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
@@ -41,8 +45,11 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
   useEffect(() => {
     if (profile?.school_id) {
       fetchRooms();
+      if (selectedAcademicYear?.id) {
+        fetchAllocations(selectedAcademicYear.id, selectedTerm);
+      }
     }
-  }, [profile?.school_id, fetchRooms]);
+  }, [profile?.school_id, selectedAcademicYear?.id, selectedTerm, fetchRooms, fetchAllocations]);
 
   // Filter rooms based on search and type
   const filteredRooms = rooms.filter(room => {
@@ -60,6 +67,10 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
     setSelectedRoom(null);
     setRoomDialogMode('create');
     setRoomDialogOpen(true);
+  };
+
+  const handleAddAllocation = () => {
+    setAllocationDialogOpen(true);
   };
 
   const handleEditRoom = (room: Room) => {
@@ -85,6 +96,21 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
     }
   };
 
+  const handleSaveAllocation = async (allocationData: RoomAllocationData) => {
+    try {
+      const allocationWithDetails = {
+        ...allocationData,
+        school_id: profile?.school_id || '',
+        academic_year_id: selectedAcademicYear?.id || '',
+        term: selectedTerm
+      };
+
+      await addAllocation(allocationWithDetails);
+    } catch (error) {
+      console.error('Error saving allocation:', error);
+    }
+  };
+
   const handleDeleteRoom = async (room: Room) => {
     try {
       await deleteRoom(room.id);
@@ -95,15 +121,20 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
   };
 
   const getRoomUtilization = (room: Room) => {
-    // This would be calculated based on actual timetable data
-    // For now, return a mock percentage
-    return Math.floor(Math.random() * 100);
+    // Calculate utilization based on actual allocations
+    const roomAllocations = allocations.filter(allocation => allocation.room_id === room.id);
+    const totalSlots = 30; // 5 days × 6 periods (adjust based on your schedule)
+    return Math.round((roomAllocations.length / totalSlots) * 100);
   };
 
   const getRoomStatusColor = (utilization: number) => {
     if (utilization >= 80) return "bg-red-100 text-red-800";
     if (utilization >= 60) return "bg-yellow-100 text-yellow-800";
     return "bg-green-100 text-green-800";
+  };
+
+  const getRoomAllocationsCount = (room: Room) => {
+    return allocations.filter(allocation => allocation.room_id === room.id).length;
   };
 
   return (
@@ -114,7 +145,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Room Management
+                Room Management & Allocation
               </div>
               <AcademicYearSelector
                 academicYears={academicYears}
@@ -123,10 +154,16 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                 isLoading={academicYearLoading}
               />
             </div>
-            <Button onClick={handleAddRoom} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Room
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleAddAllocation} size="sm" variant="outline">
+                <Calendar className="h-4 w-4 mr-2" />
+                Add Allocation
+              </Button>
+              <Button onClick={handleAddRoom} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Room
+              </Button>
+            </div>
           </CardTitle>
           <CardDescription>
             Manage room information and view allocations for {selectedYear?.name || 'the selected academic year'}.
@@ -183,6 +220,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                     <TableHead>Type & Capacity</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Facilities</TableHead>
+                    <TableHead>Allocations</TableHead>
                     <TableHead>Utilization</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -190,6 +228,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                 <TableBody>
                   {filteredRooms.map((room) => {
                     const utilization = getRoomUtilization(room);
+                    const allocationsCount = getRoomAllocationsCount(room);
                     return (
                       <TableRow key={room.id}>
                         <TableCell>
@@ -237,6 +276,11 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                               )}
                             </div>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {allocationsCount} slots
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge 
@@ -304,8 +348,8 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-sm font-medium text-muted-foreground">Room Types</div>
-                  <div className="text-2xl font-bold">{roomTypes.length}</div>
+                  <div className="text-sm font-medium text-muted-foreground">Total Allocations</div>
+                  <div className="text-2xl font-bold">{allocations.length}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -320,7 +364,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                 <CardContent className="p-4">
                   <div className="text-sm font-medium text-muted-foreground">Avg. Utilization</div>
                   <div className="text-2xl font-bold">
-                    {Math.round(rooms.reduce((sum, room) => sum + getRoomUtilization(room), 0) / rooms.length)}%
+                    {rooms.length > 0 ? Math.round(rooms.reduce((sum, room) => sum + getRoomUtilization(room), 0) / rooms.length) : 0}%
                   </div>
                 </CardContent>
               </Card>
@@ -336,6 +380,14 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
         room={selectedRoom}
         onSave={handleSaveRoom}
         mode={roomDialogMode}
+      />
+
+      {/* Room Allocation Dialog */}
+      <RoomAllocationDialog
+        open={allocationDialogOpen}
+        onOpenChange={setAllocationDialogOpen}
+        rooms={rooms}
+        onSave={handleSaveAllocation}
       />
     </div>
   );
