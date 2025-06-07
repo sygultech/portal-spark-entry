@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -153,24 +154,22 @@ export const DaySpecificConfig = ({
     const periodIndex = currentPeriods.findIndex(p => p.id === afterPeriodId);
     if (periodIndex === -1) return;
 
-    const afterPeriod = currentPeriods[periodIndex];
-    const breakId = `break-after-${afterPeriodId}`;
+    const currentPeriod = currentPeriods[periodIndex];
+    const nextPeriod = currentPeriods[periodIndex + 1];
     
-    const [hours, minutes] = afterPeriod.endTime.split(':').map(Number);
-    const breakEndTime = new Date();
-    breakEndTime.setHours(hours, minutes + 15);
-    
-    const newBreak: Period = {
-      id: breakId,
-      number: 0,
-      startTime: afterPeriod.endTime,
-      endTime: `${breakEndTime.getHours().toString().padStart(2, '0')}:${breakEndTime.getMinutes().toString().padStart(2, '0')}`,
+    // Create break with proper numbering - use decimal to place it between periods
+    const breakPeriod: Period = {
+      id: `break-${Date.now()}`,
+      number: currentPeriod.number + 0.5, // Place break between current and next period
+      startTime: currentPeriod.endTime,
+      endTime: nextPeriod?.startTime || '09:00',
       type: 'break',
       label: 'Break'
     };
 
+    // Insert the break without changing any period numbers
     const newPeriods = [...currentPeriods];
-    newPeriods.splice(periodIndex + 1, 0, newBreak);
+    newPeriods.splice(periodIndex + 1, 0, breakPeriod);
     onUpdateDayPeriods(dayId, newPeriods);
     
     // Validate after adding break
@@ -185,7 +184,7 @@ export const DaySpecificConfig = ({
       } else {
         toast({
           title: "Break Added",
-          description: `Break added after Period ${afterPeriod.number} for ${daysToShow.find(d => d.id === dayId)?.label}`
+          description: `Break added after Period ${currentPeriod.number} for ${daysToShow.find(d => d.id === dayId)?.label}`
         });
       }
     }, 100);
