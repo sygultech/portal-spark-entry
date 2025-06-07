@@ -61,6 +61,7 @@ export const TimetableSettings = () => {
   }, [profile?.school_id, selectedAcademicYear]);
 
   const handleAddPeriodConfiguration = () => {
+    console.log('Adding new configuration');
     const newConfig: TimePeriodConfig = {
       id: `config-${Date.now()}`,
       name: `Configuration ${periodConfigurations.length + 1}`,
@@ -78,11 +79,23 @@ export const TimetableSettings = () => {
   };
 
   const handleEditConfiguration = (configId: string) => {
+    console.log('Edit button clicked for config:', configId);
+    console.log('Current activeConfigId:', activeConfigId);
+    console.log('Current viewMode:', viewMode);
+    
     setActiveConfigId(configId);
     setViewMode('edit');
+    
+    console.log('After setting - activeConfigId:', configId, 'viewMode:', 'edit');
+    
+    toast({
+      title: "Opening Configuration",
+      description: "Loading configuration for editing..."
+    });
   };
 
   const handleViewConfiguration = (configId: string) => {
+    console.log('View button clicked for config:', configId);
     setActiveConfigId(configId);
     setViewMode('view');
   };
@@ -258,9 +271,12 @@ export const TimetableSettings = () => {
   };
 
   const handleCloseConfiguration = () => {
+    console.log('Closing configuration editor');
     setActiveConfigId(null);
     setViewMode(null);
   };
+
+  console.log('TimetableSettings render - activeConfigId:', activeConfigId, 'viewMode:', viewMode);
 
   return (
     <div className="space-y-6">
@@ -335,7 +351,7 @@ export const TimetableSettings = () => {
       </Card>
 
       {/* Active Configuration Editor/Viewer */}
-      {activeConfigId && (
+      {activeConfigId && viewMode && (
         <TimePeriodConfiguration 
           key={activeConfigId}
           configId={activeConfigId}

@@ -49,17 +49,34 @@ export const TimePeriodConfiguration = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isExistingConfig, setIsExistingConfig] = useState(false);
 
+  console.log('TimePeriodConfiguration render:', {
+    configId,
+    mode,
+    academicYearId,
+    configName,
+    isActive,
+    isDefault
+  });
+
   // Check if this is an existing configuration (not a new one)
   useEffect(() => {
     // If configId doesn't start with 'config-' (our new config pattern), it's an existing config
-    setIsExistingConfig(!configId.startsWith('config-'));
+    const isExisting = !configId.startsWith('config-');
+    setIsExistingConfig(isExisting);
+    console.log('TimePeriodConfiguration: isExistingConfig set to:', isExisting, 'for configId:', configId);
   }, [configId]);
 
   // Fetch configuration data when editing existing configuration or in view mode
   useEffect(() => {
     const fetchConfigurationData = async () => {
       if ((mode === 'edit' && isExistingConfig) || mode === 'view') {
-        if (!profile?.school_id || !academicYearId) return;
+        if (!profile?.school_id || !academicYearId) {
+          console.log('TimePeriodConfiguration: Missing required data for fetching:', {
+            schoolId: profile?.school_id,
+            academicYearId
+          });
+          return;
+        }
         
         setIsLoading(true);
         try {
@@ -341,6 +358,12 @@ export const TimePeriodConfiguration = ({
       </Card>
     );
   }
+
+  console.log('TimePeriodConfiguration: Rendering edit mode with:', {
+    periods: periods.length,
+    selectedDays: selectedDays.length,
+    isExistingConfig
+  });
 
   return (
     <Card>

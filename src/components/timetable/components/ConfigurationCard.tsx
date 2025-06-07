@@ -33,6 +33,21 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
   onBatchTagging,
   onRemove
 }) => {
+  const handleEditClick = () => {
+    console.log('ConfigurationCard: Edit button clicked for config:', config.id);
+    onEdit(config.id);
+  };
+
+  const handleViewClick = () => {
+    console.log('ConfigurationCard: View button clicked for config:', config.id);
+    onView(config.id);
+  };
+
+  const handleCloneClick = () => {
+    console.log('ConfigurationCard: Clone button clicked for config:', config.id);
+    onClone(config.id);
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-3">
@@ -106,7 +121,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onView(config.id)}
+            onClick={handleViewClick}
             className="flex-1"
           >
             <Eye className="h-4 w-4 mr-1" />
@@ -116,7 +131,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onClone(config.id)}
+            onClick={handleCloneClick}
             className="flex-1"
           >
             <Copy className="h-4 w-4 mr-1" />
@@ -126,7 +141,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           <Button
             variant="default"
             size="sm"
-            onClick={() => onEdit(config.id)}
+            onClick={handleEditClick}
             className="flex-1"
           >
             <Settings className="h-4 w-4 mr-1" />
