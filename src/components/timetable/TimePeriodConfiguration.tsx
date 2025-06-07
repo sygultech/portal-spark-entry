@@ -222,57 +222,28 @@ export const TimePeriodConfiguration = ({
     const periodIndex = periods.findIndex(p => p.id === periodId);
     if (periodIndex === -1) return;
 
-    // Create the break period with the next number in sequence
-    const breakNumber = periods[periodIndex].number + 1;
+    const currentPeriod = periods[periodIndex];
+    const nextPeriod = periods[periodIndex + 1];
     
+    // Create break with unique ID but don't affect period numbering
     const breakPeriod: Period = {
-        id: `break-${Date.now()}`,
-        number: breakNumber,
-        startTime: periods[periodIndex].endTime,
-        endTime: periods[periodIndex + 1]?.startTime || '09:00',
-        type: 'break',
-        label: 'Break'
+      id: `break-${Date.now()}`,
+      number: currentPeriod.number + 0.5, // Use decimal to indicate it's between periods
+      startTime: currentPeriod.endTime,
+      endTime: nextPeriod?.startTime || '09:00',
+      type: 'break',
+      label: 'Break'
     };
 
-    // Create new periods array with shifted numbers
-    const newPeriods = periods.map(period => {
-        if (period.number <= periods[periodIndex].number) {
-            // Keep numbers the same for periods before the break
-            return period;
-        } else {
-            // Shift numbers up by 1 for all periods after the break
-            return {
-                ...period,
-                number: period.number + 1
-            };
-        }
-    });
-
-    // Insert the break period at the correct position
+    // Insert the break without changing any period numbers
+    const newPeriods = [...periods];
     newPeriods.splice(periodIndex + 1, 0, breakPeriod);
     setPeriods(newPeriods);
   };
 
   const removeBreak = (breakId: string) => {
-    // Find the break's index
-    const breakIndex = periods.findIndex(period => period.id === breakId);
-    if (breakIndex === -1) return;
-
-    // Create new periods array with adjusted numbers
-    const newPeriods = periods
-        .filter(period => period.id !== breakId) // Remove the break
-        .map((period, idx, array) => {
-            if (period.number > periods[breakIndex].number) {
-                // Shift numbers down by 1 for all periods after the break
-                return {
-                    ...period,
-                    number: period.number - 1
-                };
-            }
-            return period;
-        });
-
-    setPeriods(newPeriods);
+    // Simply remove the break without affecting period numbers
+    setPeriods(prev => prev.filter(period => period.id !== breakId));
   };
 
   const updateBreakLabel = (breakId: string, label: string) => {
