@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Save, X } from "lucide-react";
@@ -154,8 +155,9 @@ export const TimePeriodConfiguration = ({
       return;
     }
 
-    // Validate that all period numbers are integers
-    const hasNonIntegerNumbers = periods.some(period => !Number.isInteger(period.number));
+    // Validate that all ACTUAL period numbers (not breaks) are integers
+    const actualPeriods = periods.filter(period => period.type === 'period');
+    const hasNonIntegerNumbers = actualPeriods.some(period => !Number.isInteger(period.number));
     if (hasNonIntegerNumbers) {
       toast({
         title: "Validation Error",
