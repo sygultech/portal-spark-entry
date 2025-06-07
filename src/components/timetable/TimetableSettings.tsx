@@ -10,6 +10,7 @@ import { ConfigurationCard } from "./components/ConfigurationCard";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimePeriodConfig {
   id: string;
