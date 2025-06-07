@@ -48,6 +48,7 @@ export const TimePeriodConfiguration = ({
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isExistingConfig, setIsExistingConfig] = useState(false);
+  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(false); // Add this state
 
   console.log('TimePeriodConfiguration render:', {
     configId,
@@ -100,6 +101,11 @@ export const TimePeriodConfiguration = ({
             
             // Set day-specific periods
             setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
+            
+            // Set flexible timings state based on whether day-specific periods exist
+            const hasFlexibleTimings = Object.keys(currentConfig.daySpecificPeriods || {}).length > 0;
+            setEnableFlexibleTimings(hasFlexibleTimings);
+            console.log('TimePeriodConfiguration: Setting enableFlexibleTimings to:', hasFlexibleTimings);
           } else {
             console.warn('Configuration not found for editing:', configId);
             toast({
@@ -243,7 +249,7 @@ export const TimePeriodConfiguration = ({
       selectedDays, // Keep the full day IDs (e.g., 'week1-monday')
       defaultPeriods: periods,
       daySpecificPeriods,
-      enableFlexibleTimings: Object.keys(daySpecificPeriods).length > 0,
+      enableFlexibleTimings: enableFlexibleTimings,
       batchIds: null // Handle this if batch tagging is needed
     });
 
@@ -362,7 +368,8 @@ export const TimePeriodConfiguration = ({
   console.log('TimePeriodConfiguration: Rendering edit mode with:', {
     periods: periods.length,
     selectedDays: selectedDays.length,
-    isExistingConfig
+    isExistingConfig,
+    enableFlexibleTimings
   });
 
   return (
@@ -413,6 +420,7 @@ export const TimePeriodConfiguration = ({
           defaultPeriods={periods}
           onUpdateDayPeriods={handleUpdateDayPeriods}
           daySpecificPeriods={daySpecificPeriods}
+          initialFlexibleTimings={enableFlexibleTimings} // Pass the flexible timings state
         />
 
         {/* Timetable Actions */}

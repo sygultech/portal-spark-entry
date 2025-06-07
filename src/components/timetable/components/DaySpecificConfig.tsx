@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +18,7 @@ interface DaySpecificConfigProps {
   defaultPeriods: Period[];
   onUpdateDayPeriods: (dayId: string, periods: Period[]) => void;
   daySpecificPeriods: Record<string, Period[]>;
+  initialFlexibleTimings?: boolean; // Add this prop to initialize state
 }
 
 // Generate fortnight days
@@ -48,15 +49,29 @@ export const DaySpecificConfig = ({
   isWeeklyMode,
   defaultPeriods,
   onUpdateDayPeriods,
-  daySpecificPeriods
+  daySpecificPeriods,
+  initialFlexibleTimings = false // Default to false if not provided
 }: DaySpecificConfigProps) => {
-  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(false);
+  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(initialFlexibleTimings);
   const [activeDay, setActiveDay] = useState<string | null>(null);
+
+  // Initialize enableFlexibleTimings from props when component mounts or props change
+  useEffect(() => {
+    console.log('DaySpecificConfig: Initializing flexible timings with:', initialFlexibleTimings);
+    console.log('DaySpecificConfig: daySpecificPeriods keys:', Object.keys(daySpecificPeriods));
+    
+    // If we have day-specific periods or the initial flexible timings is true, enable flexible timings
+    const shouldEnableFlexible = initialFlexibleTimings || Object.keys(daySpecificPeriods).length > 0;
+    setEnableFlexibleTimings(shouldEnableFlexible);
+    
+    console.log('DaySpecificConfig: Setting enableFlexibleTimings to:', shouldEnableFlexible);
+  }, [initialFlexibleTimings, daySpecificPeriods]);
 
   const daysToShow = isWeeklyMode ? weekDays : generateFortnightDays();
   const activeDays = daysToShow.filter(day => selectedDays.includes(day.id));
 
   const handleToggleFlexibleTimings = (enabled: boolean) => {
+    console.log('DaySpecificConfig: Toggling flexible timings to:', enabled);
     setEnableFlexibleTimings(enabled);
     if (!enabled) {
       setActiveDay(null);
