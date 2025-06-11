@@ -30,7 +30,14 @@ export interface BatchConfigurationMapping {
   configuration_id: string;
   effective_from: string;
   effective_to?: string;
-  configuration?: TimetableConfiguration;
+  configuration?: {
+    id: string;
+    name: string;
+    school_id: string;
+    academic_year_id: string;
+    is_active: boolean;
+    is_default: boolean;
+  };
 }
 
 export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?: string) => {
@@ -101,7 +108,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
           configuration_id,
           effective_from,
           effective_to,
-          configuration:timetable_configurations (
+          timetable_configurations!batch_configuration_mapping_configuration_id_fkey (
             id,
             name,
             school_id,
@@ -110,12 +117,25 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
             is_default
           )
         `)
-        .eq('configuration.school_id', schoolId)
-        .eq('configuration.academic_year_id', academicYearId)
+        .eq('timetable_configurations.school_id', schoolId)
+        .eq('timetable_configurations.academic_year_id', academicYearId)
         .order('effective_from', { ascending: false });
 
       if (error) throw error;
-      setBatchMappings(data || []);
+
+      // Transform the data to match our interface
+      const transformedMappings = data?.map(mapping => ({
+        id: mapping.id,
+        batch_id: mapping.batch_id,
+        configuration_id: mapping.configuration_id,
+        effective_from: mapping.effective_from,
+        effective_to: mapping.effective_to,
+        configuration: Array.isArray(mapping.timetable_configurations) 
+          ? mapping.timetable_configurations[0] 
+          : mapping.timetable_configurations
+      })) || [];
+
+      setBatchMappings(transformedMappings);
     } catch (error: any) {
       console.error('Error fetching batch mappings:', error);
       toast({
