@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -18,7 +19,8 @@ import {
   Eye,
   Bell,
   Copy,
-  RefreshCw
+  RefreshCw,
+  BookOpen
 } from "lucide-react";
 import { TimetableGridEditor } from "@/components/timetable/TimetableGridEditor";
 import { TeacherScheduleView } from "@/components/timetable/TeacherScheduleView";
@@ -36,19 +38,6 @@ import {
   BreadcrumbList, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
-
-// Mock class and term data for demonstration; replace with real data as needed
-const mockClasses = [
-  { id: "class-6a", name: "Class 6A", students: 30 },
-  { id: "class-6b", name: "Class 6B", students: 28 },
-  { id: "class-7a", name: "Class 7A", students: 32 },
-  { id: "class-7b", name: "Class 7B", students: 29 },
-];
-const mockTerms = [
-  { id: "2024-25-term1", name: "2024-25 Term 1" },
-  { id: "2024-25-term2", name: "2024-25 Term 2" },
-  { id: "2024-25-term3", name: "2024-25 Term 3" },
-];
 
 const Timetable = () => {
   const { profile, isLoading } = useAuth();
@@ -118,25 +107,6 @@ const Timetable = () => {
           >
             {publishStatus === "published" ? "Published" : "Draft"}
           </Badge>
-          <select 
-            value={selectedTerm} 
-            onChange={(e) => setSelectedTerm(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background"
-          >
-            {mockTerms.map(term => (
-              <option key={term.id} value={term.id}>{term.name}</option>
-            ))}
-          </select>
-
-          <select 
-            value={selectedClass} 
-            onChange={(e) => setSelectedClass(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background"
-          >
-            {mockClasses.map(cls => (
-              <option key={cls.id} value={cls.id}>{cls.name}</option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -173,7 +143,7 @@ const Timetable = () => {
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="grid-editor" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">Grid Editor</span>
+            <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
           <TabsTrigger value="teacher-view" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
