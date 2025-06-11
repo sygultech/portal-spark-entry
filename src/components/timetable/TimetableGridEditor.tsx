@@ -18,6 +18,7 @@ import { useBatches } from "@/hooks/useBatches";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useTeachersFromStaff } from "@/hooks/useTeachersFromStaff";
 import { useRooms } from "@/hooks/useRooms";
+import { useBatchTimetableConfiguration } from "@/hooks/useBatchTimetableConfiguration";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
@@ -25,17 +26,6 @@ interface TimetableGridEditorProps {
   selectedClass: string;
   selectedTerm: string;
 }
-
-const timeSlots = [
-  { number: 1, start: "08:00", end: "08:45" },
-  { number: 2, start: "08:45", end: "09:30" },
-  { number: 3, start: "09:30", end: "10:15" },
-  { number: 4, start: "10:30", end: "11:15" }, // After break
-  { number: 5, start: "11:15", end: "12:00" },
-  { number: 6, start: "12:00", end: "12:45" },
-  { number: 7, start: "13:30", end: "14:15" }, // After lunch
-  { number: 8, start: "14:15", end: "15:00" },
-];
 
 const weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
@@ -55,6 +45,14 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const { teachers } = useTeachersFromStaff(profile?.school_id || '');
   const { rooms } = useRooms(profile?.school_id || '');
   
+  // Use the new batch timetable configuration hook
+  const {
+    getTimeSlots,
+    isBreakTime,
+    getBreakInfo,
+    isLoading: configLoading
+  } = useBatchTimetableConfiguration(profile?.school_id || '', selectedYear?.id);
+  
   const [selectedBatch, setSelectedBatch] = useState<string>('');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; period: number } | null>(null);
@@ -72,6 +70,9 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
   const { specialClasses, fetchSpecialClasses } = useSpecialClasses(profile?.school_id || '');
   const { holidays, fetchHolidays } = useHolidays(profile?.school_id || '');
+
+  // Get dynamic time slots based on selected batch
+  const timeSlots = selectedBatch ? getTimeSlots(selectedBatch) : [];
 
   useEffect(() => {
     if (selectedBatch && selectedYear?.id) {
@@ -131,14 +132,6 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     return daySchedules.find(s => s.period_number === period);
   };
 
-  const isBreakTime = (period: number) => {
-    return period === 4; // Morning break at 10:15
-  };
-
-  const isLunchTime = (period: number) => {
-    return period === 7; // Lunch break at 12:45
-  };
-
   const getSubjectColor = (subjectId: string) => {
     const colors = [
       "bg-blue-100 text-blue-800",
@@ -155,7 +148,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   };
 
   // Show loading state
-  if (academicYearLoading || batchesLoading) {
+  if (academicYearLoading || batchesLoading || configLoading) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -305,58 +298,61 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                 </tr>
               </thead>
               <tbody>
-                {timeSlots.map((timeSlot) => (
-                  <tr key={timeSlot.number}>
-                    <td className="border border-gray-200 p-3 font-medium text-sm bg-gray-50">
-                      <div>Period {timeSlot.number}</div>
-                      <div className="text-xs text-gray-600">{timeSlot.start} - {timeSlot.end}</div>
-                    </td>
-                    {weekDays.map((day) => {
-                      const schedule = getScheduleForSlot(day, timeSlot.number);
-                      const isBreak = isBreakTime(timeSlot.number);
-                      const isLunch = isLunchTime(timeSlot.number);
-                      
-                      return (
-                        <td key={`${day}-${timeSlot.number}`} className="border border-gray-200 p-1">
-                          {isBreak ? (
-                            <div className="h-20 flex items-center justify-center bg-yellow-50 rounded text-sm text-yellow-700">
-                              Morning Break
-                            </div>
-                          ) : isLunch ? (
-                            <div className="h-20 flex items-center justify-center bg-orange-50 rounded text-sm text-orange-700">
-                              Lunch Break
-                            </div>
-                          ) : schedule ? (
-                            <div className={`h-20 p-2 rounded ${getSubjectColor(schedule.subject_id)} relative group`}>
-                              <div className="font-semibold text-xs">{schedule.subject?.name}</div>
-                              <div className="text-xs opacity-80">{schedule.teacher?.first_name} {schedule.teacher?.last_name}</div>
-                              {schedule.room && (
-                                <div className="text-xs opacity-60">{schedule.room.name}</div>
-                              )}
-                              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => deleteSchedule(schedule.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                {timeSlots.map((timeSlot) => {
+                  const isBreak = selectedBatch && isBreakTime(selectedBatch, timeSlot.number);
+                  const breakInfo = selectedBatch && isBreak ? getBreakInfo(selectedBatch, timeSlot.number) : null;
+                  
+                  return (
+                    <tr key={timeSlot.number}>
+                      <td className="border border-gray-200 p-3 font-medium text-sm bg-gray-50">
+                        <div>Period {timeSlot.number}</div>
+                        <div className="text-xs text-gray-600">{timeSlot.start} - {timeSlot.end}</div>
+                      </td>
+                      {weekDays.map((day) => {
+                        const schedule = getScheduleForSlot(day, timeSlot.number);
+                        
+                        return (
+                          <td key={`${day}-${timeSlot.number}`} className="border border-gray-200 p-1">
+                            {isBreak ? (
+                              <div className={`h-20 flex items-center justify-center rounded text-sm ${
+                                breakInfo?.type === 'lunch' ? 'bg-orange-50 text-orange-700' : 
+                                breakInfo?.type === 'morning' ? 'bg-yellow-50 text-yellow-700' : 
+                                'bg-blue-50 text-blue-700'
+                              }`}>
+                                {breakInfo?.label || 'Break'}
                               </div>
-                            </div>
-                          ) : (
-                            <div 
-                              className="h-20 border-2 border-dashed border-gray-200 rounded hover:border-gray-400 hover:bg-gray-50 cursor-pointer flex items-center justify-center transition-colors"
-                              onClick={() => handleAddSchedule(day, timeSlot.number)}
-                            >
-                              <Plus className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                            ) : schedule ? (
+                              <div className={`h-20 p-2 rounded ${getSubjectColor(schedule.subject_id)} relative group`}>
+                                <div className="font-semibold text-xs">{schedule.subject?.name}</div>
+                                <div className="text-xs opacity-80">{schedule.teacher?.first_name} {schedule.teacher?.last_name}</div>
+                                {schedule.room && (
+                                  <div className="text-xs opacity-60">{schedule.room.name}</div>
+                                )}
+                                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => deleteSchedule(schedule.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div 
+                                className="h-20 border-2 border-dashed border-gray-200 rounded hover:border-gray-400 hover:bg-gray-50 cursor-pointer flex items-center justify-center transition-colors"
+                                onClick={() => handleAddSchedule(day, timeSlot.number)}
+                              >
+                                <Plus className="h-6 w-6 text-gray-400" />
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -451,7 +447,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {weekDays.length * timeSlots.filter(ts => !isBreakTime(ts.number) && !isLunchTime(ts.number)).length}
+              {weekDays.length * timeSlots.length}
             </div>
             <p className="text-xs text-muted-foreground">per week</p>
           </CardContent>
@@ -475,7 +471,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {(weekDays.length * timeSlots.filter(ts => !isBreakTime(ts.number) && !isLunchTime(ts.number)).length) - 
+              {(weekDays.length * timeSlots.length) - 
                schedules.filter(s => s.batch_id === selectedBatch).length}
             </div>
             <p className="text-xs text-muted-foreground">remaining</p>
