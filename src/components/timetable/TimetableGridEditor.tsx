@@ -93,7 +93,11 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           );
           
           if (batchConfig) {
-            console.log('Batch configuration loaded:', batchConfig);
+            console.log('Raw config data:', batchConfig);
+            console.log('Is weekly config:', batchConfig.isWeeklyMode);
+            console.log('Has flexible timings:', batchConfig.enableFlexibleTimings);
+            console.log('Day specific periods:', batchConfig.daySpecificPeriods);
+            console.log('Default periods:', batchConfig.defaultPeriods);
             setBatchConfiguration(batchConfig);
           }
         } catch (error) {
@@ -108,20 +112,46 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   // Function to get periods for a specific day
   const getPeriodsForDay = (dayId: string) => {
     if (!batchConfiguration) {
+      console.log(`No batch configuration available for ${dayId}, using fallback periods`);
       return allPeriods; // Fallback to general periods
     }
 
     const { daySpecificPeriods, defaultPeriods, enableFlexibleTimings } = batchConfiguration;
     
+    console.log(`Getting periods for ${dayId}:`);
+    console.log('Enable flexible timings:', enableFlexibleTimings);
+    console.log('Day specific periods available:', daySpecificPeriods);
+    console.log('Default periods available:', defaultPeriods);
+    
     // If flexible timings are enabled and this day has specific periods, use them
     if (enableFlexibleTimings && daySpecificPeriods && daySpecificPeriods[dayId]) {
       console.log(`Using day-specific periods for ${dayId}:`, daySpecificPeriods[dayId]);
-      return daySpecificPeriods[dayId];
+      // Transform the periods to match the expected format
+      return daySpecificPeriods[dayId].map((period: any) => ({
+        number: period.number,
+        start: period.startTime,
+        end: period.endTime,
+        type: period.type || 'class',
+        label: period.label
+      }));
     }
     
-    // Otherwise use default periods
-    console.log(`Using default periods for ${dayId}:`, defaultPeriods || allPeriods);
-    return defaultPeriods || allPeriods;
+    // If we have default periods, use them
+    if (defaultPeriods && defaultPeriods.length > 0) {
+      console.log(`Using default periods for ${dayId}:`, defaultPeriods);
+      // Transform the periods to match the expected format
+      return defaultPeriods.map((period: any) => ({
+        number: period.number,
+        start: period.startTime,
+        end: period.endTime,
+        type: period.type || 'class',
+        label: period.label
+      }));
+    }
+    
+    // Otherwise fall back to the general periods from the hook
+    console.log(`Using fallback periods for ${dayId}:`, allPeriods);
+    return allPeriods;
   };
 
   useEffect(() => {
