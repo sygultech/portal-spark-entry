@@ -49,7 +49,8 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     isLoading: academicYearLoading 
   } = useAcademicYearSelector();
 
-  const { batches } = useBatches(profile?.school_id || '');
+  // Fetch batches for the selected academic year
+  const { batches, isLoading: batchesLoading } = useBatches(selectedYear?.id, undefined);
   const { subjects } = useSubjects(profile?.school_id || '');
   const { teachers } = useTeachersFromStaff(profile?.school_id || '');
   const { rooms } = useRooms(profile?.school_id || '');
@@ -79,6 +80,11 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
       fetchHolidays(new Date().getFullYear());
     }
   }, [selectedBatch, selectedYear?.id, fetchSchedules, fetchSpecialClasses, fetchHolidays]);
+
+  // Reset selected batch when academic year changes
+  useEffect(() => {
+    setSelectedBatch('');
+  }, [selectedYear?.id]);
 
   const handleAddSchedule = (day: string, period: number) => {
     setSelectedSlot({ day, period });
@@ -148,12 +154,65 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     return colors[index];
   };
 
+  // Show loading state
+  if (academicYearLoading || batchesLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-muted-foreground">Loading academic year and batches...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show message if no academic year is selected
+  if (!selectedYear) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Please select an academic year to view and edit timetables.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show message if no batches are available
+  if (!batches || batches.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+            <h3 className="text-lg font-semibold mb-2">No Batches Available</h3>
+            <p className="text-muted-foreground mb-4">
+              No batches found for the selected academic year "{selectedYear.name}".
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please create batches in the Academic section before setting up timetables.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!selectedBatch) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center">
             <h3 className="text-lg font-semibold mb-2">Select a Batch</h3>
+            <p className="text-muted-foreground mb-4">
+              Choose a batch to edit timetable for {selectedYear.name}
+            </p>
             <Select value={selectedBatch} onValueChange={setSelectedBatch}>
               <SelectTrigger className="w-64 mx-auto">
                 <SelectValue placeholder="Choose a batch to edit timetable" />
@@ -161,7 +220,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
               <SelectContent>
                 {batches.map((batch) => (
                   <SelectItem key={batch.id} value={batch.id}>
-                    {batch.name}
+                    {batch.name} {batch.course?.name && `- ${batch.course.name}`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -196,7 +255,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                 <SelectContent>
                   {batches.map((batch) => (
                     <SelectItem key={batch.id} value={batch.id}>
-                      {batch.name}
+                      {batch.name} {batch.course?.name && `- ${batch.course.name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
