@@ -59,7 +59,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; period: number } | null>(null);
   const [newSchedule, setNewSchedule] = useState<Partial<CreateScheduleData>>({});
-  const [batchConfiguration, setBatchConfiguration] = useState<any>(null);\
+  const [batchConfiguration, setBatchConfiguration] = useState<any>(null);
 
   const {
     schedules,
