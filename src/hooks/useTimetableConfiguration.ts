@@ -31,6 +31,7 @@ interface TimetableConfiguration {
   selectedDays: string[];
   defaultPeriods: Period[];
   daySpecificPeriods: Record<string, Period[]>;
+  enableFlexibleTimings: boolean;
   batchIds?: string[];
 }
 
@@ -153,6 +154,7 @@ export const useTimetableConfiguration = () => {
           selectedDays: Array.from(selectedDaysSet),
           defaultPeriods: defaultPeriods,
           daySpecificPeriods: daySpecificPeriods,
+          enableFlexibleTimings: hasFlexibleTimings,
           batchIds: config.batchIds || []
         };
       });
