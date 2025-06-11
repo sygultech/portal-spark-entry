@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -113,9 +112,6 @@ export const TimetableActions = ({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline">
-            Save as Template
-          </Button>
           <Button onClick={onSaveConfiguration}>
             Save Configuration
           </Button>

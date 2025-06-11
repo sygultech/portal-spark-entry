@@ -17,7 +17,6 @@ import {
   Save,
   Eye,
   Bell,
-  Copy,
   RefreshCw
 } from "lucide-react";
 import { TimetableGridEditor } from "@/components/timetable/TimetableGridEditor";
@@ -25,7 +24,6 @@ import { TeacherScheduleView } from "@/components/timetable/TeacherScheduleView"
 import { RoomAllocation } from "@/components/timetable/RoomAllocation";
 import { TimetableSettings } from "@/components/timetable/TimetableSettings";
 import { SubstitutionManager } from "@/components/timetable/SubstitutionManager";
-import { TemplateManager } from "@/components/timetable/TemplateManager";
 import { NotificationCenter } from "@/components/timetable/NotificationCenter";
 import { ConflictChecker } from "@/components/timetable/ConflictChecker";
 import { hasRole } from "@/utils/roleUtils";
@@ -169,8 +167,8 @@ const Timetable = () => {
       </div>
 
       {/* Main Tabs Interface */}
-      <Tabs defaultValue="grid-editor" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
+      <Tabs defaultValue="grid-editor" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value="grid-editor" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Grid Editor</span>
@@ -186,10 +184,6 @@ const Timetable = () => {
           <TabsTrigger value="substitutions" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Substitutions</span>
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Copy className="h-4 w-4" />
-            <span className="hidden sm:inline">Templates</span>
           </TabsTrigger>
           <TabsTrigger value="conflicts" className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />
@@ -216,9 +210,6 @@ const Timetable = () => {
         </TabsContent>
         <TabsContent value="substitutions">
           <SubstitutionManager selectedTerm={selectedTerm} />
-        </TabsContent>
-        <TabsContent value="templates">
-          <TemplateManager />
         </TabsContent>
         <TabsContent value="conflicts">
           <ConflictChecker selectedClass={selectedClass} selectedTerm={selectedTerm} />
