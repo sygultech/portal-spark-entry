@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { Search, Filter, Users, BookOpen, Calendar, Clock, Plus, Eye, Settings }
 import { AcademicYearSelector } from "./components/AcademicYearSelector";
 import { TeacherAssignmentDialog } from "./components/TeacherAssignmentDialog";
 import { TeacherDetailView } from "./components/TeacherDetailView";
+import { SubjectAssignmentsView } from "./components/SubjectAssignmentsView";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 import { useTeachersFromStaff, Teacher } from "@/hooks/useTeachersFromStaff";
 import { useSubjectTeachers } from "@/hooks/useSubjectTeachers";
@@ -269,10 +269,7 @@ export const TeacherScheduleView = ({ selectedTerm }: TeacherScheduleViewProps) 
             </TabsContent>
 
             <TabsContent value="assignments">
-              <div className="text-center py-8 text-muted-foreground">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Subject assignments view will be implemented here</p>
-              </div>
+              <SubjectAssignmentsView selectedAcademicYearId={selectedYear?.id} />
             </TabsContent>
 
             <TabsContent value="schedule">
