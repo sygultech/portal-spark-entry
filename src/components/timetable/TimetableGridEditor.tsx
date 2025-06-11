@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useTeachersFromStaff } from "@/hooks/useTeachersFromStaff";
 import { useRooms } from "@/hooks/useRooms";
 import { useBatchTimetableConfiguration } from "@/hooks/useBatchTimetableConfiguration";
+import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
@@ -51,11 +51,15 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     getBreakInfo,
     isLoading: configLoading
   } = useBatchTimetableConfiguration(profile?.school_id || '', selectedYear?.id);
+
+  // Add the timetable configuration hook to get day-specific periods
+  const { getTimetableConfigurations } = useTimetableConfiguration();
   
   const [selectedBatch, setSelectedBatch] = useState<string>('');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; period: number } | null>(null);
   const [newSchedule, setNewSchedule] = useState<Partial<CreateScheduleData>>({});
+  const [batchConfiguration, setBatchConfiguration] = useState<any>(null);
 
   const {
     schedules,
@@ -75,6 +79,50 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const selectedDays = selectedBatch ? getSelectedDays(selectedBatch) : [];
   // Filter out breaks to get only class periods for time slots
   const timeSlots = allPeriods.filter(p => p.type === 'class');
+
+  // Fetch batch-specific configuration when batch is selected
+  useEffect(() => {
+    const fetchBatchConfiguration = async () => {
+      if (selectedBatch && selectedYear?.id && profile?.school_id) {
+        try {
+          const configs = await getTimetableConfigurations(profile.school_id, selectedYear.id);
+          
+          // Find configuration for this batch (either specific mapping or default)
+          const batchConfig = configs.find(config => 
+            config.batchIds?.includes(selectedBatch) || config.isDefault
+          );
+          
+          if (batchConfig) {
+            console.log('Batch configuration loaded:', batchConfig);
+            setBatchConfiguration(batchConfig);
+          }
+        } catch (error) {
+          console.error('Error fetching batch configuration:', error);
+        }
+      }
+    };
+
+    fetchBatchConfiguration();
+  }, [selectedBatch, selectedYear?.id, profile?.school_id, getTimetableConfigurations]);
+
+  // Function to get periods for a specific day
+  const getPeriodsForDay = (dayId: string) => {
+    if (!batchConfiguration) {
+      return allPeriods; // Fallback to general periods
+    }
+
+    const { daySpecificPeriods, defaultPeriods, enableFlexibleTimings } = batchConfiguration;
+    
+    // If flexible timings are enabled and this day has specific periods, use them
+    if (enableFlexibleTimings && daySpecificPeriods && daySpecificPeriods[dayId]) {
+      console.log(`Using day-specific periods for ${dayId}:`, daySpecificPeriods[dayId]);
+      return daySpecificPeriods[dayId];
+    }
+    
+    // Otherwise use default periods
+    console.log(`Using default periods for ${dayId}:`, defaultPeriods || allPeriods);
+    return defaultPeriods || allPeriods;
+  };
 
   useEffect(() => {
     if (selectedBatch && selectedYear?.id) {
@@ -112,8 +160,18 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
       return;
     }
 
-    const timeSlot = timeSlots.find(ts => ts.number === newSchedule.period_number);
-    if (!timeSlot) return;
+    // Get the time slot from the specific day's periods
+    const dayPeriods = getPeriodsForDay(newSchedule.day_of_week || '');
+    const timeSlot = dayPeriods.find(p => p.number === newSchedule.period_number && p.type === 'class');
+    
+    if (!timeSlot) {
+      toast({
+        title: 'Error',
+        description: 'Could not find time slot information',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const scheduleData: CreateScheduleData = {
       ...newSchedule as CreateScheduleData,
@@ -273,6 +331,11 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
             <span className="text-sm text-muted-foreground">
               Configured days: {selectedDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')}
             </span>
+            {batchConfiguration?.enableFlexibleTimings && (
+              <span className="text-sm text-blue-600 ml-2">
+                • Day-specific timings enabled
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -304,32 +367,52 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                 </tr>
               </thead>
               <tbody>
-                {allPeriods.map((period) => {
-                  const isBreak = period.type === 'break';
-                  
+                {/* We need to get the maximum number of periods across all days */}
+                {Array.from(new Set(
+                  selectedDays.flatMap(day => 
+                    getPeriodsForDay(day).map(p => p.number)
+                  )
+                )).sort((a, b) => a - b).map((periodNumber) => {
                   return (
-                    <tr key={period.number}>
+                    <tr key={periodNumber}>
                       <td className="border border-gray-200 p-3 font-medium text-sm bg-gray-50">
-                        <div>{period.label}</div>
-                        <div className="text-xs text-gray-600">{period.start} - {period.end}</div>
+                        <div>Period {Math.floor(periodNumber)}</div>
                       </td>
                       {selectedDays.map((day) => {
-                        const schedule = getScheduleForSlot(day, period.number);
+                        const dayPeriods = getPeriodsForDay(day);
+                        const period = dayPeriods.find(p => p.number === periodNumber);
+                        const schedule = getScheduleForSlot(day, periodNumber);
+                        
+                        if (!period) {
+                          return (
+                            <td key={`${day}-${periodNumber}`} className="border border-gray-200 p-1">
+                              <div className="h-20 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
+                                No Period
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        const isBreak = period.type === 'break';
                         
                         return (
-                          <td key={`${day}-${period.number}`} className="border border-gray-200 p-1">
+                          <td key={`${day}-${periodNumber}`} className="border border-gray-200 p-1">
                             {isBreak ? (
                               <div className={`h-20 flex items-center justify-center rounded text-sm ${
                                 period.label?.toLowerCase().includes('lunch') ? 'bg-orange-50 text-orange-700' : 
                                 period.label?.toLowerCase().includes('morning') ? 'bg-yellow-50 text-yellow-700' : 
                                 'bg-blue-50 text-blue-700'
                               }`}>
-                                {period.label}
+                                <div className="text-center">
+                                  <div className="font-medium">{period.label}</div>
+                                  <div className="text-xs">{period.start} - {period.end}</div>
+                                </div>
                               </div>
                             ) : schedule ? (
                               <div className={`h-20 p-2 rounded ${getSubjectColor(schedule.subject_id)} relative group`}>
                                 <div className="font-semibold text-xs">{schedule.subject?.name}</div>
                                 <div className="text-xs opacity-80">{schedule.teacher?.first_name} {schedule.teacher?.last_name}</div>
+                                <div className="text-xs opacity-60">{period.start} - {period.end}</div>
                                 {schedule.room && (
                                   <div className="text-xs opacity-60">{schedule.room.name}</div>
                                 )}
@@ -346,10 +429,11 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                               </div>
                             ) : (
                               <div 
-                                className="h-20 border-2 border-dashed border-gray-200 rounded hover:border-gray-400 hover:bg-gray-50 cursor-pointer flex items-center justify-center transition-colors"
-                                onClick={() => handleAddSchedule(day, period.number)}
+                                className="h-20 border-2 border-dashed border-gray-200 rounded hover:border-gray-400 hover:bg-gray-50 cursor-pointer flex flex-col items-center justify-center transition-colors"
+                                onClick={() => handleAddSchedule(day, periodNumber)}
                               >
-                                <Plus className="h-6 w-6 text-gray-400" />
+                                <Plus className="h-6 w-6 text-gray-400 mb-1" />
+                                <div className="text-xs text-gray-500">{period.start} - {period.end}</div>
                               </div>
                             )}
                           </td>
@@ -452,7 +536,10 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {selectedDays.length * timeSlots.length}
+              {selectedDays.reduce((total, day) => {
+                const dayPeriods = getPeriodsForDay(day);
+                return total + dayPeriods.filter(p => p.type === 'class').length;
+              }, 0)}
             </div>
             <p className="text-xs text-muted-foreground">per week</p>
           </CardContent>
@@ -476,8 +563,10 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {(selectedDays.length * timeSlots.length) - 
-               schedules.filter(s => s.batch_id === selectedBatch).length}
+              {selectedDays.reduce((total, day) => {
+                const dayPeriods = getPeriodsForDay(day);
+                return total + dayPeriods.filter(p => p.type === 'class').length;
+              }, 0) - schedules.filter(s => s.batch_id === selectedBatch).length}
             </div>
             <p className="text-xs text-muted-foreground">remaining</p>
           </CardContent>
@@ -498,3 +587,5 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     </div>
   );
 };
+
+export default TimetableGridEditor;
