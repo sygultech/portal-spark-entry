@@ -1,5 +1,4 @@
 
-
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +14,12 @@ interface WeekDaysSelectorProps {
   hasError?: boolean;
 }
 
-// Generate fortnight days (14 days)
+// Generate fortnight days (14 days) with consistent naming that matches backend expectations
 const generateFortnightDays = (): WeekDay[] => {
   const fortnightDays: WeekDay[] = [];
   
-  // Week 1
-  weekDays.forEach((day, index) => {
+  // Week 1 - use consistent week1-dayname format
+  weekDays.forEach((day) => {
     fortnightDays.push({
       id: `week1-${day.id}`,
       label: `W1-${day.label}`,
@@ -28,8 +27,8 @@ const generateFortnightDays = (): WeekDay[] => {
     });
   });
   
-  // Week 2
-  weekDays.forEach((day, index) => {
+  // Week 2 - use consistent week2-dayname format
+  weekDays.forEach((day) => {
     fortnightDays.push({
       id: `week2-${day.id}`,
       label: `W2-${day.label}`,
@@ -47,6 +46,32 @@ export const WeekDaysSelector = ({
   hasError = false
 }: WeekDaysSelectorProps) => {
   const daysToShow = isWeeklyMode ? weekDays : generateFortnightDays();
+  
+  // Validate selected days to ensure they're consistent
+  const handleDaysChange = (newDays: string[]) => {
+    // Log for debugging
+    console.log('WeekDaysSelector - Selected days changed:', newDays);
+    
+    // Ensure all selected days are valid for the current mode
+    const validDays = newDays.filter(day => {
+      const isValid = daysToShow.some(d => d.id === day);
+      if (!isValid) {
+        console.warn('WeekDaysSelector - Invalid day detected:', day);
+      }
+      return isValid;
+    });
+    
+    // Additional validation: ensure consistency with mode
+    if (isWeeklyMode) {
+      // For weekly mode, remove any day IDs with week prefixes
+      const weeklyDays = validDays.filter(day => !day.includes('week'));
+      onSelectedDaysChange(weeklyDays);
+    } else {
+      // For fortnightly mode, ensure we have proper week prefixes
+      const fortnightDays = validDays.filter(day => day.includes('week'));
+      onSelectedDaysChange(fortnightDays);
+    }
+  };
   
   return (
     <div className="space-y-4">
@@ -70,7 +95,7 @@ export const WeekDaysSelector = ({
           <ToggleGroup 
             type="multiple" 
             value={selectedDays} 
-            onValueChange={onSelectedDaysChange}
+            onValueChange={handleDaysChange}
             className="flex flex-wrap justify-start gap-2"
           >
             {daysToShow.map((day) => (
@@ -102,7 +127,7 @@ export const WeekDaysSelector = ({
               const day = daysToShow.find(d => d.id === dayId);
               return (
                 <Badge key={dayId} variant="default" className="mr-1">
-                  {day?.fullName}
+                  {day?.fullName || dayId}
                 </Badge>
               );
             })

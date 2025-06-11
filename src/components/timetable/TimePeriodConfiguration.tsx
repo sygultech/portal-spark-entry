@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Save, X } from "lucide-react";
@@ -45,43 +46,93 @@ export const TimePeriodConfiguration = ({
   const [fortnightStartDate, setFortnightStartDate] = useState<string>('');
   const [daySpecificPeriods, setDaySpecificPeriods] = useState<Record<string, Period[]>>({});
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExistingConfig, setIsExistingConfig] = useState(false);
+  const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(false);
 
-  // Fetch configuration data when in view mode
+  console.log('TimePeriodConfiguration render:', {
+    configId,
+    mode,
+    academicYearId,
+    configName,
+    isActive,
+    isDefault
+  });
+
+  // Check if this is an existing configuration (not a new one)
+  useEffect(() => {
+    // If configId doesn't start with 'config-' (our new config pattern), it's an existing config
+    const isExisting = !configId.startsWith('config-');
+    setIsExistingConfig(isExisting);
+    console.log('TimePeriodConfiguration: isExistingConfig set to:', isExisting, 'for configId:', configId);
+  }, [configId]);
+
+  // Fetch configuration data when editing existing configuration or in view mode
   useEffect(() => {
     const fetchConfigurationData = async () => {
-      if (mode === 'view' && profile?.school_id && academicYearId) {
-        console.log('Fetching configuration data for view mode...');
-        const configs = await getTimetableConfigurations(profile.school_id, academicYearId);
-        const currentConfig = configs.find(config => config.id === configId);
+      if ((mode === 'edit' && isExistingConfig) || mode === 'view') {
+        if (!profile?.school_id || !academicYearId) {
+          console.log('TimePeriodConfiguration: Missing required data for fetching:', {
+            schoolId: profile?.school_id,
+            academicYearId
+          });
+          return;
+        }
         
-        if (currentConfig) {
-          console.log('Found configuration:', currentConfig);
+        setIsLoading(true);
+        try {
+          console.log('Fetching configuration data for editing/viewing...', { configId, mode, isExistingConfig });
+          const configs = await getTimetableConfigurations(profile.school_id, academicYearId);
+          const currentConfig = configs.find(config => config.id === configId);
           
-          // Set periods and calculate total periods count
-          setPeriods(currentConfig.defaultPeriods);
-          setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
-          
-          // Set selected days
-          setSelectedDays(currentConfig.selectedDays);
-          
-          // Set mode and fortnight settings
-          setIsWeeklyMode(currentConfig.isWeeklyMode);
-          setFortnightStartDate(currentConfig.fortnightStartDate || '');
-          
-          // Set day-specific periods
-          setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
-        } else {
-          console.warn('Configuration not found:', configId);
+          if (currentConfig) {
+            console.log('Found configuration for editing:', currentConfig);
+            
+            // Set periods and calculate total periods count
+            setPeriods(currentConfig.defaultPeriods);
+            setTotalPeriods(currentConfig.defaultPeriods.filter(p => p.type === 'period').length);
+            
+            // Set selected days
+            setSelectedDays(currentConfig.selectedDays);
+            
+            // Set mode and fortnight settings
+            setIsWeeklyMode(currentConfig.isWeeklyMode);
+            setFortnightStartDate(currentConfig.fortnightStartDate || '');
+            
+            // Set day-specific periods
+            setDaySpecificPeriods(currentConfig.daySpecificPeriods || {});
+            
+            // Set flexible timings state based on whether day-specific periods exist
+            const hasFlexibleTimings = Object.keys(currentConfig.daySpecificPeriods || {}).length > 0;
+            setEnableFlexibleTimings(hasFlexibleTimings);
+            console.log('TimePeriodConfiguration: Setting enableFlexibleTimings to:', hasFlexibleTimings);
+          } else {
+            console.warn('Configuration not found for editing:', configId);
+            toast({
+              title: "Configuration Not Found",
+              description: "The requested configuration could not be loaded.",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching configuration for editing:', error);
+          toast({
+            title: "Error Loading Configuration",
+            description: "Failed to load configuration data for editing.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
         }
       }
     };
 
     fetchConfigurationData();
-  }, [mode, configId, profile?.school_id, academicYearId, getTimetableConfigurations]);
+  }, [mode, configId, isExistingConfig, profile?.school_id, academicYearId, getTimetableConfigurations]);
 
   // Handle mode changes and reset selected days appropriately
   useEffect(() => {
-    if (mode === 'edit') {
+    if (mode === 'edit' && !isLoading) {
       if (isWeeklyMode) {
         // Convert fortnightly days back to weekly days if switching from fortnightly to weekly
         const weeklyDays = selectedDays
@@ -116,30 +167,32 @@ export const TimePeriodConfiguration = ({
         setHasTriedToSubmit(false);
       }
     }
-  }, [isWeeklyMode, mode]);
+  }, [isWeeklyMode, mode, isLoading]);
 
-  // Generate default periods based on total periods count
+  // Generate default periods based on total periods count (only for new configurations)
   useEffect(() => {
-    const newPeriods: Period[] = [];
-    
-    for (let i = 1; i <= totalPeriods; i++) {
-      const startHour = 8 + Math.floor((i - 1) * 0.75); // Roughly 45 min periods
-      const startMinute = ((i - 1) * 45) % 60;
-      const endMinute = (i * 45) % 60;
-      const endHour = 8 + Math.floor((i * 45) / 60);
+    if (!isExistingConfig && mode === 'edit' && !isLoading) {
+      const newPeriods: Period[] = [];
       
-      newPeriods.push({
-        id: `period-${i}`,
-        number: i,
-        startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
-        endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`,
-        type: 'period',
-        label: `Period ${i}`
-      });
+      for (let i = 1; i <= totalPeriods; i++) {
+        const startHour = 8 + Math.floor((i - 1) * 0.75); // Roughly 45 min periods
+        const startMinute = ((i - 1) * 45) % 60;
+        const endMinute = (i * 45) % 60;
+        const endHour = 8 + Math.floor((i * 45) / 60);
+        
+        newPeriods.push({
+          id: `period-${i}`,
+          number: i,
+          startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
+          endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`,
+          type: 'period',
+          label: `Period ${i}`
+        });
+      }
+      
+      setPeriods(newPeriods);
     }
-    
-    setPeriods(newPeriods);
-  }, [totalPeriods]);
+  }, [totalPeriods, isExistingConfig, mode, isLoading]);
 
   const handleSaveConfiguration = async () => {
     setHasTriedToSubmit(true);
@@ -154,8 +207,9 @@ export const TimePeriodConfiguration = ({
       return;
     }
 
-    // Validate that all period numbers are integers
-    const hasNonIntegerNumbers = periods.some(period => !Number.isInteger(period.number));
+    // Validate that all ACTUAL period numbers (not breaks) are integers
+    const actualPeriods = periods.filter(period => period.type === 'period');
+    const hasNonIntegerNumbers = actualPeriods.some(period => !Number.isInteger(period.number));
     if (hasNonIntegerNumbers) {
       toast({
         title: "Validation Error",
@@ -184,6 +238,14 @@ export const TimePeriodConfiguration = ({
       return;
     }
 
+    console.log('Saving configuration:', {
+      configId,
+      isExistingConfig,
+      configName,
+      isActive,
+      isDefault
+    });
+
     const result = await saveTimetableConfiguration({
       schoolId: profile.school_id,
       name: configName,
@@ -192,11 +254,12 @@ export const TimePeriodConfiguration = ({
       academicYearId,
       isWeeklyMode,
       fortnightStartDate: isWeeklyMode ? null : fortnightStartDate,
-      selectedDays, // Keep the full day IDs (e.g., 'week1-monday')
+      selectedDays,
       defaultPeriods: periods,
       daySpecificPeriods,
-      enableFlexibleTimings: Object.keys(daySpecificPeriods).length > 0,
-      batchIds: null // Handle this if batch tagging is needed
+      enableFlexibleTimings: enableFlexibleTimings,
+      batchIds: null,
+      configId: isExistingConfig ? configId : undefined // Pass configId only for existing configs
     });
 
     if (result) {
@@ -222,57 +285,28 @@ export const TimePeriodConfiguration = ({
     const periodIndex = periods.findIndex(p => p.id === periodId);
     if (periodIndex === -1) return;
 
-    // Create the break period with the next number in sequence
-    const breakNumber = periods[periodIndex].number + 1;
+    const currentPeriod = periods[periodIndex];
+    const nextPeriod = periods[periodIndex + 1];
     
+    // Create break with unique ID but don't affect period numbering
     const breakPeriod: Period = {
-        id: `break-${Date.now()}`,
-        number: breakNumber,
-        startTime: periods[periodIndex].endTime,
-        endTime: periods[periodIndex + 1]?.startTime || '09:00',
-        type: 'break',
-        label: 'Break'
+      id: `break-${Date.now()}`,
+      number: currentPeriod.number + 0.5, // Use decimal to indicate it's between periods
+      startTime: currentPeriod.endTime,
+      endTime: nextPeriod?.startTime || '09:00',
+      type: 'break',
+      label: 'Break'
     };
 
-    // Create new periods array with shifted numbers
-    const newPeriods = periods.map(period => {
-        if (period.number <= periods[periodIndex].number) {
-            // Keep numbers the same for periods before the break
-            return period;
-        } else {
-            // Shift numbers up by 1 for all periods after the break
-            return {
-                ...period,
-                number: period.number + 1
-            };
-        }
-    });
-
-    // Insert the break period at the correct position
+    // Insert the break without changing any period numbers
+    const newPeriods = [...periods];
     newPeriods.splice(periodIndex + 1, 0, breakPeriod);
     setPeriods(newPeriods);
   };
 
   const removeBreak = (breakId: string) => {
-    // Find the break's index
-    const breakIndex = periods.findIndex(period => period.id === breakId);
-    if (breakIndex === -1) return;
-
-    // Create new periods array with adjusted numbers
-    const newPeriods = periods
-        .filter(period => period.id !== breakId) // Remove the break
-        .map((period, idx, array) => {
-            if (period.number > periods[breakIndex].number) {
-                // Shift numbers down by 1 for all periods after the break
-                return {
-                    ...period,
-                    number: period.number - 1
-                };
-            }
-            return period;
-        });
-
-    setPeriods(newPeriods);
+    // Simply remove the break without affecting period numbers
+    setPeriods(prev => prev.filter(period => period.id !== breakId));
   };
 
   const updateBreakLabel = (breakId: string, label: string) => {
@@ -317,20 +351,53 @@ export const TimePeriodConfiguration = ({
     );
   }
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Loading Configuration...
+            </span>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  console.log('TimePeriodConfiguration: Rendering edit mode with:', {
+    periods: periods.length,
+    selectedDays: selectedDays.length,
+    isExistingConfig,
+    enableFlexibleTimings
+  });
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Configure Period Configuration
+            {isExistingConfig ? `Edit: ${configName}` : 'Configure Period Configuration'}
           </span>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </CardTitle>
         <CardDescription>
-          Set up periods, timings, and scheduling options for this configuration.
+          {isExistingConfig ? 
+            `Modify the settings and timings for ${configName}.` :
+            "Set up periods, timings, and scheduling options for this configuration."
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -362,6 +429,7 @@ export const TimePeriodConfiguration = ({
           defaultPeriods={periods}
           onUpdateDayPeriods={handleUpdateDayPeriods}
           daySpecificPeriods={daySpecificPeriods}
+          initialFlexibleTimings={enableFlexibleTimings}
         />
 
         {/* Timetable Actions */}

@@ -1861,38 +1861,50 @@ export type Database = {
       timetable_configurations: {
         Row: {
           academic_year_id: string
+          batch_ids: string[] | null
           created_at: string | null
+          default_periods: Json | null
+          enable_flexible_timings: boolean | null
           fortnight_start_date: string | null
           id: string
           is_active: boolean | null
           is_default: boolean | null
-          is_fortnightly: boolean | null
+          is_weekly_mode: boolean | null
           name: string
           school_id: string
+          selected_days: string[] | null
           updated_at: string | null
         }
         Insert: {
           academic_year_id: string
+          batch_ids?: string[] | null
           created_at?: string | null
+          default_periods?: Json | null
+          enable_flexible_timings?: boolean | null
           fortnight_start_date?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
-          is_fortnightly?: boolean | null
+          is_weekly_mode?: boolean | null
           name: string
           school_id: string
+          selected_days?: string[] | null
           updated_at?: string | null
         }
         Update: {
           academic_year_id?: string
+          batch_ids?: string[] | null
           created_at?: string | null
+          default_periods?: Json | null
+          enable_flexible_timings?: boolean | null
           fortnight_start_date?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
-          is_fortnightly?: boolean | null
+          is_weekly_mode?: boolean | null
           name?: string
           school_id?: string
+          selected_days?: string[] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2192,6 +2204,18 @@ export type Database = {
       execute_admin_sql: {
         Args: { sql: string }
         Returns: undefined
+      }
+      extract_base_day: {
+        Args: { day_string: string }
+        Returns: string
+      }
+      extract_day_name: {
+        Args: { input_day: string }
+        Returns: string
+      }
+      extract_week_number: {
+        Args: { day_string: string }
+        Returns: number
       }
       generate_admission_number: {
         Args: { p_school_id: string }

@@ -10,6 +10,7 @@ import { ConfigurationCard } from "./components/ConfigurationCard";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimePeriodConfig {
   id: string;
@@ -60,6 +61,7 @@ export const TimetableSettings = () => {
   }, [profile?.school_id, selectedAcademicYear]);
 
   const handleAddPeriodConfiguration = () => {
+    console.log('Adding new configuration');
     const newConfig: TimePeriodConfig = {
       id: `config-${Date.now()}`,
       name: `Configuration ${periodConfigurations.length + 1}`,
@@ -77,36 +79,141 @@ export const TimetableSettings = () => {
   };
 
   const handleEditConfiguration = (configId: string) => {
+    console.log('Edit button clicked for config:', configId);
+    console.log('Current activeConfigId:', activeConfigId);
+    console.log('Current viewMode:', viewMode);
+    
     setActiveConfigId(configId);
     setViewMode('edit');
+    
+    console.log('After setting - activeConfigId:', configId, 'viewMode:', 'edit');
+    
+    toast({
+      title: "Opening Configuration",
+      description: "Loading configuration for editing..."
+    });
   };
 
   const handleViewConfiguration = (configId: string) => {
+    console.log('View button clicked for config:', configId);
     setActiveConfigId(configId);
     setViewMode('view');
   };
 
-  const handleCloneConfiguration = (configId: string) => {
+  const handleCloneConfiguration = async (configId: string) => {
     const originalConfig = periodConfigurations.find(c => c.id === configId);
     if (!originalConfig) return;
 
-    const clonedConfig: TimePeriodConfig = {
-      id: `config-${Date.now()}`,
-      name: `${originalConfig.name} (Copy)`,
-      isActive: false,
-      isDefault: false
-    };
+    // If it's an existing config (not a temp one), fetch its full data and clone it
+    if (!configId.startsWith('config-') && profile?.school_id && selectedAcademicYear) {
+      try {
+        const configs = await getTimetableConfigurations(profile.school_id, selectedAcademicYear);
+        const configToClone = configs.find(c => c.id === configId);
+        
+        if (configToClone) {
+          // Create the clone with updated details
+          const clonedConfig: TimePeriodConfig = {
+            id: `config-${Date.now()}`, // Temporary ID for new config
+            name: `${originalConfig.name} (Copy)`,
+            isActive: false,
+            isDefault: false
+          };
 
-    setPeriodConfigurations(prev => [...prev, clonedConfig]);
-    
-    toast({
-      title: "Configuration Cloned",
-      description: `${clonedConfig.name} has been created`
-    });
+          // Save the cloned configuration
+          const result = await saveTimetableConfiguration({
+            schoolId: profile.school_id,
+            name: clonedConfig.name,
+            isActive: clonedConfig.isActive,
+            isDefault: clonedConfig.isDefault,
+            academicYearId: selectedAcademicYear,
+            isWeeklyMode: configToClone.isWeeklyMode,
+            fortnightStartDate: configToClone.fortnightStartDate,
+            selectedDays: configToClone.selectedDays,
+            defaultPeriods: configToClone.defaultPeriods,
+            daySpecificPeriods: configToClone.daySpecificPeriods,
+            enableFlexibleTimings: Object.keys(configToClone.daySpecificPeriods || {}).length > 0,
+            batchIds: null
+          });
+
+          if (result) {
+            // Refresh configurations to show the new cloned one
+            await fetchConfigurations();
+            toast({
+              title: "Configuration Cloned",
+              description: `${clonedConfig.name} has been created successfully`
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error cloning configuration:', error);
+        toast({
+          title: "Error Cloning Configuration",
+          description: "Failed to clone the configuration. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // For temporary configs, just create a simple clone
+      const clonedConfig: TimePeriodConfig = {
+        id: `config-${Date.now()}`,
+        name: `${originalConfig.name} (Copy)`,
+        isActive: false,
+        isDefault: false
+      };
+
+      setPeriodConfigurations(prev => [...prev, clonedConfig]);
+      
+      toast({
+        title: "Configuration Cloned",
+        description: `${clonedConfig.name} has been created`
+      });
+    }
   };
 
-  const handleRemoveConfiguration = (configId: string) => {
+  const fetchConfigurations = async () => {
+    if (!profile?.school_id || !selectedAcademicYear) return;
+    
+    setIsLoading(true);
+    try {
+      const configs = await getTimetableConfigurations(profile.school_id, selectedAcademicYear);
+      setPeriodConfigurations(configs.map(config => ({
+        id: config.id,
+        name: config.name,
+        isActive: config.isActive,
+        isDefault: config.isDefault
+      })));
+    } catch (error) {
+      console.error('Error fetching configurations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveConfiguration = async (configId: string) => {
     const config = periodConfigurations.find(c => c.id === configId);
+    
+    // If it's an existing configuration (not temporary), delete from database
+    if (!configId.startsWith('config-') && profile?.school_id) {
+      try {
+        const { error } = await supabase
+          .from('timetable_configurations')
+          .delete()
+          .eq('id', configId);
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        console.error('Error deleting configuration:', error);
+        toast({
+          title: "Error Deleting Configuration",
+          description: "Failed to delete the configuration. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setPeriodConfigurations(prev => prev.filter(c => c.id !== configId));
     
     if (activeConfigId === configId) {
@@ -124,43 +231,115 @@ export const TimetableSettings = () => {
 
   const handleConfigurationSaved = async () => {
     // Refresh configurations after saving
-    if (profile?.school_id && selectedAcademicYear) {
-      const configs = await getTimetableConfigurations(profile.school_id, selectedAcademicYear);
-      setPeriodConfigurations(configs.map(config => ({
-        id: config.id,
-        name: config.name,
-        isActive: config.isActive,
-        isDefault: config.isDefault
-      })));
-    }
+    await fetchConfigurations();
     setActiveConfigId(null);
     setViewMode(null);
   };
 
-  const handleToggleActive = (configId: string) => {
-    setPeriodConfigurations(prev => prev.map(config => 
-      config.id === configId ? { ...config, isActive: !config.isActive } : config
-    ));
-    
-    const config = periodConfigurations.find(c => c.id === configId);
-    toast({
-      title: config?.isActive ? "Configuration Deactivated" : "Configuration Activated",
-      description: `${config?.name} is now ${config?.isActive ? 'inactive' : 'active'}`
-    });
+  const handleToggleActive = async (configId: string, isActive: boolean) => {
+    // For temporary configurations, just update the state
+    if (configId.startsWith('config-')) {
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId ? { ...config, isActive } : config
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isActive ? "Configuration Activated" : "Configuration Deactivated",
+        description: `${config?.name} is now ${isActive ? 'active' : 'inactive'}`
+      });
+      return;
+    }
+
+    // For existing configurations, update in database
+    try {
+      const { error } = await supabase
+        .from('timetable_configurations')
+        .update({ is_active: isActive })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId ? { ...config, isActive } : config
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isActive ? "Configuration Activated" : "Configuration Deactivated",
+        description: `${config?.name} is now ${isActive ? 'active' : 'inactive'}`
+      });
+    } catch (error) {
+      console.error('Error updating active status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update configuration status. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleToggleDefault = (configId: string) => {
-    setPeriodConfigurations(prev => prev.map(config => 
-      config.id === configId 
-        ? { ...config, isDefault: !config.isDefault }
-        : { ...config, isDefault: false }
-    ));
-    
-    const config = periodConfigurations.find(c => c.id === configId);
-    toast({
-      title: config?.isDefault ? "Default Removed" : "Default Set",
-      description: `${config?.name} is ${config?.isDefault ? 'no longer' : 'now'} the default configuration`
-    });
+  const handleToggleDefault = async (configId: string, isDefault: boolean) => {
+    // For temporary configurations, just update the state
+    if (configId.startsWith('config-')) {
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId 
+          ? { ...config, isDefault }
+          : { ...config, isDefault: false } // Only one can be default
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isDefault ? "Default Set" : "Default Removed",
+        description: `${config?.name} is ${isDefault ? 'now' : 'no longer'} the default configuration`
+      });
+      return;
+    }
+
+    // For existing configurations, update in database
+    try {
+      if (isDefault) {
+        // First, unset any other default configuration for this school and academic year
+        await supabase
+          .from('timetable_configurations')
+          .update({ is_default: false })
+          .eq('school_id', profile?.school_id)
+          .eq('academic_year_id', selectedAcademicYear);
+      }
+
+      // Then set this configuration as default (or remove default)
+      const { error } = await supabase
+        .from('timetable_configurations')
+        .update({ is_default: isDefault })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setPeriodConfigurations(prev => prev.map(config => 
+        config.id === configId 
+          ? { ...config, isDefault }
+          : { ...config, isDefault: false } // Only one can be default
+      ));
+      
+      const config = periodConfigurations.find(c => c.id === configId);
+      toast({
+        title: isDefault ? "Default Set" : "Default Removed",
+        description: `${config?.name} is ${isDefault ? 'now' : 'no longer'} the default configuration`
+      });
+    } catch (error) {
+      console.error('Error updating default status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update default configuration. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleBatchTagging = (configId: string) => {
@@ -172,9 +351,12 @@ export const TimetableSettings = () => {
   };
 
   const handleCloseConfiguration = () => {
+    console.log('Closing configuration editor');
     setActiveConfigId(null);
     setViewMode(null);
   };
+
+  console.log('TimetableSettings render - activeConfigId:', activeConfigId, 'viewMode:', viewMode);
 
   return (
     <div className="space-y-6">
@@ -249,7 +431,7 @@ export const TimetableSettings = () => {
       </Card>
 
       {/* Active Configuration Editor/Viewer */}
-      {activeConfigId && (
+      {activeConfigId && viewMode && (
         <TimePeriodConfiguration 
           key={activeConfigId}
           configId={activeConfigId}

@@ -17,8 +17,8 @@ interface ConfigurationCardProps {
   onEdit: (configId: string) => void;
   onClone: (configId: string) => void;
   onView: (configId: string) => void;
-  onToggleActive: (configId: string) => void;
-  onToggleDefault: (configId: string) => void;
+  onToggleActive: (configId: string, isActive: boolean) => void;
+  onToggleDefault: (configId: string, isDefault: boolean) => void;
   onBatchTagging: (configId: string) => void;
   onRemove: (configId: string) => void;
 }
@@ -33,6 +33,31 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
   onBatchTagging,
   onRemove
 }) => {
+  const handleEditClick = () => {
+    console.log('ConfigurationCard: Edit button clicked for config:', config.id);
+    onEdit(config.id);
+  };
+
+  const handleViewClick = () => {
+    console.log('ConfigurationCard: View button clicked for config:', config.id);
+    onView(config.id);
+  };
+
+  const handleCloneClick = () => {
+    console.log('ConfigurationCard: Clone button clicked for config:', config.id);
+    onClone(config.id);
+  };
+
+  const handleActiveToggle = (checked: boolean) => {
+    console.log('ConfigurationCard: Active toggle changed for config:', config.id, 'to:', checked);
+    onToggleActive(config.id, checked);
+  };
+
+  const handleDefaultToggle = (checked: boolean) => {
+    console.log('ConfigurationCard: Default toggle changed for config:', config.id, 'to:', checked);
+    onToggleDefault(config.id, checked);
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-3">
@@ -64,7 +89,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
               <span className="text-sm text-muted-foreground">Active</span>
               <Switch
                 checked={config.isActive}
-                onCheckedChange={() => onToggleActive(config.id)}
+                onCheckedChange={handleActiveToggle}
               />
             </div>
             
@@ -72,7 +97,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
               <span className="text-sm text-muted-foreground">Default</span>
               <Switch
                 checked={config.isDefault}
-                onCheckedChange={() => onToggleDefault(config.id)}
+                onCheckedChange={handleDefaultToggle}
               />
             </div>
           </div>
@@ -106,7 +131,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onView(config.id)}
+            onClick={handleViewClick}
             className="flex-1"
           >
             <Eye className="h-4 w-4 mr-1" />
@@ -116,7 +141,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onClone(config.id)}
+            onClick={handleCloneClick}
             className="flex-1"
           >
             <Copy className="h-4 w-4 mr-1" />
@@ -126,7 +151,7 @@ export const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
           <Button
             variant="default"
             size="sm"
-            onClick={() => onEdit(config.id)}
+            onClick={handleEditClick}
             className="flex-1"
           >
             <Settings className="h-4 w-4 mr-1" />

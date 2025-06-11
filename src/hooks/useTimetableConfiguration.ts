@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Period } from '@/components/timetable/types/TimePeriodTypes';
@@ -16,6 +17,7 @@ interface SaveTimetableConfigurationParams {
   daySpecificPeriods: Record<string, Period[]>;
   enableFlexibleTimings: boolean;
   batchIds?: string[] | null;
+  configId?: string; // Add configId for updates
 }
 
 interface TimetableConfiguration {
@@ -177,16 +179,10 @@ export const useTimetableConfiguration = () => {
     defaultPeriods,
     daySpecificPeriods,
     enableFlexibleTimings,
-    batchIds
+    batchIds,
+    configId
   }: SaveTimetableConfigurationParams) => {
     try {
-      // For fortnightly mode, we need to extract the base day names
-      const processedSelectedDays = selectedDays.map(dayId => {
-        if (isWeeklyMode) return dayId;
-        const [weekPart, dayPart] = dayId.split('-');
-        return dayPart;
-      });
-
       // Convert defaultPeriods to the format expected by the backend
       const formattedDefaultPeriods = defaultPeriods.map(period => ({
         number: period.number,
@@ -196,53 +192,102 @@ export const useTimetableConfiguration = () => {
         label: period.label
       }));
 
-      // Convert daySpecificPeriods to the format expected by the backend
-      const formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
-        (acc, [dayId, periods]) => {
-          // Extract week number and base day name for fortnightly mode
-          const [weekPart, dayPart] = isWeeklyMode ? [null, dayId] : dayId.split('-');
-          const weekNumber = weekPart === 'week1' ? 1 : weekPart === 'week2' ? 2 : null;
-          const baseDayName = isWeeklyMode ? dayId : dayPart;
+      // Handle daySpecificPeriods - only send custom configurations, not defaults
+      let formattedDaySpecificPeriods = {};
+      
+      if (enableFlexibleTimings && Object.keys(daySpecificPeriods).length > 0) {
+        // Only include days that actually have custom configurations
+        formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
+          (acc, [dayId, periods]) => {
+            return {
+              ...acc,
+              [dayId]: periods.map(period => ({
+                number: period.number,
+                startTime: period.startTime,
+                endTime: period.endTime,
+                type: period.type,
+                label: period.label
+              }))
+            };
+          },
+          {}
+        );
+      }
 
-          return {
-            ...acc,
-            [dayId]: periods.map(period => ({
-              number: period.number,
-              startTime: period.startTime,
-              endTime: period.endTime,
-              type: period.type,
-              label: period.label,
-              day_of_week: baseDayName,
-              fortnight_week: weekNumber
-            }))
-          };
-        },
-        {}
-      );
+      console.log('Sending to backend - Selected days:', selectedDays);
+      console.log('Sending to backend - Day specific periods keys:', Object.keys(formattedDaySpecificPeriods));
+      console.log('Sending to backend - Config ID for update:', configId);
 
-      const { data, error } = await supabase.rpc('save_timetable_configuration', {
-        p_school_id: schoolId,
-        p_name: name,
-        p_is_active: isActive,
-        p_is_default: isDefault,
-        p_academic_year_id: academicYearId,
-        p_is_weekly_mode: isWeeklyMode,
-        p_selected_days: processedSelectedDays,
-        p_default_periods: formattedDefaultPeriods,
-        p_fortnight_start_date: fortnightStartDate,
-        p_day_specific_periods: formattedDaySpecificPeriods,
-        p_enable_flexible_timings: enableFlexibleTimings,
-        p_batch_ids: batchIds
-      });
+      let result;
+      
+      if (configId) {
+        // Update existing configuration
+        console.log('Updating existing configuration:', configId);
+        
+        // First, delete the existing configuration and its related data
+        const { error: deleteError } = await supabase
+          .from('timetable_configurations')
+          .delete()
+          .eq('id', configId);
 
-      if (error) throw error;
+        if (deleteError) {
+          throw deleteError;
+        }
+
+        console.log('Deleted existing configuration, now creating new one with same data');
+
+        // Then create a new one with the updated data
+        const { data, error } = await supabase.rpc('save_timetable_configuration', {
+          p_school_id: schoolId,
+          p_name: name,
+          p_is_active: isActive,
+          p_is_default: isDefault,
+          p_academic_year_id: academicYearId,
+          p_is_weekly_mode: isWeeklyMode,
+          p_selected_days: selectedDays,
+          p_default_periods: formattedDefaultPeriods,
+          p_fortnight_start_date: fortnightStartDate,
+          p_day_specific_periods: formattedDaySpecificPeriods,
+          p_enable_flexible_timings: enableFlexibleTimings,
+          p_batch_ids: batchIds
+        });
+
+        if (error) {
+          throw error;
+        }
+        result = data;
+      } else {
+        // Create new configuration
+        console.log('Creating new configuration');
+        const { data, error } = await supabase.rpc('save_timetable_configuration', {
+          p_school_id: schoolId,
+          p_name: name,
+          p_is_active: isActive,
+          p_is_default: isDefault,
+          p_academic_year_id: academicYearId,
+          p_is_weekly_mode: isWeeklyMode,
+          p_selected_days: selectedDays,
+          p_default_periods: formattedDefaultPeriods,
+          p_fortnight_start_date: fortnightStartDate,
+          p_day_specific_periods: formattedDaySpecificPeriods,
+          p_enable_flexible_timings: enableFlexibleTimings,
+          p_batch_ids: batchIds
+        });
+
+        if (error) {
+          throw error;
+        }
+        result = data;
+      }
 
       toast({
         title: "Success",
-        description: "Timetable configuration saved successfully"
+        description: configId ? 
+          "Timetable configuration updated successfully" : 
+          "Timetable configuration saved successfully"
       });
 
-      return data;
+      return result;
     } catch (error: any) {
       console.error('Error saving timetable configuration:', error);
       toast({

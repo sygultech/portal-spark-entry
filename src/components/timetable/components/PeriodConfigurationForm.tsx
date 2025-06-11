@@ -67,6 +67,19 @@ export const PeriodConfigurationForm = ({
     }, 100);
   };
 
+  // Sort periods for display: first by period number (treating breaks as between periods), then by ID for stability
+  const sortedPeriods = [...periods].sort((a, b) => {
+    // Compare period numbers first
+    if (a.number !== b.number) {
+      return a.number - b.number;
+    }
+    // If numbers are equal (like period 3 and break after period 3), put period first
+    if (a.type === 'period' && b.type === 'break') return -1;
+    if (a.type === 'break' && b.type === 'period') return 1;
+    // If both are same type, sort by ID for stability
+    return a.id.localeCompare(b.id);
+  });
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -114,7 +127,7 @@ export const PeriodConfigurationForm = ({
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 mt-4">
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {periods.map((period, index) => {
+            {sortedPeriods.map((period, index) => {
               const periodErrors = getErrorsForPeriod(period.id);
               const hasError = periodErrors.length > 0;
               
@@ -130,7 +143,9 @@ export const PeriodConfigurationForm = ({
                     {period.type === 'period' ? (
                       <>
                         <BookOpen className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium text-sm">Period {period.number}</span>
+                        <span className="font-medium text-sm">
+                          Period {Math.floor(period.number)}
+                        </span>
                       </>
                     ) : (
                       <>
