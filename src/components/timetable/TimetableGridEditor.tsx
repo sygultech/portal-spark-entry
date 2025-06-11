@@ -27,8 +27,6 @@ interface TimetableGridEditorProps {
   selectedTerm: string;
 }
 
-const weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-
 export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGridEditorProps) => {
   const { profile } = useAuth();
   const { 
@@ -48,6 +46,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   // Use the new batch timetable configuration hook
   const {
     getAllPeriods,
+    getSelectedDays,
     isBreakTime,
     getBreakInfo,
     isLoading: configLoading
@@ -71,8 +70,9 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const { specialClasses, fetchSpecialClasses } = useSpecialClasses(profile?.school_id || '');
   const { holidays, fetchHolidays } = useHolidays(profile?.school_id || '');
 
-  // Get dynamic periods (including breaks) based on selected batch
+  // Get dynamic periods and selected days based on selected batch
   const allPeriods = selectedBatch ? getAllPeriods(selectedBatch) : [];
+  const selectedDays = selectedBatch ? getSelectedDays(selectedBatch) : [];
   // Filter out breaks to get only class periods for time slots
   const timeSlots = allPeriods.filter(p => p.type === 'class');
 
@@ -269,6 +269,10 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardTitle>
           <CardDescription>
             Create and manage the weekly schedule for {batches.find(b => b.id === selectedBatch)?.name} in {selectedYear?.name || 'the selected academic year'}.
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Configured days: {selectedDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')}
+            </span>
           </CardDescription>
         </CardHeader>
       </Card>
@@ -292,7 +296,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
               <thead>
                 <tr>
                   <th className="border border-gray-200 p-3 bg-gray-50 w-32 text-left">Time</th>
-                  {weekDays.map((day) => (
+                  {selectedDays.map((day) => (
                     <th key={day} className="border border-gray-200 p-3 bg-gray-50 min-w-48 text-left capitalize">
                       {day}
                     </th>
@@ -309,7 +313,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                         <div>{period.label}</div>
                         <div className="text-xs text-gray-600">{period.start} - {period.end}</div>
                       </td>
-                      {weekDays.map((day) => {
+                      {selectedDays.map((day) => {
                         const schedule = getScheduleForSlot(day, period.number);
                         
                         return (
@@ -448,7 +452,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {weekDays.length * timeSlots.length}
+              {selectedDays.length * timeSlots.length}
             </div>
             <p className="text-xs text-muted-foreground">per week</p>
           </CardContent>
@@ -472,7 +476,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {(weekDays.length * timeSlots.length) - 
+              {(selectedDays.length * timeSlots.length) - 
                schedules.filter(s => s.batch_id === selectedBatch).length}
             </div>
             <p className="text-xs text-muted-foreground">remaining</p>

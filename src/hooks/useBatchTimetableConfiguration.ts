@@ -11,6 +11,7 @@ export interface PeriodConfiguration {
   period_type: 'class' | 'break';
   label?: string;
   is_break: boolean;
+  day_of_week?: string;
   break_type?: 'morning' | 'lunch' | 'afternoon';
 }
 
@@ -21,6 +22,7 @@ export interface TimetableConfiguration {
   academic_year_id: string;
   is_active: boolean;
   is_default: boolean;
+  selected_days?: string[];
   periods: PeriodConfiguration[];
 }
 
@@ -57,13 +59,15 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
           academic_year_id,
           is_active,
           is_default,
+          selected_days,
           period_settings (
             id,
             period_number,
             start_time,
             end_time,
             type,
-            label
+            label,
+            day_of_week
           )
         `)
         .eq('school_id', schoolId)
@@ -81,6 +85,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
         academic_year_id: config.academic_year_id,
         is_active: config.is_active,
         is_default: config.is_default,
+        selected_days: config.selected_days || [],
         periods: (config.period_settings || [])
           .map(p => {
             const isBreak = p.type === 'break';
@@ -94,6 +99,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
               period_type: periodType,
               label: p.label,
               is_break: isBreak,
+              day_of_week: p.day_of_week,
               break_type: isBreak ? (
                 p.label?.toLowerCase().includes('lunch') ? 'lunch' as const :
                 p.label?.toLowerCase().includes('morning') || p.label?.toLowerCase().includes('mom') ? 'morning' as const : 
@@ -174,6 +180,17 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
     // If no specific mapping, return the default configuration
     return configurations.find(c => c.is_default) || null;
   }, [configurations, batchMappings]);
+
+  const getSelectedDays = useCallback((batchId: string): string[] => {
+    const config = getBatchConfiguration(batchId);
+    if (!config || !config.selected_days || config.selected_days.length === 0) {
+      console.log('No selected days found in config, using fallback for batch:', batchId);
+      return ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    }
+
+    console.log('Using selected days from config for batch:', batchId, config.selected_days);
+    return config.selected_days;
+  }, [getBatchConfiguration]);
 
   const getTimeSlots = useCallback((batchId: string) => {
     const config = getBatchConfiguration(batchId);
@@ -295,6 +312,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
     fetchConfigurations,
     fetchBatchMappings,
     getBatchConfiguration,
+    getSelectedDays,
     getTimeSlots,
     getBreakPeriods,
     isBreakTime,
