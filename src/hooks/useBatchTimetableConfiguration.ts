@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -27,8 +28,6 @@ export interface BatchConfigurationMapping {
   id: string;
   batch_id: string;
   configuration_id: string;
-  effective_from: string;
-  effective_to?: string;
   configuration?: {
     id: string;
     name: string;
@@ -97,7 +96,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
               is_break: isBreak,
               break_type: isBreak ? (
                 p.label?.toLowerCase().includes('lunch') ? 'lunch' as const :
-                p.label?.toLowerCase().includes('morning') ? 'morning' as const : 
+                p.label?.toLowerCase().includes('morning') || p.label?.toLowerCase().includes('mom') ? 'morning' as const : 
                 'afternoon' as const
               ) : undefined
             };
@@ -128,8 +127,6 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
           id,
           batch_id,
           configuration_id,
-          effective_from,
-          effective_to,
           timetable_configurations!batch_configuration_mapping_configuration_id_fkey (
             id,
             name,
@@ -140,8 +137,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
           )
         `)
         .eq('timetable_configurations.school_id', schoolId)
-        .eq('timetable_configurations.academic_year_id', academicYearId)
-        .order('effective_from', { ascending: false });
+        .eq('timetable_configurations.academic_year_id', academicYearId);
 
       if (error) throw error;
 
@@ -150,8 +146,6 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
         id: mapping.id,
         batch_id: mapping.batch_id,
         configuration_id: mapping.configuration_id,
-        effective_from: mapping.effective_from,
-        effective_to: mapping.effective_to,
         configuration: Array.isArray(mapping.timetable_configurations) 
           ? mapping.timetable_configurations[0] 
           : mapping.timetable_configurations
@@ -170,10 +164,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
 
   const getBatchConfiguration = useCallback((batchId: string): TimetableConfiguration | null => {
     // First, check if there's a specific mapping for this batch
-    const mapping = batchMappings.find(mapping => 
-      mapping.batch_id === batchId &&
-      (!mapping.effective_to || new Date(mapping.effective_to) >= new Date())
-    );
+    const mapping = batchMappings.find(mapping => mapping.batch_id === batchId);
 
     if (mapping) {
       const config = configurations.find(c => c.id === mapping.configuration_id);
@@ -261,22 +252,24 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
 
   const getAllPeriods = useCallback((batchId: string) => {
     const config = getBatchConfiguration(batchId);
-    if (!config || !config.periods) {
+    if (!config || !config.periods || config.periods.length === 0) {
+      console.log('No periods found in config, using fallback for batch:', batchId);
       // Fallback periods including breaks
       return [
         { number: 1, start: "08:00", end: "08:45", type: 'class', label: 'Period 1' },
         { number: 2, start: "08:45", end: "09:30", type: 'class', label: 'Period 2' },
         { number: 3, start: "09:30", end: "10:15", type: 'class', label: 'Period 3' },
-        { number: 4, start: "10:15", end: "10:30", type: 'break', label: 'Morning Break' },
-        { number: 5, start: "10:30", end: "11:15", type: 'class', label: 'Period 4' },
-        { number: 6, start: "11:15", end: "12:00", type: 'class', label: 'Period 5' },
-        { number: 7, start: "12:00", end: "12:45", type: 'class', label: 'Period 6' },
-        { number: 8, start: "12:45", end: "13:30", type: 'break', label: 'Lunch Break' },
-        { number: 9, start: "13:30", end: "14:15", type: 'class', label: 'Period 7' },
-        { number: 10, start: "14:15", end: "15:00", type: 'class', label: 'Period 8' },
+        { number: 3.5, start: "10:15", end: "10:30", type: 'break', label: 'Morning Break' },
+        { number: 4, start: "10:30", end: "11:15", type: 'class', label: 'Period 4' },
+        { number: 5, start: "11:15", end: "12:00", type: 'class', label: 'Period 5' },
+        { number: 6, start: "12:00", end: "12:45", type: 'class', label: 'Period 6' },
+        { number: 6.5, start: "12:45", end: "13:30", type: 'break', label: 'Lunch Break' },
+        { number: 7, start: "13:30", end: "14:15", type: 'class', label: 'Period 7' },
+        { number: 8, start: "14:15", end: "15:00", type: 'class', label: 'Period 8' },
       ];
     }
 
+    console.log('Using periods from config for batch:', batchId, config.periods);
     return config.periods
       .map(p => ({
         number: p.period_number,
