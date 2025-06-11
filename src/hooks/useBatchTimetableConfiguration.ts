@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -78,20 +77,17 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
       if (configError) throw configError;
 
       // Transform the data to match our interface
-      const transformedConfigs: TimetableConfiguration[] = configData?.map(config => ({
-        id: config.id,
-        name: config.name,
-        school_id: config.school_id,
-        academic_year_id: config.academic_year_id,
-        is_active: config.is_active,
-        is_default: config.is_default,
-        selected_days: config.selected_days || [],
-        periods: (config.period_settings || [])
-          .map(p => {
+      const transformedConfigs: TimetableConfiguration[] = configData?.map(config => {
+        // Group periods by period_number to remove duplicates across days
+        const periodsMap = new Map();
+        
+        (config.period_settings || []).forEach(p => {
+          const key = p.period_number;
+          if (!periodsMap.has(key)) {
             const isBreak = p.type === 'break';
             const periodType: 'class' | 'break' = isBreak ? 'break' : 'class';
             
-            return {
+            periodsMap.set(key, {
               id: p.id,
               period_number: p.period_number,
               start_time: p.start_time,
@@ -105,10 +101,25 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
                 p.label?.toLowerCase().includes('morning') || p.label?.toLowerCase().includes('mom') ? 'morning' as const : 
                 'afternoon' as const
               ) : undefined
-            };
-          })
-          .sort((a, b) => a.period_number - b.period_number)
-      })) || [];
+            });
+          }
+        });
+
+        // Convert map to array and sort by period number
+        const uniquePeriods = Array.from(periodsMap.values())
+          .sort((a, b) => a.period_number - b.period_number);
+
+        return {
+          id: config.id,
+          name: config.name,
+          school_id: config.school_id,
+          academic_year_id: config.academic_year_id,
+          is_active: config.is_active,
+          is_default: config.is_default,
+          selected_days: config.selected_days || [],
+          periods: uniquePeriods
+        };
+      }) || [];
 
       setConfigurations(transformedConfigs);
     } catch (error: any) {
