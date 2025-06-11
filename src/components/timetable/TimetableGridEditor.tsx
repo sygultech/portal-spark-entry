@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,49 +109,56 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     fetchBatchConfiguration();
   }, [selectedBatch, selectedYear?.id, profile?.school_id, getTimetableConfigurations]);
 
-  // Function to get periods for a specific day
-  const getPeriodsForDay = (dayId: string) => {
-    if (!batchConfiguration) {
-      console.log(`No batch configuration available for ${dayId}, using fallback periods`);
-      return allPeriods; // Fallback to general periods
+  // Memoize the periods for each day to prevent infinite loops
+  const dayPeriodsMap = useMemo(() => {
+    if (!batchConfiguration || !selectedDays.length) {
+      console.log('No batch configuration or selected days available, using fallback');
+      return {};
     }
 
     const { daySpecificPeriods, defaultPeriods, enableFlexibleTimings } = batchConfiguration;
-    
-    console.log(`Getting periods for ${dayId}:`);
-    console.log('Enable flexible timings:', enableFlexibleTimings);
-    console.log('Day specific periods available:', daySpecificPeriods);
-    console.log('Default periods available:', defaultPeriods);
-    
-    // If flexible timings are enabled and this day has specific periods, use them
-    if (enableFlexibleTimings && daySpecificPeriods && daySpecificPeriods[dayId]) {
-      console.log(`Using day-specific periods for ${dayId}:`, daySpecificPeriods[dayId]);
-      // Transform the periods to match the expected format
-      return daySpecificPeriods[dayId].map((period: any) => ({
-        number: period.number,
-        start: period.startTime,
-        end: period.endTime,
-        type: period.type || 'class',
-        label: period.label
-      }));
-    }
-    
-    // If we have default periods, use them
-    if (defaultPeriods && defaultPeriods.length > 0) {
-      console.log(`Using default periods for ${dayId}:`, defaultPeriods);
-      // Transform the periods to match the expected format
-      return defaultPeriods.map((period: any) => ({
-        number: period.number,
-        start: period.startTime,
-        end: period.endTime,
-        type: period.type || 'class',
-        label: period.label
-      }));
-    }
-    
-    // Otherwise fall back to the general periods from the hook
-    console.log(`Using fallback periods for ${dayId}:`, allPeriods);
-    return allPeriods;
+    const periodsMap: Record<string, any[]> = {};
+
+    selectedDays.forEach(dayId => {
+      console.log(`Computing periods for ${dayId}`);
+      
+      // If flexible timings are enabled and this day has specific periods, use them
+      if (enableFlexibleTimings && daySpecificPeriods && daySpecificPeriods[dayId]) {
+        console.log(`Using day-specific periods for ${dayId}:`, daySpecificPeriods[dayId]);
+        // Transform the periods to match the expected format
+        periodsMap[dayId] = daySpecificPeriods[dayId].map((period: any) => ({
+          number: period.number,
+          start: period.startTime,
+          end: period.endTime,
+          type: period.type || 'class',
+          label: period.label
+        }));
+      }
+      // If we have default periods, use them
+      else if (defaultPeriods && defaultPeriods.length > 0) {
+        console.log(`Using default periods for ${dayId}:`, defaultPeriods);
+        // Transform the periods to match the expected format
+        periodsMap[dayId] = defaultPeriods.map((period: any) => ({
+          number: period.number,
+          start: period.startTime,
+          end: period.endTime,
+          type: period.type || 'class',
+          label: period.label
+        }));
+      }
+      // Otherwise fall back to the general periods from the hook
+      else {
+        console.log(`Using fallback periods for ${dayId}:`, allPeriods);
+        periodsMap[dayId] = allPeriods;
+      }
+    });
+
+    return periodsMap;
+  }, [batchConfiguration, selectedDays, allPeriods]);
+
+  // Function to get periods for a specific day using memoized data
+  const getPeriodsForDay = (dayId: string) => {
+    return dayPeriodsMap[dayId] || allPeriods;
   };
 
   useEffect(() => {
@@ -236,6 +243,16 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     const index = parseInt(subjectId.slice(-1), 16) % colors.length;
     return colors[index];
   };
+
+  // Get unique period numbers across all days for rendering the grid
+  const allPeriodNumbers = useMemo(() => {
+    const periodNumbers = new Set<number>();
+    selectedDays.forEach(day => {
+      const dayPeriods = getPeriodsForDay(day);
+      dayPeriods.forEach(p => periodNumbers.add(p.number));
+    });
+    return Array.from(periodNumbers).sort((a, b) => a - b);
+  }, [selectedDays, dayPeriodsMap]);
 
   // Show loading state
   if (academicYearLoading || batchesLoading || configLoading) {
@@ -397,12 +414,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                 </tr>
               </thead>
               <tbody>
-                {/* We need to get the maximum number of periods across all days */}
-                {Array.from(new Set(
-                  selectedDays.flatMap(day => 
-                    getPeriodsForDay(day).map(p => p.number)
-                  )
-                )).sort((a, b) => a - b).map((periodNumber) => {
+                {allPeriodNumbers.map((periodNumber) => {
                   return (
                     <tr key={periodNumber}>
                       <td className="border border-gray-200 p-3 font-medium text-sm bg-gray-50">
@@ -530,13 +542,13 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
               <Label>Room (Optional)</Label>
               <Select
                 value={newSchedule.room_id || ''}
-                onValueChange={(value) => setNewSchedule(prev => ({ ...prev, room_id: value }))}
+                onValueChange={(value) => setNewSchedule(prev => ({ ...prev, room_id: value || undefined }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select room" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No room assigned</SelectItem>
+                  <SelectItem value="no-room">No room assigned</SelectItem>
                   {rooms.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
                       {room.name} {room.code && `(${room.code})`}
@@ -619,3 +631,5 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 };
 
 export default TimetableGridEditor;
+
+}
