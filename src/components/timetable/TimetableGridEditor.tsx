@@ -47,7 +47,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   
   // Use the new batch timetable configuration hook
   const {
-    getTimeSlots,
+    getAllPeriods,
     isBreakTime,
     getBreakInfo,
     isLoading: configLoading
@@ -71,8 +71,10 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const { specialClasses, fetchSpecialClasses } = useSpecialClasses(profile?.school_id || '');
   const { holidays, fetchHolidays } = useHolidays(profile?.school_id || '');
 
-  // Get dynamic time slots based on selected batch
-  const timeSlots = selectedBatch ? getTimeSlots(selectedBatch) : [];
+  // Get dynamic periods (including breaks) based on selected batch
+  const allPeriods = selectedBatch ? getAllPeriods(selectedBatch) : [];
+  // Filter out breaks to get only class periods for time slots
+  const timeSlots = allPeriods.filter(p => p.type === 'class');
 
   useEffect(() => {
     if (selectedBatch && selectedYear?.id) {
@@ -298,28 +300,27 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                 </tr>
               </thead>
               <tbody>
-                {timeSlots.map((timeSlot) => {
-                  const isBreak = selectedBatch && isBreakTime(selectedBatch, timeSlot.number);
-                  const breakInfo = selectedBatch && isBreak ? getBreakInfo(selectedBatch, timeSlot.number) : null;
+                {allPeriods.map((period) => {
+                  const isBreak = period.type === 'break';
                   
                   return (
-                    <tr key={timeSlot.number}>
+                    <tr key={period.number}>
                       <td className="border border-gray-200 p-3 font-medium text-sm bg-gray-50">
-                        <div>Period {timeSlot.number}</div>
-                        <div className="text-xs text-gray-600">{timeSlot.start} - {timeSlot.end}</div>
+                        <div>{period.label}</div>
+                        <div className="text-xs text-gray-600">{period.start} - {period.end}</div>
                       </td>
                       {weekDays.map((day) => {
-                        const schedule = getScheduleForSlot(day, timeSlot.number);
+                        const schedule = getScheduleForSlot(day, period.number);
                         
                         return (
-                          <td key={`${day}-${timeSlot.number}`} className="border border-gray-200 p-1">
+                          <td key={`${day}-${period.number}`} className="border border-gray-200 p-1">
                             {isBreak ? (
                               <div className={`h-20 flex items-center justify-center rounded text-sm ${
-                                breakInfo?.type === 'lunch' ? 'bg-orange-50 text-orange-700' : 
-                                breakInfo?.type === 'morning' ? 'bg-yellow-50 text-yellow-700' : 
+                                period.label?.toLowerCase().includes('lunch') ? 'bg-orange-50 text-orange-700' : 
+                                period.label?.toLowerCase().includes('morning') ? 'bg-yellow-50 text-yellow-700' : 
                                 'bg-blue-50 text-blue-700'
                               }`}>
-                                {breakInfo?.label || 'Break'}
+                                {period.label}
                               </div>
                             ) : schedule ? (
                               <div className={`h-20 p-2 rounded ${getSubjectColor(schedule.subject_id)} relative group`}>
@@ -342,7 +343,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                             ) : (
                               <div 
                                 className="h-20 border-2 border-dashed border-gray-200 rounded hover:border-gray-400 hover:bg-gray-50 cursor-pointer flex items-center justify-center transition-colors"
-                                onClick={() => handleAddSchedule(day, timeSlot.number)}
+                                onClick={() => handleAddSchedule(day, period.number)}
                               >
                                 <Plus className="h-6 w-6 text-gray-400" />
                               </div>

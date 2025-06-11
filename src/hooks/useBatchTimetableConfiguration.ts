@@ -64,10 +64,8 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
             period_number,
             start_time,
             end_time,
-            period_type,
-            label,
-            is_break,
-            break_type
+            type,
+            label
           )
         `)
         .eq('school_id', schoolId)
@@ -78,10 +76,24 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
       if (configError) throw configError;
 
       // Transform the data to match our interface
-      const transformedConfigs = configData.map(config => ({
+      const transformedConfigs = configData?.map(config => ({
         ...config,
-        periods: (config.period_settings || []).sort((a, b) => a.period_number - b.period_number)
-      }));
+        periods: (config.period_settings || [])
+          .map(p => ({
+            id: p.id,
+            period_number: p.period_number,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            period_type: p.type === 'break' ? 'break' : 'class',
+            label: p.label,
+            is_break: p.type === 'break',
+            break_type: p.type === 'break' ? (
+              p.label?.toLowerCase().includes('lunch') ? 'lunch' :
+              p.label?.toLowerCase().includes('morning') ? 'morning' : 'afternoon'
+            ) : undefined
+          }))
+          .sort((a, b) => a.period_number - b.period_number)
+      })) || [];
 
       setConfigurations(transformedConfigs);
     } catch (error: any) {
@@ -165,19 +177,21 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
   const getTimeSlots = useCallback((batchId: string) => {
     const config = getBatchConfiguration(batchId);
     if (!config || !config.periods) {
+      console.log('No configuration found for batch:', batchId, 'using fallback periods');
       // Fallback to hardcoded periods if no configuration found
       return [
         { number: 1, start: "08:00", end: "08:45", type: 'class' },
         { number: 2, start: "08:45", end: "09:30", type: 'class' },
         { number: 3, start: "09:30", end: "10:15", type: 'class' },
-        { number: 4, start: "10:30", end: "11:15", type: 'class' }, // After break
+        { number: 4, start: "10:30", end: "11:15", type: 'class' },
         { number: 5, start: "11:15", end: "12:00", type: 'class' },
         { number: 6, start: "12:00", end: "12:45", type: 'class' },
-        { number: 7, start: "13:30", end: "14:15", type: 'class' }, // After lunch
+        { number: 7, start: "13:30", end: "14:15", type: 'class' },
         { number: 8, start: "14:15", end: "15:00", type: 'class' },
       ];
     }
 
+    console.log('Using config periods for batch:', batchId, config.periods);
     return config.periods
       .filter(p => !p.is_break)
       .map(p => ({
@@ -208,14 +222,61 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
   }, [getBatchConfiguration]);
 
   const isBreakTime = useCallback((batchId: string, periodNumber: number) => {
-    const breakPeriods = getBreakPeriods(batchId);
-    return breakPeriods.some(bp => bp.number === periodNumber);
-  }, [getBreakPeriods]);
+    const config = getBatchConfiguration(batchId);
+    if (!config || !config.periods) {
+      // Fallback break detection
+      return periodNumber === 4 || periodNumber === 7;
+    }
+
+    return config.periods.some(p => p.period_number === periodNumber && p.is_break);
+  }, [getBatchConfiguration]);
 
   const getBreakInfo = useCallback((batchId: string, periodNumber: number) => {
-    const breakPeriods = getBreakPeriods(batchId);
-    return breakPeriods.find(bp => bp.number === periodNumber);
-  }, [getBreakPeriods]);
+    const config = getBatchConfiguration(batchId);
+    if (!config || !config.periods) {
+      // Fallback break info
+      if (periodNumber === 4) return { type: 'morning', label: 'Morning Break' };
+      if (periodNumber === 7) return { type: 'lunch', label: 'Lunch Break' };
+      return null;
+    }
+
+    const breakPeriod = config.periods.find(p => p.period_number === periodNumber && p.is_break);
+    if (!breakPeriod) return null;
+
+    return {
+      type: breakPeriod.break_type || 'break',
+      label: breakPeriod.label || `${breakPeriod.break_type || 'Break'} Break`
+    };
+  }, [getBatchConfiguration]);
+
+  const getAllPeriods = useCallback((batchId: string) => {
+    const config = getBatchConfiguration(batchId);
+    if (!config || !config.periods) {
+      // Fallback periods including breaks
+      return [
+        { number: 1, start: "08:00", end: "08:45", type: 'class', label: 'Period 1' },
+        { number: 2, start: "08:45", end: "09:30", type: 'class', label: 'Period 2' },
+        { number: 3, start: "09:30", end: "10:15", type: 'class', label: 'Period 3' },
+        { number: 4, start: "10:15", end: "10:30", type: 'break', label: 'Morning Break' },
+        { number: 5, start: "10:30", end: "11:15", type: 'class', label: 'Period 4' },
+        { number: 6, start: "11:15", end: "12:00", type: 'class', label: 'Period 5' },
+        { number: 7, start: "12:00", end: "12:45", type: 'class', label: 'Period 6' },
+        { number: 8, start: "12:45", end: "13:30", type: 'break', label: 'Lunch Break' },
+        { number: 9, start: "13:30", end: "14:15", type: 'class', label: 'Period 7' },
+        { number: 10, start: "14:15", end: "15:00", type: 'class', label: 'Period 8' },
+      ];
+    }
+
+    return config.periods
+      .map(p => ({
+        number: p.period_number,
+        start: p.start_time,
+        end: p.end_time,
+        type: p.is_break ? 'break' : 'class',
+        label: p.label || (p.is_break ? `${p.break_type || 'Break'} Break` : `Period ${p.period_number}`)
+      }))
+      .sort((a, b) => a.number - b.number);
+  }, [getBatchConfiguration]);
 
   useEffect(() => {
     if (schoolId && academicYearId) {
@@ -234,6 +295,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
     getTimeSlots,
     getBreakPeriods,
     isBreakTime,
-    getBreakInfo
+    getBreakInfo,
+    getAllPeriods
   };
 };
