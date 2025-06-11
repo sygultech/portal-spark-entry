@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -76,22 +75,33 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
       if (configError) throw configError;
 
       // Transform the data to match our interface
-      const transformedConfigs = configData?.map(config => ({
-        ...config,
+      const transformedConfigs: TimetableConfiguration[] = configData?.map(config => ({
+        id: config.id,
+        name: config.name,
+        school_id: config.school_id,
+        academic_year_id: config.academic_year_id,
+        is_active: config.is_active,
+        is_default: config.is_default,
         periods: (config.period_settings || [])
-          .map(p => ({
-            id: p.id,
-            period_number: p.period_number,
-            start_time: p.start_time,
-            end_time: p.end_time,
-            period_type: p.type === 'break' ? 'break' : 'class',
-            label: p.label,
-            is_break: p.type === 'break',
-            break_type: p.type === 'break' ? (
-              p.label?.toLowerCase().includes('lunch') ? 'lunch' :
-              p.label?.toLowerCase().includes('morning') ? 'morning' : 'afternoon'
-            ) : undefined
-          }))
+          .map(p => {
+            const isBreak = p.type === 'break';
+            const periodType: 'class' | 'break' = isBreak ? 'break' : 'class';
+            
+            return {
+              id: p.id,
+              period_number: p.period_number,
+              start_time: p.start_time,
+              end_time: p.end_time,
+              period_type: periodType,
+              label: p.label,
+              is_break: isBreak,
+              break_type: isBreak ? (
+                p.label?.toLowerCase().includes('lunch') ? 'lunch' as const :
+                p.label?.toLowerCase().includes('morning') ? 'morning' as const : 
+                'afternoon' as const
+              ) : undefined
+            };
+          })
           .sort((a, b) => a.period_number - b.period_number)
       })) || [];
 
@@ -180,14 +190,14 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
       console.log('No configuration found for batch:', batchId, 'using fallback periods');
       // Fallback to hardcoded periods if no configuration found
       return [
-        { number: 1, start: "08:00", end: "08:45", type: 'class' },
-        { number: 2, start: "08:45", end: "09:30", type: 'class' },
-        { number: 3, start: "09:30", end: "10:15", type: 'class' },
-        { number: 4, start: "10:30", end: "11:15", type: 'class' },
-        { number: 5, start: "11:15", end: "12:00", type: 'class' },
-        { number: 6, start: "12:00", end: "12:45", type: 'class' },
-        { number: 7, start: "13:30", end: "14:15", type: 'class' },
-        { number: 8, start: "14:15", end: "15:00", type: 'class' },
+        { number: 1, start: "08:00", end: "08:45", type: 'class' as const },
+        { number: 2, start: "08:45", end: "09:30", type: 'class' as const },
+        { number: 3, start: "09:30", end: "10:15", type: 'class' as const },
+        { number: 4, start: "10:30", end: "11:15", type: 'class' as const },
+        { number: 5, start: "11:15", end: "12:00", type: 'class' as const },
+        { number: 6, start: "12:00", end: "12:45", type: 'class' as const },
+        { number: 7, start: "13:30", end: "14:15", type: 'class' as const },
+        { number: 8, start: "14:15", end: "15:00", type: 'class' as const },
       ];
     }
 
@@ -198,7 +208,7 @@ export const useBatchTimetableConfiguration = (schoolId: string, academicYearId?
         number: p.period_number,
         start: p.start_time,
         end: p.end_time,
-        type: p.period_type as 'class' | 'break'
+        type: p.period_type
       }));
   }, [getBatchConfiguration]);
 
