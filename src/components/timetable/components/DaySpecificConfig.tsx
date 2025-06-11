@@ -18,7 +18,7 @@ interface DaySpecificConfigProps {
   defaultPeriods: Period[];
   onUpdateDayPeriods: (dayId: string, periods: Period[]) => void;
   daySpecificPeriods: Record<string, Period[]>;
-  initialFlexibleTimings?: boolean; // Add this prop to initialize state
+  initialFlexibleTimings?: boolean;
 }
 
 // Generate fortnight days
@@ -50,7 +50,7 @@ export const DaySpecificConfig = ({
   defaultPeriods,
   onUpdateDayPeriods,
   daySpecificPeriods,
-  initialFlexibleTimings = false // Default to false if not provided
+  initialFlexibleTimings = false
 }: DaySpecificConfigProps) => {
   const [enableFlexibleTimings, setEnableFlexibleTimings] = useState(initialFlexibleTimings);
   const [activeDay, setActiveDay] = useState<string | null>(null);
@@ -130,11 +130,14 @@ export const DaySpecificConfig = ({
   };
 
   const getCurrentPeriods = (dayId: string): Period[] => {
-    return daySpecificPeriods[dayId] || defaultPeriods;
+    // Use the correct day ID format for lookup
+    const lookupDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    return daySpecificPeriods[lookupDayId] || defaultPeriods;
   };
 
   const hasCustomTimings = (dayId: string): boolean => {
-    return !!daySpecificPeriods[dayId];
+    const lookupDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    return !!daySpecificPeriods[lookupDayId];
   };
 
   const hasValidationErrors = (dayId: string): boolean => {
@@ -147,7 +150,10 @@ export const DaySpecificConfig = ({
     const updatedPeriods = currentPeriods.map(period => 
       period.id === periodId ? { ...period, [field]: value } : period
     );
-    onUpdateDayPeriods(dayId, updatedPeriods);
+    
+    // Use the correct day ID format for updates
+    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    onUpdateDayPeriods(targetDayId, updatedPeriods);
     
     // Immediate validation feedback
     setTimeout(() => {
@@ -185,7 +191,10 @@ export const DaySpecificConfig = ({
     // Insert the break without changing any period numbers
     const newPeriods = [...currentPeriods];
     newPeriods.splice(periodIndex + 1, 0, breakPeriod);
-    onUpdateDayPeriods(dayId, newPeriods);
+    
+    // Use the correct day ID format for updates
+    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    onUpdateDayPeriods(targetDayId, newPeriods);
     
     // Validate after adding break
     setTimeout(() => {
@@ -208,7 +217,10 @@ export const DaySpecificConfig = ({
   const removeBreak = (dayId: string, breakId: string) => {
     const currentPeriods = getCurrentPeriods(dayId);
     const updatedPeriods = currentPeriods.filter(p => p.id !== breakId);
-    onUpdateDayPeriods(dayId, updatedPeriods);
+    
+    // Use the correct day ID format for updates
+    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    onUpdateDayPeriods(targetDayId, updatedPeriods);
     
     toast({
       title: "Break Removed",
@@ -221,7 +233,10 @@ export const DaySpecificConfig = ({
     const updatedPeriods = currentPeriods.map(period => 
       period.id === periodId ? { ...period, label } : period
     );
-    onUpdateDayPeriods(dayId, updatedPeriods);
+    
+    // Use the correct day ID format for updates
+    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
+    onUpdateDayPeriods(targetDayId, updatedPeriods);
   };
 
   // Get overall validation status for all day-specific configurations

@@ -779,6 +779,56 @@ export type Database = {
           },
         ]
       }
+      holidays: {
+        Row: {
+          affects_batches: string[] | null
+          created_at: string | null
+          date: string
+          description: string | null
+          holiday_type: string
+          id: string
+          is_recurring: boolean | null
+          name: string
+          recurrence_pattern: Json | null
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          affects_batches?: string[] | null
+          created_at?: string | null
+          date: string
+          description?: string | null
+          holiday_type: string
+          id?: string
+          is_recurring?: boolean | null
+          name: string
+          recurrence_pattern?: Json | null
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          affects_batches?: string[] | null
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          holiday_type?: string
+          id?: string
+          is_recurring?: boolean | null
+          name?: string
+          recurrence_pattern?: Json | null
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_holidays_school"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_resources: {
         Row: {
           author: string | null
@@ -971,6 +1021,103 @@ export type Database = {
           },
         ]
       }
+      room_allocations: {
+        Row: {
+          academic_year_id: string
+          allocated_by: string
+          allocation_type: string
+          created_at: string | null
+          date: string
+          end_time: string
+          id: string
+          room_id: string
+          schedule_id: string | null
+          school_id: string
+          special_class_id: string | null
+          start_time: string
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          allocated_by: string
+          allocation_type: string
+          created_at?: string | null
+          date: string
+          end_time: string
+          id?: string
+          room_id: string
+          schedule_id?: string | null
+          school_id: string
+          special_class_id?: string | null
+          start_time: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          allocated_by?: string
+          allocation_type?: string
+          created_at?: string | null
+          date?: string
+          end_time?: string
+          id?: string
+          room_id?: string
+          schedule_id?: string | null
+          school_id?: string
+          special_class_id?: string | null
+          start_time?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_room_allocations_academic_year"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_room_allocations_allocated_by"
+            columns: ["allocated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_room_allocations_room"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_room_allocations_schedule"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "timetable_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_room_allocations_school"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_room_allocations_special_class"
+            columns: ["special_class_id"]
+            isOneToOne: false
+            referencedRelation: "special_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           capacity: number | null
@@ -1110,6 +1257,97 @@ export type Database = {
             columns: ["default_grading_system_id"]
             isOneToOne: false
             referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      special_classes: {
+        Row: {
+          batch_ids: string[]
+          class_type: string
+          created_at: string | null
+          created_by: string
+          date: string
+          description: string | null
+          end_time: string
+          id: string
+          is_recurring: boolean | null
+          recurrence_end_date: string | null
+          recurrence_pattern: Json | null
+          replaced_schedule_ids: string[] | null
+          replaces_regular_class: boolean | null
+          room_id: string | null
+          school_id: string
+          start_time: string
+          status: string | null
+          teacher_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          batch_ids: string[]
+          class_type: string
+          created_at?: string | null
+          created_by: string
+          date: string
+          description?: string | null
+          end_time: string
+          id?: string
+          is_recurring?: boolean | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: Json | null
+          replaced_schedule_ids?: string[] | null
+          replaces_regular_class?: boolean | null
+          room_id?: string | null
+          school_id: string
+          start_time: string
+          status?: string | null
+          teacher_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          batch_ids?: string[]
+          class_type?: string
+          created_at?: string | null
+          created_by?: string
+          date?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          is_recurring?: boolean | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: Json | null
+          replaced_schedule_ids?: string[] | null
+          replaces_regular_class?: boolean | null
+          room_id?: string | null
+          school_id?: string
+          start_time?: string
+          status?: string | null
+          teacher_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_special_classes_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_special_classes_room"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_special_classes_school"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -1920,6 +2158,198 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetable_overrides: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string
+          date: string
+          id: string
+          new_end_time: string | null
+          new_room_id: string | null
+          new_start_time: string | null
+          notes: string | null
+          original_schedule_id: string
+          override_type: string
+          reason: string
+          school_id: string
+          status: string | null
+          substitute_teacher_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by: string
+          date: string
+          id?: string
+          new_end_time?: string | null
+          new_room_id?: string | null
+          new_start_time?: string | null
+          notes?: string | null
+          original_schedule_id: string
+          override_type: string
+          reason: string
+          school_id: string
+          status?: string | null
+          substitute_teacher_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string
+          date?: string
+          id?: string
+          new_end_time?: string | null
+          new_room_id?: string | null
+          new_start_time?: string | null
+          notes?: string | null
+          original_schedule_id?: string
+          override_type?: string
+          reason?: string
+          school_id?: string
+          status?: string | null
+          substitute_teacher_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_timetable_overrides_approved_by"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_overrides_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_overrides_room"
+            columns: ["new_room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_overrides_schedule"
+            columns: ["original_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "timetable_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_overrides_school"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetable_schedules: {
+        Row: {
+          academic_year_id: string
+          batch_id: string
+          created_at: string | null
+          day_of_week: string
+          end_time: string
+          fortnight_week: number | null
+          id: string
+          is_active: boolean | null
+          period_number: number
+          room_id: string | null
+          school_id: string
+          start_time: string
+          subject_id: string
+          teacher_id: string
+          updated_at: string | null
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          batch_id: string
+          created_at?: string | null
+          day_of_week: string
+          end_time: string
+          fortnight_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          period_number: number
+          room_id?: string | null
+          school_id: string
+          start_time: string
+          subject_id: string
+          teacher_id: string
+          updated_at?: string | null
+          valid_from: string
+          valid_to?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          batch_id?: string
+          created_at?: string | null
+          day_of_week?: string
+          end_time?: string
+          fortnight_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          period_number?: number
+          room_id?: string | null
+          school_id?: string
+          start_time?: string
+          subject_id?: string
+          teacher_id?: string
+          updated_at?: string | null
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_timetable_schedules_academic_year"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_schedules_batch"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_schedules_room"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_schedules_school"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_schedules_subject"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]

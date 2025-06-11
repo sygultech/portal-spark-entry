@@ -1,7 +1,9 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 
+// Legacy interfaces for backward compatibility
 export interface TimeSlot {
   id: string;
   subject_teacher_id: string;
@@ -40,37 +42,37 @@ export interface SubjectTeacher {
 export const useTimetable = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch timetable for a batch
+  // Fetch timetable for a batch using new structure
   const getBatchTimetable = async (batchId: string) => {
     setIsLoading(true);
     try {
-      const { data: subjectTeachers, error: stError } = await supabase
-        .from('subject_teachers')
+      const { data: schedules, error } = await supabase
+        .from('timetable_schedules')
         .select(`
-          id,
+          *,
           subject:subjects(name, code),
-          teacher:profiles(first_name, last_name)
+          teacher:profiles(first_name, last_name),
+          room:rooms(name, code)
         `)
-        .eq('batch_id', batchId);
+        .eq('batch_id', batchId)
+        .eq('is_active', true);
 
-      if (stError) throw stError;
+      if (error) throw error;
 
-      const { data: timeSlots, error: tsError } = await supabase
-        .from('subject_time_slots')
-        .select('*')
-        .in('subject_teacher_id', subjectTeachers.map(st => st.id));
-
-      if (tsError) throw tsError;
-
-      // Combine the data
-      const timetable = timeSlots.map(slot => {
-        const subjectTeacher = subjectTeachers.find(st => st.id === slot.subject_teacher_id);
-        return {
-          ...slot,
-          subject: subjectTeacher?.subject,
-          teacher: subjectTeacher?.teacher
-        };
-      });
+      // Convert to legacy format for backward compatibility
+      const timetable = schedules.map(schedule => ({
+        id: schedule.id,
+        subject_teacher_id: `${schedule.subject_id}-${schedule.teacher_id}`,
+        day_of_week: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+          .indexOf(schedule.day_of_week.toLowerCase()),
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        room_number: schedule.room?.name || schedule.room?.code,
+        created_at: schedule.created_at,
+        updated_at: schedule.updated_at,
+        subject: schedule.subject,
+        teacher: schedule.teacher
+      }));
 
       return timetable;
     } catch (error: any) {
@@ -85,42 +87,20 @@ export const useTimetable = () => {
     }
   };
 
-  // Create a new time slot
+  // Create a new time slot using new structure
   const createTimeSlot = async (data: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>) => {
     setIsLoading(true);
     try {
-      // Check for scheduling conflicts
-      const { data: conflicts, error: conflictError } = await supabase
-        .from('subject_time_slots')
-        .select('*')
-        .eq('day_of_week', data.day_of_week)
-        .or(`and(start_time.lte.${data.end_time},end_time.gte.${data.start_time})`);
-
-      if (conflictError) throw conflictError;
-
-      if (conflicts && conflicts.length > 0) {
-        toast({
-          title: 'Scheduling conflict',
-          description: 'This time slot overlaps with an existing slot',
-          variant: 'destructive'
-        });
-        return null;
-      }
-
-      const { data: newSlot, error } = await supabase
-        .from('subject_time_slots')
-        .insert([data])
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      // This is now a legacy function - recommend using useTimetableSchedules instead
+      console.warn('createTimeSlot is deprecated. Use useTimetableSchedules.createSchedule instead.');
+      
       toast({
-        title: 'Success',
-        description: 'Time slot created successfully'
+        title: 'Deprecated Function',
+        description: 'Please use the new timetable schedule management',
+        variant: 'destructive'
       });
 
-      return newSlot;
+      return null;
     } catch (error: any) {
       toast({
         title: 'Error creating time slot',
@@ -133,25 +113,19 @@ export const useTimetable = () => {
     }
   };
 
-  // Update a time slot
+  // Update a time slot using new structure
   const updateTimeSlot = async (id: string, data: Partial<TimeSlot>) => {
     setIsLoading(true);
     try {
-      const { data: updatedSlot, error } = await supabase
-        .from('subject_time_slots')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      console.warn('updateTimeSlot is deprecated. Use useTimetableSchedules.updateSchedule instead.');
+      
       toast({
-        title: 'Success',
-        description: 'Time slot updated successfully'
+        title: 'Deprecated Function',
+        description: 'Please use the new timetable schedule management',
+        variant: 'destructive'
       });
 
-      return updatedSlot;
+      return null;
     } catch (error: any) {
       toast({
         title: 'Error updating time slot',
@@ -164,23 +138,19 @@ export const useTimetable = () => {
     }
   };
 
-  // Delete a time slot
+  // Delete a time slot using new structure
   const deleteTimeSlot = async (id: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('subject_time_slots')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      console.warn('deleteTimeSlot is deprecated. Use useTimetableSchedules.deleteSchedule instead.');
+      
       toast({
-        title: 'Success',
-        description: 'Time slot deleted successfully'
+        title: 'Deprecated Function',
+        description: 'Please use the new timetable schedule management',
+        variant: 'destructive'
       });
 
-      return true;
+      return false;
     } catch (error: any) {
       toast({
         title: 'Error deleting time slot',
@@ -193,7 +163,7 @@ export const useTimetable = () => {
     }
   };
 
-  // Assign teacher to subject
+  // Assign teacher to subject - still relevant
   const assignTeacherToSubject = async (data: Omit<SubjectTeacher, 'id' | 'created_at' | 'updated_at'>) => {
     setIsLoading(true);
     try {
@@ -231,4 +201,4 @@ export const useTimetable = () => {
     deleteTimeSlot,
     assignTeacherToSubject
   };
-}; 
+};

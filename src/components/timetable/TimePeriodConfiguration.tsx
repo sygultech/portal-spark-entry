@@ -243,7 +243,9 @@ export const TimePeriodConfiguration = ({
       isExistingConfig,
       configName,
       isActive,
-      isDefault
+      isDefault,
+      enableFlexibleTimings,
+      daySpecificPeriods: Object.keys(daySpecificPeriods)
     });
 
     const result = await saveTimetableConfiguration({
@@ -316,10 +318,17 @@ export const TimePeriodConfiguration = ({
   };
 
   const handleUpdateDayPeriods = (dayId: string, updatedPeriods: Period[]) => {
+    console.log('TimePeriodConfiguration: Updating day periods for day:', dayId, 'periods:', updatedPeriods.length);
     setDaySpecificPeriods(prev => ({
       ...prev,
       [dayId]: updatedPeriods
     }));
+    
+    // Auto-enable flexible timings when day-specific periods are added
+    if (updatedPeriods.length > 0 && !enableFlexibleTimings) {
+      setEnableFlexibleTimings(true);
+      console.log('TimePeriodConfiguration: Auto-enabling flexible timings due to day-specific periods');
+    }
   };
 
   const handleSelectedDaysChange = (days: string[]) => {
@@ -378,7 +387,8 @@ export const TimePeriodConfiguration = ({
     periods: periods.length,
     selectedDays: selectedDays.length,
     isExistingConfig,
-    enableFlexibleTimings
+    enableFlexibleTimings,
+    daySpecificPeriodsKeys: Object.keys(daySpecificPeriods)
   });
 
   return (

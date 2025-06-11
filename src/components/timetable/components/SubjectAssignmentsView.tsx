@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Filter, BookOpen, Users, Plus, Trash2, Edit3 } from "lucide-react";
+import { Search, Filter, BookOpen, Users, Plus, Trash2, Calendar } from "lucide-react";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useBatches } from "@/hooks/useBatches";
 import { useTeachersFromStaff } from "@/hooks/useTeachersFromStaff";
 import { useSubjectTeachers } from "@/hooks/useSubjectTeachers";
+import { useTimetableSchedules } from "@/hooks/useTimetableSchedules";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/use-toast";
 
 interface SubjectAssignmentsViewProps {
   selectedAcademicYearId?: string;
@@ -31,6 +33,11 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
     undefined,
     selectedAcademicYearId
   );
+  
+  const { schedules, fetchSchedules } = useTimetableSchedules(
+    profile?.school_id || '', 
+    selectedAcademicYearId
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
@@ -39,6 +46,12 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState("");
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
+
+  useEffect(() => {
+    if (selectedAcademicYearId) {
+      fetchSchedules();
+    }
+  }, [selectedAcademicYearId, fetchSchedules]);
 
   // Filter assignments based on search and filters
   const filteredAssignments = subjectTeachers.filter(assignment => {
@@ -58,6 +71,11 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
 
   const handleAssignTeacher = async () => {
     if (!selectedSubjectId || !selectedBatchId || !selectedTeacherId || !selectedAcademicYearId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select subject, batch, and teacher',
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -100,6 +118,17 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
     return { totalSubjects, assignedSubjects, totalTeachers, activeTeachers };
   };
 
+  const getScheduleCount = (assignmentId: string) => {
+    const assignment = subjectTeachers.find(st => st.id === assignmentId);
+    if (!assignment) return 0;
+    
+    return schedules.filter(schedule => 
+      schedule.subject_id === assignment.subject_id &&
+      schedule.teacher_id === assignment.teacher_id &&
+      schedule.batch_id === assignment.batch_id
+    ).length;
+  };
+
   const stats = getAssignmentStats();
 
   return (
@@ -136,7 +165,7 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
                   <SelectContent>
                     {subjects.map((subject) => (
                       <SelectItem key={subject.id} value={subject.id}>
-                        {subject.name}
+                        {subject.name} ({subject.code})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -261,7 +290,7 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-sm font-medium text-muted-foreground">Coverage</div>
+            <div className="text-sm font-medium text-muted-foreground">Schedule Coverage</div>
             <div className="text-2xl font-bold">
               {stats.totalSubjects > 0 ? Math.round((stats.assignedSubjects / stats.totalSubjects) * 100) : 0}%
             </div>
@@ -303,6 +332,7 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
                     <TableHead>Batch</TableHead>
                     <TableHead>Teacher</TableHead>
                     <TableHead>Subject Code</TableHead>
+                    <TableHead>Scheduled Periods</TableHead>
                     <TableHead>Assigned Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -336,6 +366,14 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
                         <Badge variant="secondary">
                           {assignment.subject?.code || 'N/A'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <Badge variant="outline">
+                            {getScheduleCount(assignment.id)} periods
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {new Date(assignment.created_at).toLocaleDateString()}
