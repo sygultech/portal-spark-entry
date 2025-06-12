@@ -21,7 +21,7 @@ import { useRooms } from "@/hooks/useRooms";
 import { useBatchTimetableConfiguration } from "@/hooks/useBatchTimetableConfiguration";
 import { useTimetableConfiguration } from "@/hooks/useTimetableConfiguration";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface TimetableGridEditorProps {
   selectedClass: string;
@@ -37,6 +37,13 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     selectedYear,
     isLoading: academicYearLoading 
   } = useAcademicYearSelector();
+
+  // State variables - declare these first
+  const [selectedBatch, setSelectedBatch] = useState<string>('');
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{ day: string; period: number } | null>(null);
+  const [newSchedule, setNewSchedule] = useState<Partial<CreateScheduleData>>({});
+  const [batchConfiguration, setBatchConfiguration] = useState<any>(null);
 
   // Fetch batches for the selected academic year
   const { batches, isLoading: batchesLoading } = useBatches(selectedYear?.id, undefined);
@@ -66,12 +73,6 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   // Add the timetable configuration hook to get day-specific periods
   const { getTimetableConfigurations } = useTimetableConfiguration();
   
-  const [selectedBatch, setSelectedBatch] = useState<string>('');
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ day: string; period: number } | null>(null);
-  const [newSchedule, setNewSchedule] = useState<Partial<CreateScheduleData>>({});
-  const [batchConfiguration, setBatchConfiguration] = useState<any>(null);
-
   const {
     schedules,
     isLoading: schedulesLoading,
@@ -321,14 +322,33 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
       return;
     }
 
-    // Get the time slot from the specific day's periods
-    const dayPeriods = getPeriodsForDay(newSchedule.day_of_week || '');
-    const timeSlot = dayPeriods.find(p => p.number === newSchedule.period_number && p.type === 'class');
-    
-    if (!timeSlot) {
+    if (!newSchedule.day_of_week || !newSchedule.period_number) {
       toast({
         title: 'Error',
-        description: 'Could not find time slot information',
+        description: 'Missing day or period information',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Get the time slot from the specific day's periods
+    const dayPeriods = getPeriodsForDay(newSchedule.day_of_week);
+    console.log('Looking for period:', newSchedule.period_number, 'in day periods:', dayPeriods);
+    
+    const timeSlot = dayPeriods.find(p => p.number === newSchedule.period_number && p.type === 'class');
+    console.log('Found time slot:', timeSlot);
+    
+    if (!timeSlot || !timeSlot.start || !timeSlot.end) {
+      console.error('Time slot not found or incomplete:', {
+        timeSlot,
+        requestedPeriod: newSchedule.period_number,
+        dayPeriods,
+        selectedDay: newSchedule.day_of_week
+      });
+      
+      toast({
+        title: 'Error',
+        description: `Could not find time slot information for period ${newSchedule.period_number} on ${newSchedule.day_of_week}. Please check the timetable configuration.`,
         variant: 'destructive'
       });
       return;
@@ -339,6 +359,8 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
       start_time: timeSlot.start,
       end_time: timeSlot.end
     };
+
+    console.log('Creating schedule with data:', scheduleData);
 
     const result = await createSchedule(scheduleData);
     if (result) {
