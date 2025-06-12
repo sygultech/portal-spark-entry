@@ -234,7 +234,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     fetchBatchConfiguration();
   }, [selectedBatch, selectedYear?.id, profile?.school_id, getTimetableConfigurations]);
 
-  // Memoize the periods for each day to prevent infinite loops
+  // Memoize the periods for each day to prevent infinite loops with improved transformation
   const dayPeriodsMap = useMemo(() => {
     if (!batchConfiguration || !selectedDays.length) {
       console.log('No batch configuration or selected days available, using fallback');
@@ -255,7 +255,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           number: period.number,
           start: period.startTime,
           end: period.endTime,
-          type: period.type || 'class',
+          type: period.type === 'period' ? 'class' : period.type, // Fix type mapping
           label: period.label
         }));
       }
@@ -267,7 +267,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
           number: period.number,
           start: period.startTime,
           end: period.endTime,
-          type: period.type || 'class',
+          type: period.type === 'period' ? 'class' : period.type, // Fix type mapping
           label: period.label
         }));
       }
@@ -276,6 +276,9 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
         console.log(`Using fallback periods for ${dayId}:`, allPeriods);
         periodsMap[dayId] = allPeriods;
       }
+
+      // Debug the final periods for this day
+      console.log(`Final periods for ${dayId}:`, periodsMap[dayId]);
     });
 
     return periodsMap;
@@ -283,7 +286,9 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
   // Function to get periods for a specific day using memoized data
   const getPeriodsForDay = (dayId: string) => {
-    return dayPeriodsMap[dayId] || allPeriods;
+    const periods = dayPeriodsMap[dayId] || allPeriods;
+    console.log(`getPeriodsForDay(${dayId}) returning:`, periods);
+    return periods;
   };
 
   useEffect(() => {
@@ -300,6 +305,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   }, [selectedYear?.id]);
 
   const handleAddSchedule = (day: string, period: number) => {
+    console.log('handleAddSchedule called with:', { day, period });
     setSelectedSlot({ day, period });
     setNewSchedule({
       school_id: profile?.school_id || '',
@@ -313,6 +319,8 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   };
 
   const handleSaveSchedule = async () => {
+    console.log('handleSaveSchedule called with newSchedule:', newSchedule);
+    
     if (!newSchedule.subject_id || !newSchedule.teacher_id) {
       toast({
         title: 'Validation Error',
@@ -335,20 +343,43 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     const dayPeriods = getPeriodsForDay(newSchedule.day_of_week);
     console.log('Looking for period:', newSchedule.period_number, 'in day periods:', dayPeriods);
     
+    // Debug each period to understand the structure
+    dayPeriods.forEach((p, index) => {
+      console.log(`Period ${index}:`, {
+        number: p.number,
+        type: p.type,
+        start: p.start,
+        end: p.end,
+        label: p.label,
+        fullPeriod: p
+      });
+    });
+    
     const timeSlot = dayPeriods.find(p => p.number === newSchedule.period_number && p.type === 'class');
     console.log('Found time slot:', timeSlot);
     
-    if (!timeSlot || !timeSlot.start || !timeSlot.end) {
-      console.error('Time slot not found or incomplete:', {
-        timeSlot,
+    if (!timeSlot) {
+      console.error('Time slot not found:', {
         requestedPeriod: newSchedule.period_number,
-        dayPeriods,
+        requestedType: 'class',
+        availablePeriods: dayPeriods.map(p => ({ number: p.number, type: p.type })),
         selectedDay: newSchedule.day_of_week
       });
       
       toast({
         title: 'Error',
-        description: `Could not find time slot information for period ${newSchedule.period_number} on ${newSchedule.day_of_week}. Please check the timetable configuration.`,
+        description: `Could not find time slot for period ${newSchedule.period_number} on ${newSchedule.day_of_week}. Available periods: ${dayPeriods.map(p => `${p.number}(${p.type})`).join(', ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!timeSlot.start || !timeSlot.end) {
+      console.error('Time slot found but missing start/end times:', timeSlot);
+      
+      toast({
+        title: 'Error',
+        description: `Time slot found but missing start/end times for period ${newSchedule.period_number} on ${newSchedule.day_of_week}. Please check the timetable configuration.`,
         variant: 'destructive'
       });
       return;
