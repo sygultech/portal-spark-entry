@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
   // Fetch batches for the selected academic year
   const { batches, isLoading: batchesLoading } = useBatches(selectedYear?.id, undefined);
-  const { subjects } = useSubjects(profile?.school_id || '');
+  const { subjects } = useSubjects(selectedYear?.id, undefined);
   const { teachers } = useTeachersFromStaff(profile?.school_id || '');
   const { rooms } = useRooms(profile?.school_id || '');
   
@@ -79,6 +80,23 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const selectedDays = selectedBatch ? getSelectedDays(selectedBatch) : [];
   // Filter out breaks to get only class periods for time slots
   const timeSlots = allPeriods.filter(p => p.type === 'class');
+
+  // Get subjects assigned to the selected batch - Fixed filtering logic
+  const availableSubjects = useMemo(() => {
+    if (!selectedBatch || !subjects?.length) {
+      console.log('No batch selected or no subjects available:', { selectedBatch, subjectsLength: subjects?.length });
+      return [];
+    }
+
+    const batchSubjects = subjects.filter(subject => {
+      const isAssigned = subject.batch_assignments?.some(ba => ba.batch_id === selectedBatch);
+      console.log(`Subject ${subject.name} assigned to batch:`, isAssigned, subject.batch_assignments);
+      return isAssigned;
+    });
+
+    console.log('Available subjects for batch:', batchSubjects);
+    return batchSubjects;
+  }, [subjects, selectedBatch]);
 
   // Fetch batch-specific configuration when batch is selected
   useEffect(() => {
@@ -258,7 +276,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   console.log('fetchSubjects called', { schoolId: profile?.school_id, academicYearId: selectedYear?.id });
   console.log('All subjects:', subjects);
   console.log('Selected batch:', selectedBatch);
-  console.log('Filtered subjects:', subjects.filter(subject => subject.batch_assignments?.some(ba => ba.batch_id === selectedBatch)));
+  console.log('Available subjects for dropdown:', availableSubjects);
   console.log('Current school_id:', profile?.school_id);
   console.log('Current academic_year_id:', selectedYear?.id);
 
@@ -518,13 +536,11 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects
-                    .filter(subject => subject.batch_assignments?.some(ba => ba.batch_id === selectedBatch))
-                    .map((subject) => (
-                      <SelectItem key={subject.id} value={subject.id}>
-                        {subject.name} ({subject.code})
-                      </SelectItem>
-                    ))}
+                  {availableSubjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name} {subject.code && `(${subject.code})`}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
