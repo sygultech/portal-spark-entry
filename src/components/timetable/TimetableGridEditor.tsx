@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,6 +96,31 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     console.log('Available subjects for batch:', batchSubjects);
     return batchSubjects;
   }, [subjects, selectedBatch]);
+
+  // Get teachers assigned to the selected subject and batch
+  const availableTeachers = useMemo(() => {
+    if (!newSchedule.subject_id || !selectedBatch || !teachers?.length) {
+      console.log('No subject selected or no batch/teachers available:', { 
+        subjectId: newSchedule.subject_id, 
+        selectedBatch, 
+        teachersLength: teachers?.length 
+      });
+      return teachers || []; // Return all teachers if no subject is selected yet
+    }
+
+    // Filter teachers who are assigned to teach the selected subject for the selected batch
+    // This would require checking the subject_teachers table, but since we don't have that hook data here,
+    // let's return all teachers for now and add a TODO comment
+    const assignedTeachers = teachers.filter(teacher => {
+      // Check if this teacher is assigned to teach the selected subject for the selected batch
+      // This would require checking the subject_teachers table, but since we don't have that hook data here,
+      // let's return all teachers for now and add a TODO comment
+      return true; // TODO: Filter based on subject_teachers assignments
+    });
+
+    console.log('Available teachers for subject and batch:', assignedTeachers);
+    return assignedTeachers;
+  }, [teachers, newSchedule.subject_id, selectedBatch]);
 
   // Fetch batch-specific configuration when batch is selected
   useEffect(() => {
@@ -277,6 +301,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   console.log('All subjects:', subjects);
   console.log('Selected batch:', selectedBatch);
   console.log('Available subjects for dropdown:', availableSubjects);
+  console.log('Available teachers for dropdown:', availableTeachers);
   console.log('Current school_id:', profile?.school_id);
   console.log('Current academic_year_id:', selectedYear?.id);
 
@@ -555,7 +580,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                   <SelectValue placeholder="Select teacher" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teachers.map((teacher) => (
+                  {availableTeachers.map((teacher) => (
                     <SelectItem key={teacher.profile_id || teacher.id} value={teacher.profile_id || teacher.id}>
                       {teacher.first_name} {teacher.last_name}
                     </SelectItem>
