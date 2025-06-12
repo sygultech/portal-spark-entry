@@ -26,20 +26,21 @@ export function useSubjects(academicYearId?: string, categoryId?: string, includ
       `)
       .eq('school_id', schoolId);
     
-    if (!includeArchived) {
-      query = query.eq('is_archived', false);
-    }
+    // Temporarily remove filters for debugging
+    // if (!includeArchived) {
+    //   query = query.eq('is_archived', false);
+    // }
     
     if (academicYearId) {
       query = query.eq('academic_year_id', academicYearId);
     }
     
-    if (categoryId) {
-      query = query.eq('category_id', categoryId);
-    }
+    // if (categoryId) {
+    //   query = query.eq('category_id', categoryId);
+    // }
     
     const { data, error } = await query.order('name');
-    
+    console.log('Supabase subjects response:', data, error);
     if (error) {
       console.error('Error fetching subjects:', error);
       throw error;

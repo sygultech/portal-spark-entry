@@ -254,6 +254,14 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     return Array.from(periodNumbers).sort((a, b) => a - b);
   }, [selectedDays, dayPeriodsMap]);
 
+  // Debug logs for subject dropdown issue
+  console.log('fetchSubjects called', { schoolId: profile?.school_id, academicYearId: selectedYear?.id });
+  console.log('All subjects:', subjects);
+  console.log('Selected batch:', selectedBatch);
+  console.log('Filtered subjects:', subjects.filter(subject => subject.batch_assignments?.some(ba => ba.batch_id === selectedBatch)));
+  console.log('Current school_id:', profile?.school_id);
+  console.log('Current academic_year_id:', selectedYear?.id);
+
   // Show loading state
   if (academicYearLoading || batchesLoading || configLoading) {
     return (
@@ -510,11 +518,13 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name} ({subject.code})
-                    </SelectItem>
-                  ))}
+                  {subjects
+                    .filter(subject => subject.batch_assignments?.some(ba => ba.batch_id === selectedBatch))
+                    .map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.name} ({subject.code})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
