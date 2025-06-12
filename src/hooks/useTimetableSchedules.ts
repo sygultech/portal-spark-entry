@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -70,7 +69,7 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
         .select(`
           *,
           subject:subjects(name, code),
-          teacher:profiles(first_name, last_name),
+          teacher:profiles!timetable_schedules_teacher_id_fkey(first_name, last_name),
           batch:batches(name),
           room:rooms(name, code)
         `)
