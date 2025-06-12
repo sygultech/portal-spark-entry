@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -293,6 +294,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
   useEffect(() => {
     if (selectedBatch && selectedYear?.id) {
+      console.log('Fetching schedules for batch:', selectedBatch);
       fetchSchedules(selectedBatch);
       fetchSpecialClasses();
       fetchHolidays(new Date().getFullYear());
@@ -403,7 +405,9 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
   const getScheduleForSlot = (day: string, period: number) => {
     const daySchedules = getScheduleByBatchAndDay(selectedBatch, day);
-    return daySchedules.find(s => s.period_number === period);
+    const schedule = daySchedules.find(s => s.period_number === period);
+    console.log('getScheduleForSlot:', { day, period, daySchedules, schedule });
+    return schedule;
   };
 
   const getSubjectColor = (subjectId: string) => {

@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -60,16 +61,25 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchSchedules = useCallback(async (batchId?: string) => {
-    if (!schoolId) return;
+    if (!schoolId) {
+      console.log('No schoolId provided for fetchSchedules');
+      return;
+    }
     
     setIsLoading(true);
     try {
+      console.log('Fetching schedules with params:', { 
+        schoolId, 
+        academicYearId, 
+        batchId 
+      });
+
       let query = supabase
         .from('timetable_schedules')
         .select(`
           *,
           subject:subjects(name, code),
-          teacher:profiles!timetable_schedules_teacher_id_fkey(first_name, last_name),
+          teacher:staff_details!timetable_schedules_teacher_id_fkey(first_name, last_name),
           batch:batches(name),
           room:rooms(name, code)
         `)
@@ -86,7 +96,12 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
 
       const { data, error } = await query.order('day_of_week').order('period_number');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching timetable schedules:', error);
+        throw error;
+      }
+      
+      console.log('Fetched schedules data:', data);
       setSchedules(data || []);
     } catch (error: any) {
       console.error('Error fetching timetable schedules:', error);
@@ -102,6 +117,8 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
 
   const createSchedule = useCallback(async (scheduleData: CreateScheduleData) => {
     try {
+      console.log('Creating schedule with data:', scheduleData);
+
       // Check for conflicts first
       const { data: conflicts, error: conflictError } = await supabase
         .from('timetable_schedules')
@@ -128,17 +145,30 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
       const { data, error } = await supabase
         .from('timetable_schedules')
         .insert([scheduleData])
-        .select()
+        .select(`
+          *,
+          subject:subjects(name, code),
+          teacher:staff_details!timetable_schedules_teacher_id_fkey(first_name, last_name),
+          batch:batches(name),
+          room:rooms(name, code)
+        `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating schedule:', error);
+        throw error;
+      }
+
+      console.log('Created schedule:', data);
 
       toast({
         title: 'Success',
         description: 'Schedule created successfully'
       });
 
-      await fetchSchedules();
+      // Immediately update the local state with the new schedule
+      setSchedules(prev => [...prev, data]);
+      
       return data;
     } catch (error: any) {
       console.error('Error creating schedule:', error);
@@ -149,7 +179,7 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
       });
       return null;
     }
-  }, [fetchSchedules]);
+  }, []);
 
   const updateSchedule = useCallback(async (id: string, updates: Partial<CreateScheduleData>) => {
     try {
@@ -157,7 +187,13 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
         .from('timetable_schedules')
         .update(updates)
         .eq('id', id)
-        .select()
+        .select(`
+          *,
+          subject:subjects(name, code),
+          teacher:staff_details!timetable_schedules_teacher_id_fkey(first_name, last_name),
+          batch:batches(name),
+          room:rooms(name, code)
+        `)
         .single();
 
       if (error) throw error;
@@ -167,7 +203,11 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
         description: 'Schedule updated successfully'
       });
 
-      await fetchSchedules();
+      // Update the local state
+      setSchedules(prev => prev.map(schedule => 
+        schedule.id === id ? data : schedule
+      ));
+      
       return data;
     } catch (error: any) {
       console.error('Error updating schedule:', error);
@@ -178,7 +218,7 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
       });
       return null;
     }
-  }, [fetchSchedules]);
+  }, []);
 
   const deleteSchedule = useCallback(async (id: string) => {
     try {
@@ -194,7 +234,9 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
         description: 'Schedule deleted successfully'
       });
 
-      await fetchSchedules();
+      // Update the local state
+      setSchedules(prev => prev.filter(schedule => schedule.id !== id));
+      
       return true;
     } catch (error: any) {
       console.error('Error deleting schedule:', error);
@@ -205,14 +247,23 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
       });
       return false;
     }
-  }, [fetchSchedules]);
+  }, []);
 
   const getScheduleByBatchAndDay = useCallback((batchId: string, dayOfWeek: string) => {
-    return schedules.filter(
+    const filteredSchedules = schedules.filter(
       schedule => 
         schedule.batch_id === batchId && 
-        schedule.day_of_week === dayOfWeek
-    ).sort((a, b) => a.period_number - b.period_number);
+        schedule.day_of_week.toLowerCase() === dayOfWeek.toLowerCase()
+    );
+    
+    console.log('getScheduleByBatchAndDay:', {
+      batchId,
+      dayOfWeek,
+      allSchedules: schedules,
+      filteredSchedules
+    });
+    
+    return filteredSchedules.sort((a, b) => a.period_number - b.period_number);
   }, [schedules]);
 
   const getTeacherSchedule = useCallback((teacherId: string, dayOfWeek?: string) => {
