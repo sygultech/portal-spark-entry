@@ -40,7 +40,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   // Fetch batches for the selected academic year
   const { batches, isLoading: batchesLoading } = useBatches(selectedYear?.id, undefined);
   const { subjects } = useSubjects(selectedYear?.id, undefined);
-  const { teachers } = useTeachersFromStaff(profile?.school_id || '');
+  const { teachers, isLoading: teachersLoading, fetchTeachers } = useTeachersFromStaff(profile?.school_id || '');
   const { rooms } = useRooms(profile?.school_id || '');
   
   // Use the new batch timetable configuration hook
@@ -97,30 +97,90 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     return batchSubjects;
   }, [subjects, selectedBatch]);
 
-  // Get teachers assigned to the selected subject and batch
-  const availableTeachers = useMemo(() => {
-    if (!newSchedule.subject_id || !selectedBatch || !teachers?.length) {
-      console.log('No subject selected or no batch/teachers available:', { 
-        subjectId: newSchedule.subject_id, 
-        selectedBatch, 
-        teachersLength: teachers?.length 
-      });
-      return teachers || []; // Return all teachers if no subject is selected yet
+  // Enhanced teacher availability with debugging
+  const { availableTeachers, teacherDropdownStatus } = useMemo(() => {
+    console.log('=== Teacher Dropdown Debug ===');
+    console.log('Teachers loading:', teachersLoading);
+    console.log('Raw teachers data:', teachers);
+    console.log('Teachers length:', teachers?.length);
+    console.log('Selected subject:', newSchedule.subject_id);
+    console.log('Selected batch:', selectedBatch);
+    console.log('School ID:', profile?.school_id);
+
+    // Check if teachers are loading
+    if (teachersLoading) {
+      return {
+        availableTeachers: [],
+        teacherDropdownStatus: {
+          isEmpty: true,
+          reason: 'Loading teachers...',
+          fixPath: 'Please wait while teachers are being loaded.'
+        }
+      };
     }
 
-    // Filter teachers who are assigned to teach the selected subject for the selected batch
-    // This would require checking the subject_teachers table, but since we don't have that hook data here,
-    // let's return all teachers for now and add a TODO comment
-    const assignedTeachers = teachers.filter(teacher => {
-      // Check if this teacher is assigned to teach the selected subject for the selected batch
-      // This would require checking the subject_teachers table, but since we don't have that hook data here,
-      // let's return all teachers for now and add a TODO comment
-      return true; // TODO: Filter based on subject_teachers assignments
-    });
+    // Check if no teachers exist at all
+    if (!teachers || teachers.length === 0) {
+      return {
+        availableTeachers: [],
+        teacherDropdownStatus: {
+          isEmpty: true,
+          reason: 'No teachers found in the system',
+          fixPath: [
+            '1. Go to Staff Management section',
+            '2. Add staff members with teacher role',
+            '3. Ensure they have "teacher" in their profile roles',
+            '4. Verify their employment_status is "Active"'
+          ]
+        }
+      };
+    }
 
-    console.log('Available teachers for subject and batch:', assignedTeachers);
-    return assignedTeachers;
-  }, [teachers, newSchedule.subject_id, selectedBatch]);
+    // Check if school_id is missing
+    if (!profile?.school_id) {
+      return {
+        availableTeachers: [],
+        teacherDropdownStatus: {
+          isEmpty: true,
+          reason: 'School ID not found in user profile',
+          fixPath: 'Contact administrator to fix user profile school assignment.'
+        }
+      };
+    }
+
+    // If no subject or batch selected, show all teachers
+    if (!newSchedule.subject_id || !selectedBatch) {
+      return {
+        availableTeachers: teachers,
+        teacherDropdownStatus: {
+          isEmpty: false,
+          reason: 'Showing all teachers (no subject/batch filter applied)',
+          fixPath: 'Select a subject first to filter teachers by assignment.'
+        }
+      };
+    }
+
+    // TODO: Filter teachers based on subject_teachers table
+    // For now, return all teachers as we don't have subject_teachers hook implemented
+    return {
+      availableTeachers: teachers,
+      teacherDropdownStatus: {
+        isEmpty: teachers.length === 0,
+        reason: teachers.length === 0 ? 'No teachers available for selected subject' : 'Showing all teachers (subject filtering not implemented)',
+        fixPath: teachers.length === 0 
+          ? 'Add teacher assignments for this subject in Subject Management'
+          : 'TODO: Implement subject-teacher filtering using useSubjectTeachers hook'
+      }
+    };
+  }, [teachers, teachersLoading, newSchedule.subject_id, selectedBatch, profile?.school_id]);
+
+  // Fetch teachers when component mounts or school changes
+  useEffect(() => {
+    if (profile?.school_id) {
+      console.log('Fetching teachers for school:', profile.school_id);
+      fetchTeachers();
+    }
+  }, [profile?.school_id, fetchTeachers]);
 
   // Fetch batch-specific configuration when batch is selected
   useEffect(() => {
@@ -301,6 +361,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   console.log('All subjects:', subjects);
   console.log('Selected batch:', selectedBatch);
   console.log('Available subjects for dropdown:', availableSubjects);
+  console.log('Teacher dropdown status:', teacherDropdownStatus);
   console.log('Available teachers for dropdown:', availableTeachers);
   console.log('Current school_id:', profile?.school_id);
   console.log('Current academic_year_id:', selectedYear?.id);
@@ -572,17 +633,45 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
             <div>
               <Label>Teacher</Label>
+              {teacherDropdownStatus.isEmpty && (
+                <Alert className="mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <p><strong>Issue:</strong> {teacherDropdownStatus.reason}</p>
+                      <div>
+                        <strong>How to fix:</strong>
+                        {Array.isArray(teacherDropdownStatus.fixPath) ? (
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            {teacherDropdownStatus.fixPath.map((step, index) => (
+                              <li key={index} className="text-sm">{step}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm mt-1">{teacherDropdownStatus.fixPath}</p>
+                        )}
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
               <Select
                 value={newSchedule.teacher_id || ''}
                 onValueChange={(value) => setNewSchedule(prev => ({ ...prev, teacher_id: value }))}
+                disabled={teachersLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select teacher" />
+                  <SelectValue placeholder={
+                    teachersLoading ? "Loading teachers..." : 
+                    teacherDropdownStatus.isEmpty ? "No teachers available" : 
+                    "Select teacher"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
                   {availableTeachers.map((teacher) => (
                     <SelectItem key={teacher.profile_id || teacher.id} value={teacher.profile_id || teacher.id}>
                       {teacher.first_name} {teacher.last_name}
+                      {teacher.employee_id && ` (${teacher.employee_id})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
