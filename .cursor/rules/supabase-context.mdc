@@ -1,6 +1,3 @@
-globs: 
-alwaysApply: true
----
 ---
 description: Always include Supabase functions and schema
 globs:
@@ -13,8 +10,8 @@ alwaysApply: true
 
 Before processing the user request:
 
-1. Attempt to include the files matching the globs:
-   - All contents under `supabase/functions/**`
+1. Attempt to include:
+   - All contents under `supabase/functions/`
    - The file `schema.sql`
 
 2. Notify the user of the result before replying:

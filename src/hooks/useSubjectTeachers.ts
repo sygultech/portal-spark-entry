@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +17,16 @@ export function useSubjectTeachers(subjectId?: string, batchId?: string, academi
       .from('subject_teachers')
       .select(`
         *,
-        teacher:profiles(id, first_name, last_name, email),
+        teacher:profiles!subject_teachers_teacher_id_fkey(
+          id,
+          first_name,
+          last_name,
+          email,
+          staff:staff_details(
+            id,
+            employee_id
+          )
+        ),
         subject:subjects(id, name, code),
         batch:batches(id, name, code)
       `);

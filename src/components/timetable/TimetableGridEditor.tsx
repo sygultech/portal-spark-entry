@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -172,7 +171,14 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
     // Extract teachers from subject-teacher assignments
     const assignedTeachers = subjectTeachers
-      .map(st => st.teacher)
+      .map(st => {
+        if (!st.teacher?.staff?.[0]) return null;
+        
+        return {
+          ...st.teacher,
+          staff_id: st.teacher.staff[0].id // Use the staff_details.id from the nested join
+        };
+      })
       .filter(teacher => teacher !== null && teacher !== undefined);
 
     console.log('Assigned teachers from mapping:', assignedTeachers);
@@ -196,7 +202,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
         fixPath: ''
       }
     };
-  }, [subjectTeachers, subjectTeachersLoading, newSchedule.subject_id, selectedBatch]);
+  }, [subjectTeachers, subjectTeachersLoading, newSchedule.subject_id, selectedBatch, teachers]);
 
   // Fetch teachers when component mounts or school changes
   useEffect(() => {
@@ -748,7 +754,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
                 </SelectTrigger>
                 <SelectContent>
                   {availableTeachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
+                    <SelectItem key={teacher.id} value={teacher.staff_id}>
                       {teacher.first_name} {teacher.last_name}
                       {teacher.employee_id && ` (${teacher.employee_id})`}
                     </SelectItem>
