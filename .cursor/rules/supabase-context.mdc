@@ -1,0 +1,35 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Always include Supabase functions and schema
+globs:
+  - supabase/functions/**/*
+  - schema.sql
+alwaysApply: true
+---
+
+### Instruction to the AI
+
+Before processing the user request:
+
+1. Attempt to include the files matching the globs:
+   - All contents under `supabase/functions/**`
+   - The file `schema.sql`
+
+2. Notify the user of the result before replying:
+
+- ✅ If both were included:
+  - Say: `✅ Supabase functions and schema.sql loaded into context.`
+
+- ⚠️ If only one was included:
+  - Say either:
+    - `⚠️ Only supabase/functions loaded; schema.sql not found.`
+    - `⚠️ Only schema.sql loaded; supabase/functions not found.`
+
+- ⚠️ If neither were found:
+  - Say: `⚠️ Could not find supabase/functions or schema.sql — nothing was included.`
+
+3. Then proceed with answering the user's original request.
