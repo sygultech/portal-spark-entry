@@ -1269,6 +1269,7 @@ export type Database = {
           first_name: string
           gender: string | null
           id: string
+          is_teacher: boolean
           join_date: string
           last_name: string
           phone: string | null
@@ -1292,6 +1293,7 @@ export type Database = {
           first_name: string
           gender?: string | null
           id?: string
+          is_teacher?: boolean
           join_date: string
           last_name: string
           phone?: string | null
@@ -1315,6 +1317,7 @@ export type Database = {
           first_name?: string
           gender?: string | null
           id?: string
+          is_teacher?: boolean
           join_date?: string
           last_name?: string
           phone?: string | null
@@ -1829,7 +1832,7 @@ export type Database = {
           created_at: string
           id: string
           subject_id: string
-          teacher_id: string
+          teacher_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1838,7 +1841,7 @@ export type Database = {
           created_at?: string
           id?: string
           subject_id: string
-          teacher_id: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1847,7 +1850,7 @@ export type Database = {
           created_at?: string
           id?: string
           subject_id?: string
-          teacher_id?: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1876,7 +1879,7 @@ export type Database = {
             foreignKeyName: "subject_teachers_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "staff_details"
             referencedColumns: ["id"]
           },
         ]
