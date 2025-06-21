@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -159,9 +160,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="auto_absent_enabled"
-              checked={formData.auto_absent_enabled}
+              checked={!!formData.auto_absent_enabled}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, auto_absent_enabled: checked ?? false })
+                setFormData({ ...formData, auto_absent_enabled: !!checked })
               }
             />
             <Label htmlFor="auto_absent_enabled">Enable Auto Absent</Label>
@@ -182,9 +183,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="notification_enabled"
-              checked={formData.notification_enabled}
+              checked={!!formData.notification_enabled}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, notification_enabled: checked ?? false })
+                setFormData({ ...formData, notification_enabled: !!checked })
               }
             />
             <Label htmlFor="notification_enabled">Enable Notifications</Label>
@@ -193,9 +194,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
-              checked={formData.is_active}
+              checked={!!formData.is_active}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, is_active: checked ?? false })
+                setFormData({ ...formData, is_active: !!checked })
               }
             />
             <Label htmlFor="is_active">Active</Label>
