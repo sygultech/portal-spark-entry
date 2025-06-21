@@ -101,6 +101,216 @@ export type Database = {
           },
         ]
       }
+      attendance_configurations: {
+        Row: {
+          academic_year_id: string
+          attendance_mode: string
+          auto_absent_enabled: boolean | null
+          auto_absent_time: string | null
+          batch_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          notification_enabled: boolean | null
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          attendance_mode: string
+          auto_absent_enabled?: boolean | null
+          auto_absent_time?: string | null
+          batch_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notification_enabled?: boolean | null
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          attendance_mode?: string
+          auto_absent_enabled?: boolean | null
+          auto_absent_time?: string | null
+          batch_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notification_enabled?: boolean | null
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      attendance_leave_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          documents: Json | null
+          end_date: string
+          id: string
+          leave_type: string
+          reason: string
+          rejection_reason: string | null
+          requested_by: string
+          school_id: string
+          start_date: string
+          status: string | null
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          documents?: Json | null
+          end_date: string
+          id?: string
+          leave_type: string
+          reason: string
+          rejection_reason?: string | null
+          requested_by: string
+          school_id: string
+          start_date: string
+          status?: string | null
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          documents?: Json | null
+          end_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string
+          rejection_reason?: string | null
+          requested_by?: string
+          school_id?: string
+          start_date?: string
+          status?: string | null
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      attendance_notifications: {
+        Row: {
+          attendance_record_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message_content: string
+          notification_type: string
+          recipient_contact: string
+          school_id: string
+          sent_at: string | null
+          status: string | null
+          student_id: string
+        }
+        Insert: {
+          attendance_record_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content: string
+          notification_type: string
+          recipient_contact: string
+          school_id: string
+          sent_at?: string | null
+          status?: string | null
+          student_id: string
+        }
+        Update: {
+          attendance_record_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          notification_type?: string
+          recipient_contact?: string
+          school_id?: string
+          sent_at?: string | null
+          status?: string | null
+          student_id?: string
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          absence_reason: string | null
+          academic_year_id: string
+          attendance_date: string
+          attendance_mode: string
+          batch_id: string
+          created_at: string | null
+          event_name: string | null
+          event_type: string | null
+          id: string
+          is_auto_marked: boolean | null
+          marked_at: string | null
+          marked_by: string
+          notes: string | null
+          period_number: number | null
+          schedule_id: string | null
+          school_id: string
+          session_type: string | null
+          status: string | null
+          student_id: string
+          subject_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          absence_reason?: string | null
+          academic_year_id: string
+          attendance_date: string
+          attendance_mode: string
+          batch_id: string
+          created_at?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          id?: string
+          is_auto_marked?: boolean | null
+          marked_at?: string | null
+          marked_by: string
+          notes?: string | null
+          period_number?: number | null
+          schedule_id?: string | null
+          school_id: string
+          session_type?: string | null
+          status?: string | null
+          student_id: string
+          subject_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          absence_reason?: string | null
+          academic_year_id?: string
+          attendance_date?: string
+          attendance_mode?: string
+          batch_id?: string
+          created_at?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          id?: string
+          is_auto_marked?: boolean | null
+          marked_at?: string | null
+          marked_by?: string
+          notes?: string | null
+          period_number?: number | null
+          schedule_id?: string | null
+          school_id?: string
+          session_type?: string | null
+          status?: string | null
+          student_id?: string
+          subject_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       batch_configuration_mapping: {
         Row: {
           batch_id: string
@@ -1269,6 +1479,7 @@ export type Database = {
           first_name: string
           gender: string | null
           id: string
+          is_teacher: boolean
           join_date: string
           last_name: string
           phone: string | null
@@ -1292,6 +1503,7 @@ export type Database = {
           first_name: string
           gender?: string | null
           id?: string
+          is_teacher?: boolean
           join_date: string
           last_name: string
           phone?: string | null
@@ -1315,6 +1527,7 @@ export type Database = {
           first_name?: string
           gender?: string | null
           id?: string
+          is_teacher?: boolean
           join_date?: string
           last_name?: string
           phone?: string | null
@@ -1829,7 +2042,7 @@ export type Database = {
           created_at: string
           id: string
           subject_id: string
-          teacher_id: string
+          teacher_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1838,7 +2051,7 @@ export type Database = {
           created_at?: string
           id?: string
           subject_id: string
-          teacher_id: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1847,7 +2060,7 @@ export type Database = {
           created_at?: string
           id?: string
           subject_id?: string
-          teacher_id?: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1876,7 +2089,7 @@ export type Database = {
             foreignKeyName: "subject_teachers_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "staff_details"
             referencedColumns: ["id"]
           },
         ]

@@ -1,32 +1,16 @@
 import { 
   LayoutDashboard, 
+  GraduationCap, 
   Users, 
+  BookOpen, 
+  Calendar,
+  UserCheck,
+  School, 
   Settings, 
-  Building, 
-  BarChart, 
-  CreditCard, 
-  Puzzle, 
-  LifeBuoy,
-  GraduationCap,
-  UserRound,
-  CalendarDays,
-  ClipboardCheck,
-  Landmark,
-  BookOpen,
-  Bus,
-  Home,
-  MessageSquare,
   FileText,
-  School,
-  Clock,
-  BookCheck,
-  FileSpreadsheet,
-  FileEdit,
-  Award,
-  Baby,
-  Receipt,
-  // Certificate is not available in lucide-react, replacing with Award
-} from "lucide-react";
+  BarChart3,
+  ClipboardList
+} from 'lucide-react';
 
 type MenuItem = {
   label: string;
@@ -109,3 +93,66 @@ export const menuConfig: MenuConfig = {
 
 // Debug logging
 console.log("Menu config loaded:", menuConfig);
+
+export const menuItems = [
+  {
+    title: 'Dashboard',
+    url: '/',
+    icon: LayoutDashboard,
+    roles: ['super_admin', 'school_admin', 'teacher', 'student', 'parent']
+  },
+  {
+    title: 'Schools',
+    url: '/schools',
+    icon: School,
+    roles: ['super_admin']
+  },
+  {
+    title: 'Academic',
+    url: '/academic',
+    icon: GraduationCap,
+    roles: ['super_admin', 'school_admin', 'teacher']
+  },
+  {
+    title: 'Students',
+    url: '/students',
+    icon: Users,
+    roles: ['super_admin', 'school_admin', 'teacher']
+  },
+  {
+    title: 'Staff',
+    url: '/staff',
+    icon: Users,
+    roles: ['super_admin', 'school_admin']
+  },
+  {
+    title: 'Attendance',
+    url: '/attendance',
+    icon: UserCheck,
+    roles: ['super_admin', 'school_admin', 'teacher', 'parent']
+  },
+  {
+    title: 'Timetable',
+    url: '/timetable',
+    icon: Calendar,
+    roles: ['super_admin', 'school_admin', 'teacher']
+  },
+  {
+    title: 'Library',
+    url: '/library',
+    icon: BookOpen,
+    roles: ['super_admin', 'school_admin', 'teacher', 'student', 'librarian']
+  },
+  {
+    title: 'Reports',
+    url: '/reports',
+    icon: BarChart3,
+    roles: ['super_admin', 'school_admin', 'teacher']
+  },
+  {
+    title: 'Settings',
+    url: '/settings',
+    icon: Settings,
+    roles: ['super_admin', 'school_admin']
+  }
+];
