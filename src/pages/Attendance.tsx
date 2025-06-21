@@ -13,9 +13,7 @@ const Attendance = () => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState('entry');
 
-  const isSchoolAdmin = profile?.roles?.some(role => 
-    role.roles.includes('school_admin')
-  );
+  const isSchoolAdmin = profile?.roles?.includes('school_admin');
 
   return (
     <div className="space-y-6">

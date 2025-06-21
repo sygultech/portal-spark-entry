@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ interface TeacherAssignmentDialogProps {
   onOpenChange: (open: boolean) => void;
   teachers: Teacher[];
   onAssign: (assignment: any) => void;
+  onRemove?: (subjectTeacherId: string) => Promise<boolean>;
 }
 
 interface AssignmentFormData {
@@ -30,7 +30,8 @@ export const TeacherAssignmentDialog: React.FC<TeacherAssignmentDialogProps> = (
   open,
   onOpenChange,
   teachers,
-  onAssign
+  onAssign,
+  onRemove
 }) => {
   const { profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);

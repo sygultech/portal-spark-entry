@@ -1,3 +1,4 @@
+
 import { Json } from "@/integrations/supabase/types";
 
 // Basic types for academic features
@@ -136,6 +137,23 @@ export interface SubjectTeacher {
   academic_year_id: string;
   created_at: string;
   updated_at: string;
+  // Related objects (populated when doing joins)
+  teacher?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    employee_id: string;
+  };
+  subject?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+  batch?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface Exam {
