@@ -12,36 +12,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const { isLoading, setIsLoading, signIn, signUp, signOut } = useAuthOperations();
+  const [isLoading, setIsLoading] = useState(true);
+  const { signIn, signUp, signOut } = useAuthOperations();
 
   useEffect(() => {
+    console.log("AuthProvider: Setting up auth state listener");
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.id);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
-        // Fetch profile data with setTimeout to prevent deadlocks
+        // Fetch profile data if user exists
         if (currentSession?.user) {
-          setTimeout(async () => {
+          try {
             const userProfile = await fetchUserProfile(currentSession.user.id);
             if (userProfile) {
               setProfile(userProfile);
             }
-          }, 0);
+          } catch (error) {
+            console.error("Error fetching profile:", error);
+          }
+        } else {
+          setProfile(null);
         }
+        
+        setIsLoading(false);
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
-        const userProfile = await fetchUserProfile(currentSession.user.id);
-        if (userProfile) {
-          setProfile(userProfile);
+        try {
+          const userProfile = await fetchUserProfile(currentSession.user.id);
+          if (userProfile) {
+            setProfile(userProfile);
+          }
+        } catch (error) {
+          console.error("Error fetching initial profile:", error);
         }
       }
       setIsLoading(false);
@@ -50,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, [setIsLoading]);
+  }, []);
 
   const value = {
     session,
