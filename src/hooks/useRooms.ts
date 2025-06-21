@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 
@@ -22,6 +22,11 @@ export function useRooms(schoolId: string) {
 
   // Fetch all rooms for the school
   const fetchRooms = useCallback(async () => {
+    if (!schoolId) {
+      console.log('No schoolId provided for fetchRooms');
+      return;
+    }
+    
     setIsLoading(true);
     const { data, error } = await supabase
       .from('rooms')
@@ -30,11 +35,21 @@ export function useRooms(schoolId: string) {
       .order('name');
     setIsLoading(false);
     if (error) {
+      console.error('Error fetching rooms:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
+    console.log('Fetched rooms:', data);
     setRooms(data || []);
   }, [schoolId]);
+
+  // Automatically fetch rooms when schoolId changes
+  useEffect(() => {
+    if (schoolId) {
+      console.log('Fetching rooms for school:', schoolId);
+      fetchRooms();
+    }
+  }, [schoolId, fetchRooms]);
 
   // Add a new room
   const addRoom = async (room: Omit<Room, 'id' | 'created_at' | 'updated_at'>) => {

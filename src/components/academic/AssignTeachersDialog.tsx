@@ -28,17 +28,15 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 interface Teacher {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
+  first_name: string;
+  last_name: string;
   email: string;
-  avatar_url: string | null;
-  school_id: string | null;
-  roles: string[];
-  created_at: string;
-  updated_at: string;
+  employee_id: string;
+  is_teacher: boolean;
 }
 
 interface AssignTeachersDialogProps {
@@ -63,6 +61,7 @@ const AssignTeachersDialog = ({
     assignTeacher,
     removeTeacher
   } = useSubjectTeachers(subject?.id, batchId, academicYearId);
+  const { toast } = useToast();
   
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   
@@ -93,15 +92,11 @@ const AssignTeachersDialog = ({
   
   // Filter out already assigned teachers
   const isAlreadyAssigned = (teacherId: string) => {
-    return subjectTeachers.some(
-      st => st.teacher_id === teacherId
-    );
+    return subjectTeachers.some(st => st.teacher_id === teacherId);
   };
 
   // Ensure we have teachers to display
-  const availableTeachers = teachers.filter(teacher => 
-    teacher.roles?.includes('teacher')
-  );
+  const availableTeachers = teachers;
   const hasTeachers = availableTeachers.length > 0;
   
   return (
@@ -131,7 +126,7 @@ const AssignTeachersDialog = ({
                       value={teacher.id}
                       disabled={isAlreadyAssigned(teacher.id)}
                     >
-                      {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.email})
+                      {teacher.first_name || ''} {teacher.last_name || ''} ({teacher.employee_id || teacher.email})
                     </SelectItem>
                   ))
                 )}
@@ -169,7 +164,9 @@ const AssignTeachersDialog = ({
                   <TableRow key={assignment.id}>
                     <TableCell>
                       {assignment.teacher?.first_name || ''} {assignment.teacher?.last_name || ''} <br />
-                      <span className="text-xs text-muted-foreground">{assignment.teacher?.email}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {assignment.teacher?.employee_id || assignment.teacher?.email}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Button 

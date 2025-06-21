@@ -285,14 +285,20 @@ const RoleDepartmentManagement = () => {
         });
       }
       
-      // Only reset form and close dialog after successful API call
       resetForm();
       setDesignationDialogOpen(false);
     } catch (error: any) {
       console.error('Error saving designation:', error);
+      let errorMessage = "Failed to save designation. Please try again.";
+      
+      if (error.code === '23505') {
+        const selectedDepartment = departments.find(d => d.id === formData.department);
+        errorMessage = `A designation with the name "${formData.name}" already exists in the ${selectedDepartment?.name} department.`;
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to save designation. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     }

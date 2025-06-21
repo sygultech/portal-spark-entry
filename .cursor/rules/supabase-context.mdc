@@ -1,30 +1,36 @@
 ---
-description: Always include Supabase functions and schema
-globs:
-  - supabase/functions/**/*
-  - schema.sql
+description: Load Supabase schema, edge functions, and DB functions into context
+globs: 
+alwaysApply: true
+---
+---
+description: Load Supabase schema, edge functions, and DB functions into context
+mcpResources:
+  - server: supabase
+    type: supabase.database.schema
+  - server: supabase
+    type: supabase.edge.functions
+  - server: supabase
+    type: supabase.functions
 alwaysApply: true
 ---
 
-### Instruction to the AI
 
-Before processing the user request:
+### Notify the user:
+If all succeeded: ✅ Supabase schema, edge functions, and DB functions loaded.
+If some failed: ⚠️ One or more Supabase resources could not be loaded. Check rule or connection.
 
-1. Attempt to include:
-   - All contents under `supabase/functions/`
-   - The file `schema.sql`
 
-2. Notify the user of the result before replying:
+{{
+  if (!ctx.mcp.has("supabase.database.schema")) {
+    print("⚠️ Could not load Supabase schema")
+  }
+  if (!ctx.mcp.has("supabase.edge.functions")) {
+    print("⚠️ Could not load Supabase edge functions")
+  }
+  if (!ctx.mcp.has("supabase.functions")) {
+    print("⚠️ Could not load Supabase DB functions")
+  }
+  print("✅ Supabase rule loaded")
+}}
 
-- ✅ If both were included:
-  - Say: `✅ Supabase functions and schema.sql loaded into context.`
-
-- ⚠️ If only one was included:
-  - Say either:
-    - `⚠️ Only supabase/functions loaded; schema.sql not found.`
-    - `⚠️ Only schema.sql loaded; supabase/functions not found.`
-
-- ⚠️ If neither were found:
-  - Say: `⚠️ Could not find supabase/functions or schema.sql — nothing was included.`
-
-3. Then proceed with answering the user's original request.

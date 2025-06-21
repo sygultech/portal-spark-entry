@@ -22,6 +22,7 @@ export interface StaffMember {
   created_at: string;
   updated_at: string;
   profile_id: string | null;
+  is_teacher: boolean;
   department?: {
     id: string;
     name: string;
@@ -72,6 +73,7 @@ export interface CreateStaffData {
   designationId: string;
   employmentStatus: string;
   schoolId: string;
+  isTeacher: boolean;
   login_enabled?: boolean;
   roles?: string[];
   emergencyContact?: {
@@ -138,7 +140,8 @@ class StaffService {
         department_id: data.departmentId,
         designation_id: data.designationId,
         employment_status: data.employmentStatus,
-        school_id: data.schoolId
+        school_id: data.schoolId,
+        is_teacher: data.isTeacher
       };
 
       console.log('Transformed data:', transformedData);
@@ -315,6 +318,7 @@ class StaffService {
         created_at: staff.created_at,
         updated_at: staff.updated_at,
         profile_id: staff.profile_id,
+        is_teacher: staff.is_teacher || false,
         department: staff.department,
         designation: staff.designation,
         emergency_contact: staff.emergency_contact?.[0],
@@ -348,7 +352,18 @@ class StaffService {
         .single();
 
       if (error) throw error;
-      return { data };
+
+      // Transform the data to match the StaffMember interface
+      const transformedData = {
+        ...data,
+        is_teacher: data.is_teacher || false,
+        emergency_contact: data.emergency_contact?.[0],
+        qualifications: data.qualifications || [],
+        experiences: data.experiences || [],
+        documents: data.documents || []
+      };
+
+      return { data: transformedData };
     } catch (error: any) {
       console.error('Error fetching staff:', error);
       return { data: null, error: error.message };
@@ -357,25 +372,34 @@ class StaffService {
 
   async updateStaff(id: string, data: Partial<CreateStaffData>): Promise<StaffResponse> {
     try {
-      // First, perform the update
-      const transformedData = {
-        employee_id: data.employeeId,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        date_of_birth: data.dateOfBirth,
-        gender: data.gender,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        postal_code: data.postalCode,
-        join_date: data.joinDate,
-        department_id: data.departmentId,
-        designation_id: data.designationId,
-        employment_status: data.employmentStatus
-      };
+      // Transform and clean the data before update
+      const transformedData: any = {};
 
+      // Only include fields that are actually provided
+      if (data.firstName !== undefined) transformedData.first_name = data.firstName;
+      if (data.lastName !== undefined) transformedData.last_name = data.lastName;
+      if (data.email !== undefined) transformedData.email = data.email;
+      if (data.phone !== undefined) transformedData.phone = data.phone;
+      if (data.employeeId !== undefined) transformedData.employee_id = data.employeeId;
+      if (data.gender !== undefined) transformedData.gender = data.gender;
+      if (data.address !== undefined) transformedData.address = data.address;
+      if (data.city !== undefined) transformedData.city = data.city;
+      if (data.state !== undefined) transformedData.state = data.state;
+      if (data.postalCode !== undefined) transformedData.postal_code = data.postalCode;
+      if (data.departmentId !== undefined) transformedData.department_id = data.departmentId;
+      if (data.designationId !== undefined) transformedData.designation_id = data.designationId;
+      if (data.employmentStatus !== undefined) transformedData.employment_status = data.employmentStatus;
+      if (data.isTeacher !== undefined) transformedData.is_teacher = data.isTeacher;
+
+      // Handle date fields - convert empty strings to null
+      if (data.joinDate !== undefined) {
+        transformedData.join_date = data.joinDate || null;
+      }
+      if (data.dateOfBirth !== undefined) {
+        transformedData.date_of_birth = data.dateOfBirth || null;
+      }
+
+      // First, perform the update
       const { error: updateError } = await supabase
         .from('staff_details')
         .update(transformedData)

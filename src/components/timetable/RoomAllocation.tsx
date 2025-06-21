@@ -6,13 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, MapPin, Search, Filter, Building, Users, Settings, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Search, Filter, Building, Users } from "lucide-react";
 import { AcademicYearSelector } from "./components/AcademicYearSelector";
 import { RoomManagementDialog } from "./components/RoomManagementDialog";
-import { RoomAllocationDialog } from "./components/RoomAllocationDialog";
 import { useAcademicYearSelector } from "@/hooks/useAcademicYearSelector";
 import { useRooms, Room } from "@/hooks/useRooms";
-import { useRoomAllocations, RoomAllocationData } from "@/hooks/useRoomAllocations";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
@@ -31,12 +29,10 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
   } = useAcademicYearSelector();
 
   const { rooms, isLoading, fetchRooms, addRoom, updateRoom, deleteRoom } = useRooms(profile?.school_id || '');
-  const { allocations, isLoading: allocationsLoading, fetchAllocations, addAllocation } = useRoomAllocations(profile?.school_id || '');
   
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [roomDialogMode, setRoomDialogMode] = useState<'create' | 'edit'>('create');
-  const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
@@ -44,11 +40,8 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
   useEffect(() => {
     if (profile?.school_id) {
       fetchRooms();
-      if (selectedYear?.id) {
-        fetchAllocations(selectedYear.id, selectedTerm);
-      }
     }
-  }, [profile?.school_id, selectedYear?.id, selectedTerm, fetchRooms, fetchAllocations]);
+  }, [profile?.school_id, fetchRooms]);
 
   // Filter rooms based on search and type
   const filteredRooms = rooms.filter(room => {
@@ -66,10 +59,6 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
     setSelectedRoom(null);
     setRoomDialogMode('create');
     setRoomDialogOpen(true);
-  };
-
-  const handleAddAllocation = () => {
-    setAllocationDialogOpen(true);
   };
 
   const handleEditRoom = (room: Room) => {
@@ -95,21 +84,6 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
     }
   };
 
-  const handleSaveAllocation = async (allocationData: RoomAllocationData) => {
-    try {
-      const allocationWithDetails = {
-        ...allocationData,
-        school_id: profile?.school_id || '',
-        academic_year_id: selectedYear?.id || '',
-        term: selectedTerm
-      };
-
-      await addAllocation(allocationWithDetails);
-    } catch (error) {
-      console.error('Error saving allocation:', error);
-    }
-  };
-
   const handleDeleteRoom = async (room: Room) => {
     try {
       await deleteRoom(room.id);
@@ -117,23 +91,6 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
     } catch (error) {
       console.error('Error deleting room:', error);
     }
-  };
-
-  const getRoomUtilization = (room: Room) => {
-    // Calculate utilization based on actual allocations
-    const roomAllocations = allocations.filter(allocation => allocation.room_id === room.id);
-    const totalSlots = 30; // 5 days × 6 periods (adjust based on your schedule)
-    return Math.round((roomAllocations.length / totalSlots) * 100);
-  };
-
-  const getRoomStatusColor = (utilization: number) => {
-    if (utilization >= 80) return "bg-red-100 text-red-800";
-    if (utilization >= 60) return "bg-yellow-100 text-yellow-800";
-    return "bg-green-100 text-green-800";
-  };
-
-  const getRoomAllocationsCount = (room: Room) => {
-    return allocations.filter(allocation => allocation.room_id === room.id).length;
   };
 
   return (
@@ -144,7 +101,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Room Management & Allocation
+                Room Management
               </div>
               <AcademicYearSelector
                 academicYears={academicYears}
@@ -153,19 +110,13 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                 isLoading={academicYearLoading}
               />
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleAddAllocation} size="sm" variant="outline">
-                <Calendar className="h-4 w-4 mr-2" />
-                Add Allocation
-              </Button>
-              <Button onClick={handleAddRoom} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Room
-              </Button>
-            </div>
+            <Button onClick={handleAddRoom} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Room
+            </Button>
           </CardTitle>
           <CardDescription>
-            Manage room information and view allocations for {selectedYear?.name || 'the selected academic year'}.
+            Manage room information for {selectedYear?.name || 'the selected academic year'}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -183,7 +134,7 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-48">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue />
+                <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -219,154 +170,101 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
                     <TableHead>Type & Capacity</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Facilities</TableHead>
-                    <TableHead>Allocations</TableHead>
-                    <TableHead>Utilization</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRooms.map((room) => {
-                    const utilization = getRoomUtilization(room);
-                    const allocationsCount = getRoomAllocationsCount(room);
-                    return (
-                      <TableRow key={room.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{room.name}</div>
-                            {room.code && (
-                              <div className="text-sm text-muted-foreground">
-                                Code: {room.code}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {room.type && (
-                              <Badge variant="outline">{room.type}</Badge>
-                            )}
-                            {room.capacity && (
-                              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {room.capacity} seats
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {room.location && (
+                  {filteredRooms.map((room) => (
+                    <TableRow key={room.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{room.name}</div>
+                          {room.code && (
                             <div className="text-sm text-muted-foreground">
-                              {room.location}
+                              Code: {room.code}
                             </div>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {room.facilities && room.facilities.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {room.facilities.slice(0, 2).map((facility) => (
-                                <Badge key={facility} variant="secondary" className="text-xs">
-                                  {facility}
-                                </Badge>
-                              ))}
-                              {room.facilities.length > 2 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{room.facilities.length - 2} more
-                                </Badge>
-                              )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {room.type && (
+                            <Badge variant="outline">{room.type}</Badge>
+                          )}
+                          {room.capacity && (
+                            <div className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {room.capacity} seats
                             </div>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {allocationsCount} slots
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="secondary" 
-                            className={getRoomStatusColor(utilization)}
-                          >
-                            {utilization}% utilized
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditRoom(room)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Room</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{room.name}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteRoom(room)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {room.location && (
+                          <div className="text-sm text-muted-foreground">
+                            {room.location}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {room.facilities && room.facilities.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {room.facilities.slice(0, 2).map((facility) => (
+                              <Badge key={facility} variant="secondary" className="text-xs">
+                                {facility}
+                              </Badge>
+                            ))}
+                            {room.facilities.length > 2 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{room.facilities.length - 2} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditRoom(room)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Room</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{room.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteRoom(room)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
-            </div>
-          )}
-
-          {/* Summary Statistics */}
-          {rooms.length > 0 && (
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-sm font-medium text-muted-foreground">Total Rooms</div>
-                  <div className="text-2xl font-bold">{rooms.length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-sm font-medium text-muted-foreground">Total Allocations</div>
-                  <div className="text-2xl font-bold">{allocations.length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-sm font-medium text-muted-foreground">Total Capacity</div>
-                  <div className="text-2xl font-bold">
-                    {rooms.reduce((sum, room) => sum + (room.capacity || 0), 0)}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-sm font-medium text-muted-foreground">Avg. Utilization</div>
-                  <div className="text-2xl font-bold">
-                    {rooms.length > 0 ? Math.round(rooms.reduce((sum, room) => sum + getRoomUtilization(room), 0) / rooms.length) : 0}%
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
         </CardContent>
@@ -379,14 +277,6 @@ export const RoomAllocation = ({ selectedTerm }: RoomAllocationProps) => {
         room={selectedRoom}
         onSave={handleSaveRoom}
         mode={roomDialogMode}
-      />
-
-      {/* Room Allocation Dialog */}
-      <RoomAllocationDialog
-        open={allocationDialogOpen}
-        onOpenChange={setAllocationDialogOpen}
-        rooms={rooms}
-        onSave={handleSaveAllocation}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -18,6 +17,7 @@ export interface Teacher {
   join_date: string;
   created_at: string;
   updated_at: string;
+  is_teacher: boolean;
   // Relations
   department?: {
     id: string;
@@ -37,7 +37,7 @@ export function useTeachersFromStaff(schoolId: string) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch teachers from staff_details where profile has teacher role
+  // Fetch teachers from staff_details where is_teacher is true
   const fetchTeachers = useCallback(async () => {
     if (!schoolId) return;
     
@@ -52,20 +52,14 @@ export function useTeachersFromStaff(schoolId: string) {
           profile:profiles(id, roles)
         `)
         .eq('school_id', schoolId)
-        .eq('employment_status', 'Active');
+        .eq('employment_status', 'Active')
+        .eq('is_teacher', true);
 
       if (error) {
         throw error;
       }
 
-      // Filter staff who have 'teacher' role in their profiles
-      const teachersData = data?.filter(staff => 
-        staff.profile && 
-        staff.profile.roles && 
-        staff.profile.roles.includes('teacher')
-      ) || [];
-
-      setTeachers(teachersData);
+      setTeachers(data || []);
     } catch (error) {
       console.error('Error fetching teachers:', error);
       toast({

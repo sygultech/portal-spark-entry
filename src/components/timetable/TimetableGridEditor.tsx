@@ -49,7 +49,7 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   const { batches, isLoading: batchesLoading } = useBatches(selectedYear?.id, undefined);
   const { subjects } = useSubjects(selectedYear?.id, undefined);
   const { teachers, isLoading: teachersLoading, fetchTeachers } = useTeachersFromStaff(profile?.school_id || '');
-  const { rooms } = useRooms(profile?.school_id || '');
+  const { rooms, isLoading: roomsLoading, fetchRooms } = useRooms(profile?.school_id || '');
   
   // Use subject teachers hook to get teacher assignments for selected subject
   const { 
@@ -172,11 +172,11 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
     // Extract teachers from subject-teacher assignments
     const assignedTeachers = subjectTeachers
       .map(st => {
-        if (!st.teacher?.staff?.[0]) return null;
+        if (!st.teacher) return null;
         
         return {
           ...st.teacher,
-          staff_id: st.teacher.staff[0].id // Use the staff_details.id from the nested join
+          staff_id: st.teacher.id
         };
       })
       .filter(teacher => teacher !== null && teacher !== undefined);
@@ -240,6 +240,14 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
 
     fetchBatchConfiguration();
   }, [selectedBatch, selectedYear?.id, profile?.school_id, getTimetableConfigurations]);
+
+  // Fetch rooms when component mounts or school changes
+  useEffect(() => {
+    if (profile?.school_id) {
+      console.log('Fetching rooms for school:', profile.school_id);
+      fetchRooms();
+    }
+  }, [profile?.school_id, fetchRooms]);
 
   // Memoize the periods for each day to prevent infinite loops with improved transformation
   const dayPeriodsMap = useMemo(() => {
@@ -450,6 +458,13 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
   console.log('Available teachers for dropdown:', availableTeachers);
   console.log('Current school_id:', profile?.school_id);
   console.log('Current academic_year_id:', selectedYear?.id);
+  
+  // Debug logs for room data
+  console.log('Room data:', {
+    rooms,
+    isLoading: roomsLoading,
+    schoolId: profile?.school_id
+  });
 
   // Show loading state
   if (academicYearLoading || batchesLoading || configLoading) {
@@ -766,15 +781,28 @@ export const TimetableGridEditor = ({ selectedClass, selectedTerm }: TimetableGr
             <div>
               <Label>Room (Optional)</Label>
               <Select
-                value={newSchedule.room_id || ''}
-                onValueChange={(value) => setNewSchedule(prev => ({ ...prev, room_id: value || undefined }))}
+                value={newSchedule.room_id || 'no-room'}
+                onValueChange={(value) => setNewSchedule(prev => ({ 
+                  ...prev, 
+                  room_id: value === 'no-room' ? undefined : value 
+                }))}
+                disabled={roomsLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select room" />
+                  <SelectValue placeholder={
+                    roomsLoading ? "Loading rooms..." : 
+                    !rooms?.length ? "No rooms available" :
+                    "Select a room (optional)"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no-room">No room assigned</SelectItem>
-                  {rooms.map((room) => (
+                  <SelectItem value="no-room">No specific room</SelectItem>
+                  {rooms?.length === 0 && !roomsLoading && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      No rooms found. Please add rooms in Room Management.
+                    </div>
+                  )}
+                  {rooms?.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
                       {room.name} {room.code && `(${room.code})`}
                     </SelectItem>

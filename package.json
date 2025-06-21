@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
+    "@supabase/mcp-server-supabase": "^0.4.3",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.3",
@@ -83,5 +84,18 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "**URL**: https://lovable.dev/projects/5545b54c-f73d-4027-b9e7-1a2bad51f721",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sygultech/portal-spark-entry.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sygultech/portal-spark-entry/issues"
+  },
+  "homepage": "https://github.com/sygultech/portal-spark-entry#readme"
 }

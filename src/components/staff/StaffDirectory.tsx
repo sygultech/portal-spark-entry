@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Filter, Search, ArrowUp, ArrowDown, Download, Users, Edit } from "lucide-react";
 import StaffProfileView from "./StaffProfileView";
 import { staffService } from "@/services/staffService";
+import StaffProfileForm from "./StaffProfileForm";
 
 const StaffDirectory = () => {
   const [staffData, setStaffData] = useState<any[]>([]);
@@ -82,6 +82,15 @@ const StaffDirectory = () => {
       setSortField(field);
       setSortDirection("asc");
     }
+  };
+
+  const handleEditSuccess = () => {
+    setEditDialogOpen(false);
+    setEditingStaff(null);
+    // Refresh the staff list
+    staffService.getStaffList({}).then((res) => {
+      setStaffData(res.data || []);
+    });
   };
 
   return (
@@ -257,22 +266,24 @@ const StaffDirectory = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog - Simplified without StaffProfileForm */}
+      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Edit Staff Profile</DialogTitle>
             <DialogDescription>
-              Staff profile editing functionality will be implemented here.
+              Update staff member information
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              {editingStaff && `Editing: ${editingStaff.first_name} ${editingStaff.last_name}`}
-            </p>
-            <Button onClick={() => setEditDialogOpen(false)} className="mt-4">
-              Close
-            </Button>
+            {editingStaff && (
+              <StaffProfileForm
+                staff={editingStaff}
+                mode="edit"
+                onSuccess={handleEditSuccess}
+                onCancel={() => setEditDialogOpen(false)}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>

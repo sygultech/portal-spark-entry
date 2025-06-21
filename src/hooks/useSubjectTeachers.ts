@@ -17,15 +17,12 @@ export function useSubjectTeachers(subjectId?: string, batchId?: string, academi
       .from('subject_teachers')
       .select(`
         *,
-        teacher:profiles!subject_teachers_teacher_id_fkey(
+        teacher:staff_details(
           id,
           first_name,
           last_name,
           email,
-          staff:staff_details(
-            id,
-            employee_id
-          )
+          employee_id
         ),
         subject:subjects(id, name, code),
         batch:batches(id, name, code)
