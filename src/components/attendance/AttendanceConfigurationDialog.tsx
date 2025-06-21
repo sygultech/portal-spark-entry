@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -208,7 +207,7 @@ const AttendanceConfigurationDialog = ({
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Saving...' : 'Save'}
-            />
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
