@@ -160,7 +160,7 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="auto_absent_enabled"
-              checked={formData.auto_absent_enabled === true ? true : undefined}
+              checked={formData.auto_absent_enabled ? true : undefined}
               onCheckedChange={(checked) => 
                 setFormData({ ...formData, auto_absent_enabled: checked || false })
               }
@@ -183,7 +183,7 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="notification_enabled"
-              checked={formData.notification_enabled === true ? true : undefined}
+              checked={formData.notification_enabled ? true : undefined}
               onCheckedChange={(checked) => 
                 setFormData({ ...formData, notification_enabled: checked || false })
               }
@@ -194,7 +194,7 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
-              checked={formData.is_active === true ? true : undefined}
+              checked={formData.is_active ? true : undefined}
               onCheckedChange={(checked) => 
                 setFormData({ ...formData, is_active: checked || false })
               }
