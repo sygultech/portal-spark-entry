@@ -117,17 +117,40 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
   const createSchedule = useCallback(async (scheduleData: CreateScheduleData) => {
     try {
       console.log('Creating schedule with data:', scheduleData);
+      console.log('Teacher ID being validated:', scheduleData.teacher_id);
+      console.log('School ID for validation:', scheduleData.school_id);
 
-      // Validate teacher exists in staff_details table
+      // Validate teacher exists in staff_details table with enhanced logging
       const { data: teacherExists, error: teacherCheckError } = await supabase
         .from('staff_details')
-        .select('id')
+        .select('id, first_name, last_name, school_id, employee_id')
         .eq('id', scheduleData.teacher_id)
-        .eq('school_id', scheduleData.school_id)
-        .single();
+        .eq('school_id', scheduleData.school_id);
 
-      if (teacherCheckError || !teacherExists) {
-        console.error('Teacher validation failed:', teacherCheckError);
+      console.log('Teacher validation query result:', { teacherExists, teacherCheckError });
+
+      if (teacherCheckError) {
+        console.error('Teacher validation query error:', teacherCheckError);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to validate teacher information',
+          variant: 'destructive'
+        });
+        return null;
+      }
+
+      if (!teacherExists || teacherExists.length === 0) {
+        console.error('Teacher validation failed - teacher not found or wrong school');
+        console.log('Available teachers in staff_details for this school:');
+        
+        // Log all available teachers for debugging
+        const { data: allTeachers } = await supabase
+          .from('staff_details')
+          .select('id, first_name, last_name, employee_id')
+          .eq('school_id', scheduleData.school_id);
+        
+        console.log('All teachers in school:', allTeachers);
+        
         toast({
           title: 'Invalid Teacher',
           description: 'The selected teacher does not exist or is not from this school',
@@ -135,6 +158,8 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
         });
         return null;
       }
+
+      console.log('Teacher validation passed:', teacherExists[0]);
 
       // Check for conflicts first
       const { data: conflicts, error: conflictError } = await supabase
