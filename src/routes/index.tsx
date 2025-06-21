@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate, RouterProvider, Outlet } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { AuthProvider } from '@/contexts/AuthContext';
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import SignUp from '@/pages/SignUp';
@@ -19,7 +20,11 @@ import NotFound from '@/pages/NotFound';
 import CreateSuperAdmin from '@/pages/CreateSuperAdmin';
 
 const AppLayout = () => {
-  return <Outlet />;
+  return (
+    <AuthProvider>
+      <Outlet />
+    </AuthProvider>
+  );
 };
 
 export const router = createBrowserRouter([
