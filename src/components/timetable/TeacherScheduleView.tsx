@@ -32,7 +32,7 @@ export const TeacherScheduleView = ({ selectedTerm }: TeacherScheduleViewProps) 
   } = useAcademicYearSelector();
 
   const { teachers, isLoading: teachersLoading, fetchTeachers } = useTeachersFromStaff(profile?.school_id || '');
-  const { subjectTeachers, isLoading: subjectTeachersLoading, assignTeacher, removeTeacher } = useSubjectTeachers(
+  const { subjectTeachers, isLoading: subjectTeachersLoading, addSubjectTeacher, removeSubjectTeacher } = useSubjectTeachers(
     undefined, 
     undefined, 
     selectedYear?.id || ''
@@ -287,7 +287,8 @@ export const TeacherScheduleView = ({ selectedTerm }: TeacherScheduleViewProps) 
         open={assignmentDialogOpen}
         onOpenChange={setAssignmentDialogOpen}
         teachers={teachers}
-        onAssign={assignTeacher}
+        onAssign={addSubjectTeacher}
+        onRemove={removeSubjectTeacher}
       />
 
       {/* Teacher Detail View */}

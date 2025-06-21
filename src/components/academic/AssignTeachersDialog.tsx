@@ -60,8 +60,8 @@ const AssignTeachersDialog = ({
   const { 
     subjectTeachers, 
     isLoading: assignmentsLoading,
-    assignTeacher,
-    removeTeacher
+    addSubjectTeacher,
+    removeSubjectTeacher
   } = useSubjectTeachers(subject?.id, batchId, academicYearId);
   
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
@@ -74,18 +74,13 @@ const AssignTeachersDialog = ({
   
   const handleAssign = () => {
     if (selectedTeacher && subject) {
-      assignTeacher({
-        subject_id: subject.id,
-        teacher_id: selectedTeacher,
-        batch_id: batchId,
-        academic_year_id: academicYearId
-      });
+      addSubjectTeacher(selectedTeacher);
       setSelectedTeacher("");
     }
   };
   
   const handleRemove = (assignmentId: string) => {
-    removeTeacher(assignmentId);
+    removeSubjectTeacher(assignmentId);
   };
   
   const isAssigning = teachersLoading;

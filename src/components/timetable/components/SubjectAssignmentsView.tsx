@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
   const { subjects } = useSubjects(profile?.school_id || '');
   const { batches } = useBatches(profile?.school_id || '');
   const { teachers } = useTeachersFromStaff(profile?.school_id || '');
-  const { subjectTeachers, isLoading, assignTeacher, removeTeacher } = useSubjectTeachers(
+  const { subjectTeachers, isLoading, addSubjectTeacher, removeSubjectTeacher } = useSubjectTeachers(
     undefined,
     undefined,
     selectedAcademicYearId
@@ -80,12 +79,7 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
     }
 
     try {
-      await assignTeacher({
-        subject_id: selectedSubjectId,
-        batch_id: selectedBatchId,
-        teacher_id: selectedTeacherId,
-        academic_year_id: selectedAcademicYearId
-      });
+      await addSubjectTeacher(selectedTeacherId);
 
       // Reset form
       setSelectedSubjectId("");
@@ -99,7 +93,7 @@ export const SubjectAssignmentsView: React.FC<SubjectAssignmentsViewProps> = ({
 
   const handleRemoveAssignment = async (assignmentId: string) => {
     try {
-      await removeTeacher(assignmentId);
+      await removeSubjectTeacher(assignmentId);
     } catch (error) {
       console.error('Error removing assignment:', error);
     }

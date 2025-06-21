@@ -20,6 +20,13 @@ export interface SubjectTeacher {
     email: string;
     employee_id: string;
   };
+  subject?: {
+    name: string;
+    code: string;
+  };
+  batch?: {
+    name: string;
+  };
 }
 
 export const useSubjectTeachers = (subjectId?: string, batchId?: string, academicYearId?: string) => {
@@ -37,7 +44,7 @@ export const useSubjectTeachers = (subjectId?: string, batchId?: string, academi
     try {
       console.log('Fetching subject teachers with params:', { subjectId, batchId, academicYearId });
 
-      // Query subject_teachers and join with staff_details to ensure teacher exists
+      // Query subject_teachers and join with staff_details, subjects, and batches
       const { data, error } = await supabase
         .from('subject_teachers')
         .select(`
@@ -48,6 +55,13 @@ export const useSubjectTeachers = (subjectId?: string, batchId?: string, academi
             last_name,
             email,
             employee_id
+          ),
+          subject:subjects(
+            name,
+            code
+          ),
+          batch:batches(
+            name
           )
         `)
         .eq('subject_id', subjectId)
@@ -110,6 +124,13 @@ export const useSubjectTeachers = (subjectId?: string, batchId?: string, academi
             last_name,
             email,
             employee_id
+          ),
+          subject:subjects(
+            name,
+            code
+          ),
+          batch:batches(
+            name
           )
         `)
         .single();
@@ -169,11 +190,22 @@ export const useSubjectTeachers = (subjectId?: string, batchId?: string, academi
     }
   }, []);
 
+  // Add aliases for backward compatibility with existing components
+  const assignTeacher = useCallback(async (assignment: any) => {
+    return addSubjectTeacher(assignment.teacher_id);
+  }, [addSubjectTeacher]);
+
+  const removeTeacher = useCallback(async (assignmentId: string) => {
+    return removeSubjectTeacher(assignmentId);
+  }, [removeSubjectTeacher]);
+
   return {
     subjectTeachers,
     isLoading,
     fetchSubjectTeachers,
     addSubjectTeacher,
-    removeSubjectTeacher
+    removeSubjectTeacher,
+    assignTeacher, // Alias for backward compatibility
+    removeTeacher  // Alias for backward compatibility
   };
 };
