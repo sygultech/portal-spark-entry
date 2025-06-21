@@ -53,6 +53,12 @@ export interface AttendanceLeaveRequest {
   documents?: any;
   created_at: string;
   updated_at: string;
+  // Joined data from queries
+  student?: {
+    first_name: string;
+    last_name: string;
+    admission_number: string;
+  };
 }
 
 export interface AttendanceNotification {

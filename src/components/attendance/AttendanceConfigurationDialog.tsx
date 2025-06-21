@@ -44,7 +44,7 @@ const AttendanceConfigurationDialog = ({
     auto_absent_enabled: configuration?.auto_absent_enabled || false,
     auto_absent_time: configuration?.auto_absent_time || '16:00:00',
     notification_enabled: configuration?.notification_enabled || true,
-    is_active: configuration?.is_active || true
+    is_active: configuration?.is_active !== undefined ? configuration.is_active : true
   });
 
   const mutation = useMutation({
