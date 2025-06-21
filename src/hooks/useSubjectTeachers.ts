@@ -56,68 +56,115 @@ export function useSubjectTeachers(subjectId?: string, batchId?: string, academi
     enabled: !!schoolId
   });
 
-  const assignTeacherMutation = useMutation({
-    mutationFn: async (assignment: Omit<SubjectTeacher, 'id' | 'created_at' | 'updated_at'>) => {
+  const addSubjectTeacher = useCallback(async (teacherId: string) => {
+    if (!subjectId || !batchId || !academicYearId) {
+      toast({
+        title: 'Error',
+        description: 'Missing required parameters',
+        variant: 'destructive'
+      });
+      return false;
+    }
+
+    try {
       const { data, error } = await supabase
         .from('subject_teachers')
-        .insert(assignment)
-        .select()
+        .insert([{
+          subject_id: subjectId,
+          teacher_id: teacherId,
+          batch_id: batchId,
+          academic_year_id: academicYearId
+        }])
+        .select(`
+          *,
+          teacher:staff_details!subject_teachers_teacher_id_fkey(
+            id,
+            first_name,
+            last_name,
+            email,
+            employee_id
+          ),
+          subject:subjects(
+            name,
+            code
+          ),
+          batch:batches(
+            name
+          )
+        `)
         .single();
-      
-      if (error) {
-        console.error('Error assigning subject teacher:', error);
-        toast({
-          title: "Error",
-          description: `Failed to assign teacher: ${error.message}`,
-          variant: "destructive"
-        });
-        throw error;
-      }
-      
-      toast({
-        title: "Success",
-        description: "Teacher assigned successfully to subject"
-      });
-      
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subject-teachers', schoolId, subjectId, batchId, academicYearId] });
-    }
-  });
 
-  const removeTeacherMutation = useMutation({
-    mutationFn: async (assignmentId: string) => {
+      if (error) throw error;
+
+      // Only add if teacher data exists
+      if (data && data.teacher) {
+        setSubjectTeachers(prev => [...prev, data]);
+        toast({
+          title: 'Success',
+          description: 'Teacher assigned to subject successfully'
+        });
+        return true;
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Teacher not found in staff details',
+          variant: 'destructive'
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Error adding subject teacher:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to assign teacher to subject',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [subjectId, batchId, academicYearId]);
+
+  const removeSubjectTeacher = useCallback(async (subjectTeacherId: string) => {
+    try {
       const { error } = await supabase
         .from('subject_teachers')
         .delete()
-        .eq('id', assignmentId);
-      
-      if (error) {
-        console.error('Error removing subject teacher:', error);
-        toast({
-          title: "Error",
-          description: `Failed to remove teacher assignment: ${error.message}`,
-          variant: "destructive"
-        });
-        throw error;
-      }
-      
+        .eq('id', subjectTeacherId);
+
+      if (error) throw error;
+
+      setSubjectTeachers(prev => prev.filter(st => st.id !== subjectTeacherId));
       toast({
-        title: "Success",
-        description: "Teacher assignment removed successfully"
+        title: 'Success',
+        description: 'Teacher removed from subject successfully'
       });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subject-teachers', schoolId, subjectId, batchId, academicYearId] });
+      return true;
+    } catch (error: any) {
+      console.error('Error removing subject teacher:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove teacher from subject',
+        variant: 'destructive'
+      });
+      return false;
     }
-  });
+  }, []);
+
+  // Add aliases for backward compatibility with existing components
+  const assignTeacher = useCallback(async (assignment: any) => {
+    return addSubjectTeacher(assignment.teacher_id);
+  }, [addSubjectTeacher]);
+
+  const removeTeacher = useCallback(async (assignmentId: string) => {
+    return removeSubjectTeacher(assignmentId);
+  }, [removeSubjectTeacher]);
 
   return {
-    subjectTeachers: subjectTeachersQuery.data || [],
-    isLoading: subjectTeachersQuery.isLoading,
-    error: subjectTeachersQuery.error,
-    assignTeacher: assignTeacherMutation.mutate,
-    removeTeacher: removeTeacherMutation.mutate
+    subjectTeachers,
+    isLoading,
+    fetchSubjectTeachers,
+    addSubjectTeacher,
+    removeSubjectTeacher,
+    assignTeacher, // Alias for backward compatibility
+    removeTeacher  // Alias for backward compatibility
   };
-}
+};
