@@ -1,5 +1,5 @@
 
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Index from '@/pages/Index';
@@ -48,7 +48,7 @@ export const router = createBrowserRouter([
   {
     path: '/super-admin',
     element: (
-      <ProtectedRoute requiredRole="super_admin">
+      <ProtectedRoute requiredRoles={['super_admin']}>
         <Layout>
           <SuperAdminDashboard />
         </Layout>
@@ -58,7 +58,7 @@ export const router = createBrowserRouter([
   {
     path: '/school-admin',
     element: (
-      <ProtectedRoute requiredRole="school_admin">
+      <ProtectedRoute requiredRoles={['school_admin']}>
         <Layout>
           <SchoolAdminDashboard />
         </Layout>
@@ -68,7 +68,7 @@ export const router = createBrowserRouter([
   {
     path: '/schools',
     element: (
-      <ProtectedRoute requiredRole="super_admin">
+      <ProtectedRoute requiredRoles={['super_admin']}>
         <Layout>
           <SchoolManagement />
         </Layout>
@@ -140,3 +140,10 @@ export const router = createBrowserRouter([
     element: <NotFound />,
   },
 ]);
+
+// Default export for the AppRoutes component
+const AppRoutes = () => {
+  return <RouterProvider router={router} />;
+};
+
+export default AppRoutes;

@@ -1,3 +1,4 @@
+
 import { 
   LayoutDashboard, 
   GraduationCap, 
@@ -9,7 +10,23 @@ import {
   Settings, 
   FileText,
   BarChart3,
-  ClipboardList
+  ClipboardList,
+  Building,
+  CreditCard,
+  Puzzle,
+  LifeBuoy,
+  UserRound,
+  CalendarDays,
+  ClipboardCheck,
+  Landmark,
+  Bus,
+  Home,
+  MessageSquare,
+  FileEdit,
+  FileSpreadsheet,
+  Receipt,
+  Award,
+  Baby
 } from 'lucide-react';
 
 type MenuItem = {
@@ -29,7 +46,7 @@ export const menuConfig: MenuConfig = {
     { label: "Dashboard", path: "/super-admin-dashboard", icon: LayoutDashboard },
     { label: "Tenants", path: "/school-management", icon: Building },
     { label: "Users", path: "/users", icon: Users },
-    { label: "Analytics", path: "/analytics", icon: BarChart },
+    { label: "Analytics", path: "/analytics", icon: BarChart3 },
     { label: "Billing", path: "/billing", icon: CreditCard },
     { label: "Modules", path: "/modules", icon: Puzzle },
     { label: "Support", path: "/support", icon: LifeBuoy },
@@ -73,7 +90,7 @@ export const menuConfig: MenuConfig = {
     { label: "Examinations", path: "/examinations", icon: FileSpreadsheet },
     { label: "Fees", path: "/fees", icon: Receipt },
     { label: "Messaging", path: "/messaging", icon: MessageSquare },
-    { label: "Certificates", path: "/certificates", icon: Award }, // Changed Certificate to Award
+    { label: "Certificates", path: "/certificates", icon: Award },
     { label: "Settings", path: "/settings", icon: Settings },
   ],
   
