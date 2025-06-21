@@ -33,18 +33,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (currentSession?.user) {
           try {
+            console.log("Fetching profile for user:", currentSession.user.id);
             const userProfile = await fetchUserProfile(currentSession.user.id);
-            if (mounted && userProfile) {
-              setProfile(userProfile);
+            if (mounted) {
+              if (userProfile) {
+                console.log("Profile loaded successfully:", userProfile);
+                setProfile(userProfile);
+              } else {
+                console.log("No profile found for user");
+                setProfile(null);
+              }
             }
           } catch (error) {
             console.error("Error fetching initial profile:", error);
+            if (mounted) {
+              setProfile(null);
+            }
           }
         } else {
           setProfile(null);
         }
         
         if (mounted) {
+          console.log("Setting isLoading to false");
           setIsLoading(false);
         }
       } catch (error) {
@@ -67,18 +78,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fetch profile data if user exists
         if (currentSession?.user) {
           try {
+            console.log("Fetching profile after auth change for user:", currentSession.user.id);
             const userProfile = await fetchUserProfile(currentSession.user.id);
-            if (mounted && userProfile) {
-              setProfile(userProfile);
+            if (mounted) {
+              if (userProfile) {
+                console.log("Profile loaded after auth change:", userProfile);
+                setProfile(userProfile);
+              } else {
+                console.log("No profile found after auth change");
+                setProfile(null);
+              }
             }
           } catch (error) {
-            console.error("Error fetching profile:", error);
+            console.error("Error fetching profile after auth change:", error);
+            if (mounted) {
+              setProfile(null);
+            }
           }
         } else {
           setProfile(null);
         }
         
         if (mounted) {
+          console.log("Setting isLoading to false after auth change");
           setIsLoading(false);
         }
       }
@@ -92,6 +114,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  console.log("AuthProvider render:", { user: !!user, profile: !!profile, isLoading });
 
   const value = {
     session,
