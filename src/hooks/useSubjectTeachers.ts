@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { SubjectTeacher } from '@/types/academic';
@@ -9,45 +10,65 @@ export function useSubjectTeachers(subjectId?: string, batchId?: string, academi
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const schoolId = profile?.school_id;
+  const [subjectTeachers, setSubjectTeachers] = useState<SubjectTeacher[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchSubjectTeachers();
+  }, [subjectId, batchId, academicYearId, schoolId]);
 
   const fetchSubjectTeachers = async () => {
     if (!schoolId) return [];
     
-    let query = supabase
-      .from('subject_teachers')
-      .select(`
-        *,
-        teacher:staff_details(
-          id,
-          first_name,
-          last_name,
-          email,
-          employee_id
-        ),
-        subject:subjects(id, name, code),
-        batch:batches(id, name, code)
-      `);
-    
-    if (subjectId) {
-      query = query.eq('subject_id', subjectId);
-    }
-    
-    if (batchId) {
-      query = query.eq('batch_id', batchId);
-    }
-    
-    if (academicYearId) {
-      query = query.eq('academic_year_id', academicYearId);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
+    setIsLoading(true);
+    try {
+      let query = supabase
+        .from('subject_teachers')
+        .select(`
+          *,
+          teacher:staff_details(
+            id,
+            first_name,
+            last_name,
+            email,
+            employee_id
+          ),
+          subject:subjects(
+            name,
+            code
+          ),
+          batch:batches(
+            name
+          )
+        `);
+
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      }
+      if (batchId) {
+        query = query.eq('batch_id', batchId);
+      }
+      if (academicYearId) {
+        query = query.eq('academic_year_id', academicYearId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setSubjectTeachers(data || []);
+      return data;
+    } catch (error: any) {
       console.error('Error fetching subject teachers:', error);
-      throw error;
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch subject teachers',
+        variant: 'destructive'
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
     }
-    
-    return data;
   };
   
   const subjectTeachersQuery = useQuery({
