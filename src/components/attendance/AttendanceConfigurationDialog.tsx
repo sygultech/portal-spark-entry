@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,13 +37,13 @@ const AttendanceConfigurationDialog = ({
   const { academicYears } = useAcademicYears();
 
   const [formData, setFormData] = useState({
-    batch_id: configuration?.batch_id || '',
-    academic_year_id: configuration?.academic_year_id || '',
-    attendance_mode: configuration?.attendance_mode || 'daily',
-    auto_absent_enabled: configuration?.auto_absent_enabled || false,
-    auto_absent_time: configuration?.auto_absent_time || '16:00:00',
-    notification_enabled: configuration?.notification_enabled || true,
-    is_active: configuration?.is_active !== undefined ? configuration.is_active : true
+    batch_id: configuration?.batch_id ?? '',
+    academic_year_id: configuration?.academic_year_id ?? '',
+    attendance_mode: configuration?.attendance_mode ?? 'daily',
+    auto_absent_enabled: configuration?.auto_absent_enabled ?? false,
+    auto_absent_time: configuration?.auto_absent_time ?? '16:00:00',
+    notification_enabled: configuration?.notification_enabled ?? true,
+    is_active: configuration?.is_active ?? true
   });
 
   const mutation = useMutation({
@@ -160,9 +159,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="auto_absent_enabled"
-              checked={formData.auto_absent_enabled || undefined}
+              checked={formData.auto_absent_enabled ? true : undefined}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, auto_absent_enabled: checked || false })
+                setFormData({ ...formData, auto_absent_enabled: checked ?? false })
               }
             />
             <Label htmlFor="auto_absent_enabled">Enable Auto Absent</Label>
@@ -183,9 +182,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="notification_enabled"
-              checked={formData.notification_enabled || undefined}
+              checked={formData.notification_enabled ? true : undefined}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, notification_enabled: checked || false })
+                setFormData({ ...formData, notification_enabled: checked ?? false })
               }
             />
             <Label htmlFor="notification_enabled">Enable Notifications</Label>
@@ -194,9 +193,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
-              checked={formData.is_active || undefined}
+              checked={formData.is_active ? true : undefined}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, is_active: checked || false })
+                setFormData({ ...formData, is_active: checked ?? false })
               }
             />
             <Label htmlFor="is_active">Active</Label>
