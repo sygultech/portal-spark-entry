@@ -1021,103 +1021,6 @@ export type Database = {
           },
         ]
       }
-      room_allocations: {
-        Row: {
-          academic_year_id: string
-          allocated_by: string
-          allocation_type: string
-          created_at: string | null
-          date: string
-          end_time: string
-          id: string
-          room_id: string
-          schedule_id: string | null
-          school_id: string
-          special_class_id: string | null
-          start_time: string
-          status: string | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          academic_year_id: string
-          allocated_by: string
-          allocation_type: string
-          created_at?: string | null
-          date: string
-          end_time: string
-          id?: string
-          room_id: string
-          schedule_id?: string | null
-          school_id: string
-          special_class_id?: string | null
-          start_time: string
-          status?: string | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          academic_year_id?: string
-          allocated_by?: string
-          allocation_type?: string
-          created_at?: string | null
-          date?: string
-          end_time?: string
-          id?: string
-          room_id?: string
-          schedule_id?: string | null
-          school_id?: string
-          special_class_id?: string | null
-          start_time?: string
-          status?: string | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_room_allocations_academic_year"
-            columns: ["academic_year_id"]
-            isOneToOne: false
-            referencedRelation: "academic_years"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_room_allocations_allocated_by"
-            columns: ["allocated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_room_allocations_room"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_room_allocations_schedule"
-            columns: ["schedule_id"]
-            isOneToOne: false
-            referencedRelation: "timetable_schedules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_room_allocations_school"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_room_allocations_special_class"
-            columns: ["special_class_id"]
-            isOneToOne: false
-            referencedRelation: "special_classes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       rooms: {
         Row: {
           capacity: number | null
@@ -2350,6 +2253,20 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timetable_schedules_teacher"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "staff_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetable_schedules_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "staff_details"
             referencedColumns: ["id"]
           },
         ]

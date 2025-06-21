@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -118,6 +117,24 @@ export const useTimetableSchedules = (schoolId: string, academicYearId?: string)
   const createSchedule = useCallback(async (scheduleData: CreateScheduleData) => {
     try {
       console.log('Creating schedule with data:', scheduleData);
+
+      // Validate teacher exists in staff_details table
+      const { data: teacherExists, error: teacherCheckError } = await supabase
+        .from('staff_details')
+        .select('id')
+        .eq('id', scheduleData.teacher_id)
+        .eq('school_id', scheduleData.school_id)
+        .single();
+
+      if (teacherCheckError || !teacherExists) {
+        console.error('Teacher validation failed:', teacherCheckError);
+        toast({
+          title: 'Invalid Teacher',
+          description: 'The selected teacher does not exist or is not from this school',
+          variant: 'destructive'
+        });
+        return null;
+      }
 
       // Check for conflicts first
       const { data: conflicts, error: conflictError } = await supabase
