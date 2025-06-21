@@ -160,9 +160,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="auto_absent_enabled"
-              checked={formData.auto_absent_enabled === true ? true : undefined}
+              checked={formData.auto_absent_enabled}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, auto_absent_enabled: !!checked })
+                setFormData({ ...formData, auto_absent_enabled: checked ?? false })
               }
             />
             <Label htmlFor="auto_absent_enabled">Enable Auto Absent</Label>
@@ -183,9 +183,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="notification_enabled"
-              checked={formData.notification_enabled === true ? true : undefined}
+              checked={formData.notification_enabled}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, notification_enabled: !!checked })
+                setFormData({ ...formData, notification_enabled: checked ?? false })
               }
             />
             <Label htmlFor="notification_enabled">Enable Notifications</Label>
@@ -194,9 +194,9 @@ const AttendanceConfigurationDialog = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
-              checked={formData.is_active === true ? true : undefined}
+              checked={formData.is_active}
               onCheckedChange={(checked) => 
-                setFormData({ ...formData, is_active: !!checked })
+                setFormData({ ...formData, is_active: checked ?? false })
               }
             />
             <Label htmlFor="is_active">Active</Label>
@@ -208,7 +208,7 @@ const AttendanceConfigurationDialog = ({
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
+            />
           </DialogFooter>
         </form>
       </DialogContent>
