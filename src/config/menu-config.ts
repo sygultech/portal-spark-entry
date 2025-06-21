@@ -1,33 +1,32 @@
-
 import { 
   LayoutDashboard, 
-  GraduationCap, 
   Users, 
-  BookOpen, 
-  Calendar,
-  UserCheck,
-  School, 
   Settings, 
-  FileText,
-  BarChart3,
-  ClipboardList,
-  Building,
-  CreditCard,
-  Puzzle,
+  Building, 
+  BarChart, 
+  CreditCard, 
+  Puzzle, 
   LifeBuoy,
+  GraduationCap,
   UserRound,
   CalendarDays,
   ClipboardCheck,
   Landmark,
+  BookOpen,
   Bus,
   Home,
   MessageSquare,
-  FileEdit,
+  FileText,
+  School,
+  Clock,
+  BookCheck,
   FileSpreadsheet,
-  Receipt,
+  FileEdit,
   Award,
-  Baby
-} from 'lucide-react';
+  Baby,
+  Receipt,
+  // Certificate is not available in lucide-react, replacing with Award
+} from "lucide-react";
 
 type MenuItem = {
   label: string;
@@ -46,7 +45,7 @@ export const menuConfig: MenuConfig = {
     { label: "Dashboard", path: "/super-admin-dashboard", icon: LayoutDashboard },
     { label: "Tenants", path: "/school-management", icon: Building },
     { label: "Users", path: "/users", icon: Users },
-    { label: "Analytics", path: "/analytics", icon: BarChart3 },
+    { label: "Analytics", path: "/analytics", icon: BarChart },
     { label: "Billing", path: "/billing", icon: CreditCard },
     { label: "Modules", path: "/modules", icon: Puzzle },
     { label: "Support", path: "/support", icon: LifeBuoy },
@@ -90,7 +89,7 @@ export const menuConfig: MenuConfig = {
     { label: "Examinations", path: "/examinations", icon: FileSpreadsheet },
     { label: "Fees", path: "/fees", icon: Receipt },
     { label: "Messaging", path: "/messaging", icon: MessageSquare },
-    { label: "Certificates", path: "/certificates", icon: Award },
+    { label: "Certificates", path: "/certificates", icon: Award }, // Changed Certificate to Award
     { label: "Settings", path: "/settings", icon: Settings },
   ],
   
@@ -110,66 +109,3 @@ export const menuConfig: MenuConfig = {
 
 // Debug logging
 console.log("Menu config loaded:", menuConfig);
-
-export const menuItems = [
-  {
-    title: 'Dashboard',
-    url: '/',
-    icon: LayoutDashboard,
-    roles: ['super_admin', 'school_admin', 'teacher', 'student', 'parent']
-  },
-  {
-    title: 'Schools',
-    url: '/schools',
-    icon: School,
-    roles: ['super_admin']
-  },
-  {
-    title: 'Academic',
-    url: '/academic',
-    icon: GraduationCap,
-    roles: ['super_admin', 'school_admin', 'teacher']
-  },
-  {
-    title: 'Students',
-    url: '/students',
-    icon: Users,
-    roles: ['super_admin', 'school_admin', 'teacher']
-  },
-  {
-    title: 'Staff',
-    url: '/staff',
-    icon: Users,
-    roles: ['super_admin', 'school_admin']
-  },
-  {
-    title: 'Attendance',
-    url: '/attendance',
-    icon: UserCheck,
-    roles: ['super_admin', 'school_admin', 'teacher', 'parent']
-  },
-  {
-    title: 'Timetable',
-    url: '/timetable',
-    icon: Calendar,
-    roles: ['super_admin', 'school_admin', 'teacher']
-  },
-  {
-    title: 'Library',
-    url: '/library',
-    icon: BookOpen,
-    roles: ['super_admin', 'school_admin', 'teacher', 'student', 'librarian']
-  },
-  {
-    title: 'Reports',
-    url: '/reports',
-    icon: BarChart3,
-    roles: ['super_admin', 'school_admin', 'teacher']
-  },
-  {
-    title: 'Settings',
-    url: '/settings',
-    icon: Settings,
-    roles: ['super_admin', 'school_admin']
-  }
-];

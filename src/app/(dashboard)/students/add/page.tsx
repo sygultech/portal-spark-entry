@@ -1,11 +1,11 @@
 
 import { AddStudentForm } from '@/components/students/AddStudentForm';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AddStudentPage() {
-  const { profile } = useAuth();
+  const { user } = useAuth();
 
-  if (!profile?.school_id) {
+  if (!user?.primary_school_id) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Add New Student</h1>

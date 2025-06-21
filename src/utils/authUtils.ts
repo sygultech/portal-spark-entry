@@ -30,8 +30,6 @@ export const cleanupAuthState = () => {
 // Function to fetch user profile
 export const fetchUserProfile = async (userId: string): Promise<Profile | null> => {
   try {
-    console.log('fetchUserProfile: Starting profile fetch for user:', userId);
-    
     // Fetch the profile data
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -40,21 +38,13 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
       .single();
 
     if (error) {
-      console.error('fetchUserProfile: Error fetching profile:', error);
-      // If profile doesn't exist, that's not necessarily an error for the loading state
-      if (error.code === 'PGRST116') {
-        console.log('fetchUserProfile: No profile found, but this is not an error');
-        return null;
-      }
+      console.error('Error fetching profile:', error);
       return null;
     }
 
     if (!profile) {
-      console.log('fetchUserProfile: No profile data returned');
       return null;
     }
-
-    console.log('fetchUserProfile: Profile fetched successfully:', profile);
 
     return {
       id: profile.id,
@@ -68,7 +58,7 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
       updated_at: profile.updated_at
     };
   } catch (error) {
-    console.error('fetchUserProfile: Unexpected error:', error);
+    console.error('Error in fetchUserProfile:', error);
     return null;
   }
 };

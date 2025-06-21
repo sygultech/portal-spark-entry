@@ -1,8 +1,7 @@
-
-import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAccessRoute } from "@/utils/roleUtils";
+import { getRoleBasedRoute, canAccessRoute, getPrimaryRole } from "@/utils/roleUtils";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,41 +14,44 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  console.log("ProtectedRoute:", { 
-    user: !!user, 
-    profile: !!profile, 
-    isLoading, 
-    path: location.pathname,
-    hasRequiredRoles: requiredRoles.length > 0,
-    userRoles: profile?.roles
-  });
+  // Effect to handle role-based redirection
+  useEffect(() => {
+    if (!isLoading && user && profile) {
+      // If we're at the root path and the user should be redirected to a role-specific page
+      if (location.pathname === "/" && profile.roles) {
+        const roleRoute = getRoleBasedRoute(profile.roles);
+        // Only redirect if not already on the role's route
+        if (roleRoute !== "/" && location.pathname !== roleRoute) {
+          const primaryRole = getPrimaryRole(profile);
+          console.log(`Redirecting user with role ${primaryRole} to ${roleRoute}`);
+          navigate(roleRoute, { replace: true });
+        }
+      }
+    }
+  }, [user, profile, isLoading, location.pathname, navigate]);
 
-  // Show loading only for a reasonable time
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // If no user, redirect to login
   if (!user) {
-    console.log("No user, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
-  // If specific roles are required and user doesn't have access
+  // If specific roles are required and user doesn't have one of them
   if (requiredRoles.length > 0 && profile && !canAccessRoute(profile.roles, requiredRoles)) {
-    console.log(`User doesn't have required roles: ${requiredRoles.join(', ')}`);
-    return <Navigate to="/dashboard" replace />;
+    const primaryRole = getPrimaryRole(profile);
+    console.log(`User with role ${primaryRole} attempted to access a route for ${requiredRoles.join(', ')}`);
+    // Show NotFound component directly instead of redirecting
+    return <Navigate to="/unauthorized" replace />;
   }
 
-  // Render the protected content
   return <>{children}</>;
 };
 
