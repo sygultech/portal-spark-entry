@@ -20,8 +20,8 @@ const AttendanceReports = () => {
   const { activeBatches, isLoading: batchesLoading } = useBatchManagement();
   
   const [filters, setFilters] = useState({
-    batchId: '',
-    studentId: '',
+    batchId: 'all',
+    studentId: 'all',
     dateFrom: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days ago
     dateTo: new Date().toISOString().split('T')[0]
   });
@@ -31,15 +31,20 @@ const AttendanceReports = () => {
   // Fetch attendance records based on filters
   const { data: attendanceRecords, isLoading: recordsLoading } = useQuery({
     queryKey: ['attendanceRecords', filters],
-    queryFn: () => attendanceService.getAttendanceRecords(filters),
-    enabled: !!(filters.batchId || filters.studentId)
+    queryFn: () => attendanceService.getAttendanceRecords({
+      batchId: filters.batchId === 'all' ? undefined : filters.batchId,
+      studentId: filters.studentId === 'all' ? undefined : filters.studentId,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo
+    }),
+    enabled: !!(filters.batchId !== 'all' || filters.studentId !== 'all')
   });
 
   // Fetch students for the selected batch (for detailed filtering)
   const { data: batchStudents } = useQuery({
     queryKey: ['batchStudents', filters.batchId],
     queryFn: () => attendanceService.getStudentsByBatch(filters.batchId),
-    enabled: !!filters.batchId
+    enabled: !!(filters.batchId && filters.batchId !== 'all')
   });
 
   // Mock analytics data - replace with real data when backend is ready
@@ -141,7 +146,7 @@ const AttendanceReports = () => {
                   <SelectValue placeholder="Select batch..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Batches</SelectItem>
+                  <SelectItem value="all">All Batches</SelectItem>
                   {activeBatches.map((batch) => (
                     <SelectItem key={batch.id} value={batch.id}>
                       {batch.name} - {batch.course.name}
@@ -151,7 +156,7 @@ const AttendanceReports = () => {
               </Select>
             </div>
 
-            {filters.batchId && batchStudents && (
+            {filters.batchId !== 'all' && batchStudents && (
               <div className="space-y-2">
                 <Label htmlFor="student">Student</Label>
                 <Select value={filters.studentId} onValueChange={(value) => handleFilterChange('studentId', value)}>
@@ -159,7 +164,7 @@ const AttendanceReports = () => {
                     <SelectValue placeholder="Select student..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Students</SelectItem>
+                    <SelectItem value="all">All Students</SelectItem>
                     {batchStudents.map((student) => (
                       <SelectItem key={student.id} value={student.id}>
                         {student.first_name} {student.last_name} ({student.roll_number})
@@ -194,7 +199,7 @@ const AttendanceReports = () => {
 
           <div className="flex justify-between items-center pt-4 border-t">
             <div className="text-sm text-muted-foreground">
-              {filters.batchId 
+              {filters.batchId !== 'all'
                 ? `Showing data for ${activeBatches.find(b => b.id === filters.batchId)?.name || 'selected batch'}`
                 : 'Select a batch to view attendance data'
               }
@@ -208,7 +213,7 @@ const AttendanceReports = () => {
       </Card>
 
       {/* Report Content */}
-      {!filters.batchId ? (
+      {filters.batchId === 'all' ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
