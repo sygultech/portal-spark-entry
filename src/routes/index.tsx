@@ -23,6 +23,7 @@ import Students from "@/pages/Students";
 import StaffManagement from "@/pages/StaffManagement";
 import Timetable from "@/pages/Timetable";
 import Attendance from "@/pages/Attendance";
+import Finance from "@/pages/Finance";
 
 const AppRoutes = () => {
   return (
@@ -155,6 +156,18 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["school_admin", "teacher"]}>
             <AppLayout>
               <Attendance />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Finance Route */}
+      <Route 
+        path="/finance" 
+        element={
+          <ProtectedRoute requiredRoles={["school_admin"]}>
+            <AppLayout>
+              <Finance />
             </AppLayout>
           </ProtectedRoute>
         } 
