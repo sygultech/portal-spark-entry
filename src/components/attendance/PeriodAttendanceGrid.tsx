@@ -75,7 +75,7 @@ const PeriodAttendanceGrid: React.FC<PeriodAttendanceGridProps> = ({
     if (nextStatus) {
       onAttendanceChange(studentId, nextStatus, periodNumber);
     } else {
-      // Remove entry by not calling onAttendanceChange or handle removal
+      // Remove entry by not calling onAttendanceChange or handle removal.
       // For now, we'll set to 'absent' as default when cycling back
       onAttendanceChange(studentId, 'present', periodNumber);
     }
