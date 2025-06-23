@@ -68,14 +68,53 @@ const AttendanceEntry = () => {
         batch_id: selectedBatch,
         student_id: entry.student_id,
         date: entry.date,
-        period_number: entry.period_number,
-        session: entry.session,
+        mode: configuration?.attendance_mode || 'daily', // Include current mode
+        period_number: entry.period_number !== undefined ? entry.period_number : null, // Convert undefined to null
+        session: entry.session !== undefined ? entry.session : null, // Convert undefined to null
         status: entry.status,
         remarks: entry.remarks,
+        school_id: schoolId, // Add school_id
         marked_by: '',
         marked_at: new Date().toISOString()
       }));
-      return attendanceService.saveAttendance(attendanceRecords);
+      
+      // Debug logging to see what's being sent
+      // Filter out invalid records for session mode
+      const validRecords = attendanceRecords.filter(record => {
+        if (record.mode === 'session') {
+          // For session mode, session must not be null/undefined
+          const isValid = record.session !== null && record.session !== undefined;
+          if (!isValid) {
+            console.warn('Filtering out invalid session record:', record);
+          }
+          return isValid;
+        }
+        return true; // Valid for other modes
+      });
+
+      console.log('=== ATTENDANCE SAVE DEBUG ===');
+      console.log('Configuration mode:', configuration?.attendance_mode);
+      console.log('Original records:', attendanceRecords.length);
+      console.log('Valid records after filtering:', validRecords.length);
+      console.log('Valid records to save:', validRecords);
+      validRecords.forEach((record, index) => {
+        const passesConstraint = record.mode === 'session' ? 
+          (record.period_number === null && record.session !== null && record.session !== undefined) : 
+          true;
+        console.log(`Record ${index + 1}:`, {
+          mode: record.mode,
+          period_number: record.period_number,
+          session: record.session,
+          passes_constraint: passesConstraint
+        });
+      });
+      console.log('===========================');
+      
+      if (validRecords.length === 0) {
+        throw new Error('No valid attendance records to save. Please mark attendance with proper session data.');
+      }
+      
+      return attendanceService.saveAttendance(validRecords);
     },
     onSuccess: (result) => {
       toast({
@@ -85,9 +124,10 @@ const AttendanceEntry = () => {
       setHasUnsavedChanges(false);
     },
     onError: (error) => {
+      console.error('Save attendance mutation error:', error);
       toast({
         title: 'Save Failed',
-        description: 'Failed to save attendance. Changes are stored offline.',
+        description: `Failed to save attendance: ${error.message || 'Unknown error'}. Changes are stored offline.`,
         variant: 'destructive'
       });
     }
@@ -99,7 +139,26 @@ const AttendanceEntry = () => {
       const savedData = localStorage.getItem(`attendance_${selectedBatch}_${selectedDate}`);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        setAttendanceEntries(parsedData);
+        console.log('Loading attendance from localStorage:', parsedData);
+        
+        // Validate and filter out invalid entries for session mode
+        if (configuration?.attendance_mode === 'session') {
+          const validEntries = parsedData.filter((entry: any) => entry.session);
+          const invalidEntries = parsedData.filter((entry: any) => !entry.session);
+          
+          if (invalidEntries.length > 0) {
+            console.warn('Filtering out invalid cached entries without session data:', invalidEntries);
+            toast({
+              title: 'Cached Data Cleaned',
+              description: `Removed ${invalidEntries.length} invalid cached attendance entries.`,
+              variant: 'default'
+            });
+          }
+          
+          setAttendanceEntries(validEntries);
+        } else {
+          setAttendanceEntries(parsedData);
+        }
       } else {
         setAttendanceEntries([]);
       }
@@ -200,6 +259,19 @@ const AttendanceEntry = () => {
         variant: 'destructive'
       });
       return;
+    }
+
+    // For session mode, validate that entries have session data
+    if (configuration?.attendance_mode === 'session') {
+      const invalidEntries = attendanceEntries.filter(entry => !entry.session);
+      if (invalidEntries.length > 0) {
+        console.warn('Found attendance entries without session data:', invalidEntries);
+        toast({
+          title: 'Invalid Session Data',
+          description: `${invalidEntries.length} attendance entries are missing session information. They will be filtered out.`,
+          variant: 'destructive'
+        });
+      }
     }
 
     saveAttendanceMutation.mutate(attendanceEntries);

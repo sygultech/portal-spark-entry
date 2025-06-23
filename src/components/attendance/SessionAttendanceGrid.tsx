@@ -67,7 +67,7 @@ const SessionAttendanceGrid: React.FC<SessionAttendanceGridProps> = ({
     if (nextStatus) {
       onAttendanceChange(studentId, nextStatus, undefined, session);
     } else {
-      // Remove entry by cycling back to present
+      // For session mode, when cycling back to null, we should start from 'present' again
       onAttendanceChange(studentId, 'present', undefined, session);
     }
   };

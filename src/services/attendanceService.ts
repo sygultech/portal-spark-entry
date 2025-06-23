@@ -330,16 +330,25 @@ export const attendanceService = {
 
   // Attendance methods
   async saveAttendance(entries: AttendanceRecord[]): Promise<{ success: boolean; message: string }> {
+    // Get current user ID first
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
     const { error } = await supabase
       .from('attendance_records')
       .upsert(entries.map(entry => ({
         ...entry,
-        marked_by: supabase.auth.getUser().then(({ data }) => data.user?.id),
+        marked_by: user.id, // Fixed: Use the actual user ID instead of a Promise
         marked_at: new Date().toISOString()
       })));
 
     if (error) {
       console.error('Error saving attendance:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Attempted to save entries:', entries);
       throw error;
     }
 

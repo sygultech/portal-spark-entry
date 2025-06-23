@@ -31,12 +31,14 @@ export interface AttendanceRecord {
   student_id: string;
   batch_id: string;
   date: string;
+  mode: AttendanceMode;
   period_number?: number;
   session?: 'morning' | 'afternoon';
   status: AttendanceStatus;
   remarks?: string;
   marked_by: string;
   marked_at: string;
+  school_id: string;
 }
 
 export interface PeriodSlot {
