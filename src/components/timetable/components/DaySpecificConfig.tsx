@@ -77,17 +77,15 @@ export const DaySpecificConfig = ({
       setActiveDay(null);
       // Reset all day-specific configurations when disabled
       activeDays.forEach(day => {
-        // Extract base day name for fortnightly mode
-        const dayId = isWeeklyMode ? day.id : day.id.split('-')[1];
-        onUpdateDayPeriods(dayId, []);
+        // Use the full dayId to maintain separation between weeks in fortnightly mode
+        onUpdateDayPeriods(day.id, []);
       });
     }
   };
 
   const copyFromDefault = (dayId: string) => {
-    // Ensure we're using the correct day ID format
-    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    onUpdateDayPeriods(targetDayId, [...defaultPeriods]);
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    onUpdateDayPeriods(dayId, [...defaultPeriods]);
     
     // Validate the copied periods immediately
     const validationErrors = validatePeriodTimings(defaultPeriods);
@@ -106,12 +104,9 @@ export const DaySpecificConfig = ({
   };
 
   const copyFromAnotherDay = (dayId: string, sourceDayId: string) => {
-    // Ensure we're using the correct day ID format
-    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    const sourceDay = isWeeklyMode ? sourceDayId : sourceDayId.split('-')[1];
-    
-    const sourcePeriods = daySpecificPeriods[sourceDay] || defaultPeriods;
-    onUpdateDayPeriods(targetDayId, [...sourcePeriods]);
+    // Use full day IDs to maintain separation between weeks in fortnightly mode
+    const sourcePeriods = daySpecificPeriods[sourceDayId] || defaultPeriods;
+    onUpdateDayPeriods(dayId, [...sourcePeriods]);
     
     // Validate the copied periods immediately
     const validationErrors = validatePeriodTimings(sourcePeriods);
@@ -130,14 +125,13 @@ export const DaySpecificConfig = ({
   };
 
   const getCurrentPeriods = (dayId: string): Period[] => {
-    // Use the correct day ID format for lookup
-    const lookupDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    return daySpecificPeriods[lookupDayId] || defaultPeriods;
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    return daySpecificPeriods[dayId] || defaultPeriods;
   };
 
   const hasCustomTimings = (dayId: string): boolean => {
-    const lookupDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    return !!daySpecificPeriods[lookupDayId];
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    return !!daySpecificPeriods[dayId];
   };
 
   const hasValidationErrors = (dayId: string): boolean => {
@@ -151,9 +145,8 @@ export const DaySpecificConfig = ({
       period.id === periodId ? { ...period, [field]: value } : period
     );
     
-    // Use the correct day ID format for updates
-    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    onUpdateDayPeriods(targetDayId, updatedPeriods);
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    onUpdateDayPeriods(dayId, updatedPeriods);
     
     // Immediate validation feedback
     setTimeout(() => {
@@ -192,9 +185,8 @@ export const DaySpecificConfig = ({
     const newPeriods = [...currentPeriods];
     newPeriods.splice(periodIndex + 1, 0, breakPeriod);
     
-    // Use the correct day ID format for updates
-    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    onUpdateDayPeriods(targetDayId, newPeriods);
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    onUpdateDayPeriods(dayId, newPeriods);
     
     // Validate after adding break
     setTimeout(() => {
@@ -218,9 +210,8 @@ export const DaySpecificConfig = ({
     const currentPeriods = getCurrentPeriods(dayId);
     const updatedPeriods = currentPeriods.filter(p => p.id !== breakId);
     
-    // Use the correct day ID format for updates
-    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    onUpdateDayPeriods(targetDayId, updatedPeriods);
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    onUpdateDayPeriods(dayId, updatedPeriods);
     
     toast({
       title: "Break Removed",
@@ -234,9 +225,8 @@ export const DaySpecificConfig = ({
       period.id === periodId ? { ...period, label } : period
     );
     
-    // Use the correct day ID format for updates
-    const targetDayId = isWeeklyMode ? dayId : dayId.split('-')[1];
-    onUpdateDayPeriods(targetDayId, updatedPeriods);
+    // Use the full dayId to maintain separation between weeks in fortnightly mode
+    onUpdateDayPeriods(dayId, updatedPeriods);
   };
 
   // Get overall validation status for all day-specific configurations

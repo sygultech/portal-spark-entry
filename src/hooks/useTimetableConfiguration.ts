@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Period } from '@/components/timetable/types/TimePeriodTypes';
@@ -194,21 +193,29 @@ export const useTimetableConfiguration = () => {
         label: period.label
       }));
 
-      // Handle daySpecificPeriods - only send custom configurations, not defaults
       let formattedDaySpecificPeriods = {};
       
       if (enableFlexibleTimings && Object.keys(daySpecificPeriods).length > 0) {
-        // Only include days that actually have custom configurations
+        // Modified: Handle fortnightly mode correctly
         formattedDaySpecificPeriods = Object.entries(daySpecificPeriods).reduce(
           (acc, [dayId, periods]) => {
+            // For fortnightly mode, ensure the dayId format is preserved
+            const formattedDayId = !isWeeklyMode && dayId.includes('week') 
+              ? dayId  // Keep the week1-/week2- prefix for fortnightly mode
+              : dayId; // Use as is for weekly mode
+
             return {
               ...acc,
-              [dayId]: periods.map(period => ({
+              [formattedDayId]: periods.map(period => ({
                 number: period.number,
                 startTime: period.startTime,
                 endTime: period.endTime,
                 type: period.type,
-                label: period.label
+                label: period.label,
+                // Add fortnightWeek information for non-weekly mode
+                ...((!isWeeklyMode && dayId.startsWith('week')) && {
+                  fortnightWeek: parseInt(dayId.split('-')[0].replace('week', ''))
+                })
               }))
             };
           },
@@ -219,6 +226,8 @@ export const useTimetableConfiguration = () => {
       console.log('Sending to backend - Selected days:', selectedDays);
       console.log('Sending to backend - Day specific periods keys:', Object.keys(formattedDaySpecificPeriods));
       console.log('Sending to backend - Config ID for update:', configId);
+      console.log('Sending to backend - Flexible timings enabled:', enableFlexibleTimings);
+      console.log('Sending to backend - Weekly mode:', isWeeklyMode);
 
       let result;
       
@@ -237,56 +246,33 @@ export const useTimetableConfiguration = () => {
         }
 
         console.log('Deleted existing configuration, now creating new one with same data');
-
-        // Then create a new one with the updated data
-        const { data, error } = await supabase.rpc('save_timetable_configuration', {
-          p_school_id: schoolId,
-          p_name: name,
-          p_is_active: isActive,
-          p_is_default: isDefault,
-          p_academic_year_id: academicYearId,
-          p_is_weekly_mode: isWeeklyMode,
-          p_selected_days: selectedDays,
-          p_default_periods: formattedDefaultPeriods,
-          p_fortnight_start_date: fortnightStartDate,
-          p_day_specific_periods: formattedDaySpecificPeriods,
-          p_enable_flexible_timings: enableFlexibleTimings,
-          p_batch_ids: batchIds
-        });
-
-        if (error) {
-          throw error;
-        }
-        result = data;
-      } else {
-        // Create new configuration
-        console.log('Creating new configuration');
-        const { data, error } = await supabase.rpc('save_timetable_configuration', {
-          p_school_id: schoolId,
-          p_name: name,
-          p_is_active: isActive,
-          p_is_default: isDefault,
-          p_academic_year_id: academicYearId,
-          p_is_weekly_mode: isWeeklyMode,
-          p_selected_days: selectedDays,
-          p_default_periods: formattedDefaultPeriods,
-          p_fortnight_start_date: fortnightStartDate,
-          p_day_specific_periods: formattedDaySpecificPeriods,
-          p_enable_flexible_timings: enableFlexibleTimings,
-          p_batch_ids: batchIds
-        });
-
-        if (error) {
-          throw error;
-        }
-        result = data;
       }
 
+      // Create new configuration or recreate updated one
+      const { data, error } = await supabase.rpc('save_timetable_configuration', {
+        p_school_id: schoolId,
+        p_name: name,
+        p_is_active: isActive,
+        p_is_default: isDefault,
+        p_academic_year_id: academicYearId,
+        p_is_weekly_mode: isWeeklyMode,
+        p_fortnight_start_date: fortnightStartDate,
+        p_selected_days: selectedDays,
+        p_default_periods: formattedDefaultPeriods,
+        p_day_specific_periods: enableFlexibleTimings ? formattedDaySpecificPeriods : {},
+        p_enable_flexible_timings: enableFlexibleTimings,
+        p_batch_ids: batchIds || []
+      });
+
+      if (error) throw error;
+
+      result = data;
+      
+      console.log('Configuration saved successfully:', result);
+      
       toast({
-        title: "Success",
-        description: configId ? 
-          "Timetable configuration updated successfully" : 
-          "Timetable configuration saved successfully"
+        title: 'Success',
+        description: `Timetable configuration ${configId ? 'updated' : 'created'} successfully`,
       });
 
       return result;

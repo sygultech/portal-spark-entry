@@ -41,6 +41,21 @@ export interface AttendanceRecord {
   school_id: string;
 }
 
+export interface AttendanceRecordInput {
+  id: string;
+  student_id: string;
+  batch_id: string;
+  date: string;
+  mode: AttendanceMode;
+  period_number?: number;
+  session?: 'morning' | 'afternoon';
+  status: AttendanceStatus;
+  remarks?: string;
+  school_id: string;
+  marked_by?: string; // Optional: will be set by service
+  marked_at?: string; // Optional: will be set by service
+}
+
 export interface PeriodSlot {
   period_number: number;
   start_time: string;
@@ -50,6 +65,7 @@ export interface PeriodSlot {
 }
 
 export interface AttendanceEntry {
+  id?: string; // Optional: only set for existing database records
   student_id: string;
   date: string;
   period_number?: number;

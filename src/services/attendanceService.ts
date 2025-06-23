@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { AttendanceConfiguration, Student, PeriodSlot, AttendanceRecord, AttendanceStats, AttendanceMode } from '@/types/attendance';
+import { AttendanceConfiguration, Student, PeriodSlot, AttendanceRecord, AttendanceRecordInput, AttendanceStats, AttendanceMode } from '@/types/attendance';
 
 export const attendanceService = {
   // Configuration methods
@@ -179,21 +179,23 @@ export const attendanceService = {
         .single();
 
       let timetableConfigId: string | null = null;
+      let timetableConfig: any = null;
 
       if (!batchMappingError && batchMapping) {
         console.log(`[getPeriodGrid] Found batch mapping with configuration_id: ${batchMapping.configuration_id}`);
         
         // Step 2: Check if the mapped timetable configuration is active
-        const { data: timetableConfig, error: timetableConfigError } = await supabase
+        const { data: mappedConfig, error: timetableConfigError } = await supabase
           .from('timetable_configurations')
-          .select('id, is_active')
+          .select('id, is_active, is_weekly_mode, fortnight_start_date')
           .eq('id', batchMapping.configuration_id)
           .eq('is_active', true)
           .single();
 
-        if (!timetableConfigError && timetableConfig) {
-          console.log(`[getPeriodGrid] Found active timetable configuration: ${timetableConfig.id}`);
-          timetableConfigId = timetableConfig.id;
+        if (!timetableConfigError && mappedConfig) {
+          console.log(`[getPeriodGrid] Found active timetable configuration: ${mappedConfig.id}`);
+          timetableConfigId = mappedConfig.id;
+          timetableConfig = mappedConfig; // Store the config for fortnight calculations
         } else {
           console.log(`[getPeriodGrid] Mapped configuration is inactive or not found, falling back to default`);
         }
@@ -217,7 +219,7 @@ export const attendanceService = {
 
         const { data: defaultConfig, error: defaultConfigError } = await supabase
           .from('timetable_configurations')
-          .select('id')
+          .select('id, is_weekly_mode, fortnight_start_date')
           .eq('is_default', true)
           .eq('is_active', true)
           .eq('school_id', batchInfo.school_id)
@@ -226,6 +228,7 @@ export const attendanceService = {
         if (!defaultConfigError && defaultConfig) {
           console.log(`[getPeriodGrid] Found default timetable configuration: ${defaultConfig.id}`);
           timetableConfigId = defaultConfig.id;
+          timetableConfig = defaultConfig; // Store config details for fortnight calculations
         } else {
           console.log(`[getPeriodGrid] No default configuration found for school: ${batchInfo.school_id}`);
         }
@@ -239,11 +242,29 @@ export const attendanceService = {
 
       // Step 5: Determine day of week from date (if provided)
       let dayOfWeek: string | null = null;
+      let fortnightWeek: number | null = null;
+      
       if (date) {
         const dateObj = new Date(date);
         const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         dayOfWeek = days[dateObj.getDay()];
         console.log(`[getPeriodGrid] Date ${date} is a ${dayOfWeek}`);
+        
+        // Step 5a: Calculate fortnight week if in fortnightly mode
+        if (timetableConfig && !timetableConfig.is_weekly_mode && timetableConfig.fortnight_start_date) {
+          const fortnightStart = new Date(timetableConfig.fortnight_start_date);
+          const diffInTime = dateObj.getTime() - fortnightStart.getTime();
+          const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+          
+          // Calculate which fortnight cycle (0, 1, 2, ...)
+          const fortnightCycle = Math.floor(diffInDays / 14);
+          
+          // Determine week within the fortnight (1 or 2)
+          const dayWithinFortnight = diffInDays % 14;
+          fortnightWeek = dayWithinFortnight < 7 ? 1 : 2;
+          
+          console.log(`[getPeriodGrid] Fortnightly mode: Date ${date} is in Week ${fortnightWeek} of fortnight cycle ${fortnightCycle}`);
+        }
       }
 
       // Step 6: Fetch period settings using the timetable configuration
@@ -256,13 +277,24 @@ export const attendanceService = {
           end_time,
           label,
           type,
-          day_of_week
+          day_of_week,
+          fortnight_week
         `)
         .eq('configuration_id', timetableConfigId);
 
       // Filter by day of week if date is provided
       if (dayOfWeek) {
         query = query.eq('day_of_week', dayOfWeek);
+      }
+
+      // Filter by fortnight week for fortnightly configurations
+      if (fortnightWeek !== null && timetableConfig && !timetableConfig.is_weekly_mode) {
+        query = query.eq('fortnight_week', fortnightWeek);
+        console.log(`[getPeriodGrid] Filtering by fortnight week: ${fortnightWeek}`);
+      } else if (timetableConfig && timetableConfig.is_weekly_mode) {
+        // For weekly mode, fortnight_week should be null
+        query = query.is('fortnight_week', null);
+        console.log(`[getPeriodGrid] Weekly mode: filtering for null fortnight_week`);
       }
 
       const { data: periodSettings, error: periodError } = await query
@@ -329,7 +361,7 @@ export const attendanceService = {
   },
 
   // Attendance methods
-  async saveAttendance(entries: AttendanceRecord[]): Promise<{ success: boolean; message: string }> {
+  async saveAttendance(entries: AttendanceRecordInput[]): Promise<{ success: boolean; message: string }> {
     // Get current user ID first
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -337,19 +369,42 @@ export const attendanceService = {
       throw new Error('User not authenticated');
     }
 
-    const { error } = await supabase
+    // Validate school_id is present in all entries
+    if (!entries.every(entry => entry.school_id)) {
+      throw new Error('School ID is required for all attendance records');
+    }
+
+    // Prepare records with user ID and timestamp
+    const recordsToSave = entries.map(entry => ({
+      ...entry,
+      marked_by: user.id,
+      marked_at: new Date().toISOString()
+    }));
+
+    // Save records
+    const { data, error } = await supabase
       .from('attendance_records')
-      .upsert(entries.map(entry => ({
-        ...entry,
-        marked_by: user.id, // Fixed: Use the actual user ID instead of a Promise
-        marked_at: new Date().toISOString()
-      })));
+      .upsert(recordsToSave)
+      .select(); // Add select to verify records were actually saved
 
     if (error) {
       console.error('Error saving attendance:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
-      console.error('Attempted to save entries:', entries);
+      console.error('Attempted to save entries:', recordsToSave);
       throw error;
+    }
+
+    // Verify records were saved
+    if (!data || data.length === 0) {
+      console.error('No records were saved. This might be due to RLS policies.');
+      console.error('Attempted to save:', recordsToSave);
+      throw new Error('Failed to save attendance records. Please check your permissions.');
+    }
+
+    // Verify all records were saved
+    if (data.length !== entries.length) {
+      console.error(`Only ${data.length} out of ${entries.length} records were saved.`);
+      throw new Error('Some attendance records could not be saved. Please try again.');
     }
 
     return { success: true, message: 'Attendance saved successfully' };
