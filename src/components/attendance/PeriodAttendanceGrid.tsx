@@ -66,7 +66,7 @@ const PeriodAttendanceGrid: React.FC<PeriodAttendanceGridProps> = ({
   const handleCellClick = (studentId: string, periodNumber: number) => {
     const currentStatus = getStudentPeriodStatus(studentId, periodNumber);
     
-    // Cycle through statuses: null -> present -> absent -> late -> leave -> null
+    // Cycle through  statuses: null -> present -> absent -> late -> leave -> null
     const statusCycle: (AttendanceStatus | null)[] = [null, 'present', 'absent', 'late', 'leave'];
     const currentIndex = statusCycle.indexOf(currentStatus);
     const nextIndex = (currentIndex + 1) % statusCycle.length;
