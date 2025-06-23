@@ -13,6 +13,8 @@ interface PeriodAttendanceGridProps {
   attendanceEntries: AttendanceEntry[];
   onAttendanceChange: (studentId: string, status: AttendanceStatus, periodNumber?: number) => void;
   isLoadingPeriods: boolean;
+  selectedDate: string;
+  availableDays: string[];
 }
 
 const PeriodAttendanceGrid: React.FC<PeriodAttendanceGridProps> = ({
@@ -20,7 +22,9 @@ const PeriodAttendanceGrid: React.FC<PeriodAttendanceGridProps> = ({
   periodSlots,
   attendanceEntries,
   onAttendanceChange,
-  isLoadingPeriods
+  isLoadingPeriods,
+  selectedDate,
+  availableDays
 }) => {
   const getStudentPeriodStatus = (studentId: string, periodNumber: number): AttendanceStatus | null => {
     const entry = attendanceEntries.find(
@@ -87,14 +91,56 @@ const PeriodAttendanceGrid: React.FC<PeriodAttendanceGridProps> = ({
   }
 
   if (!periodSlots || periodSlots.length === 0) {
+    // Determine the day of week from selected date
+    const getDayOfWeek = (dateString: string) => {
+      const date = new Date(dateString);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return days[date.getDay()];
+    };
+
+    const selectedDayOfWeek = getDayOfWeek(selectedDate);
+    const selectedDayLower = selectedDayOfWeek.toLowerCase();
+
+    // Check if the selected day is in available days
+    const isDayConfigured = availableDays.includes(selectedDayLower);
+
+    // Format available days for display
+    const formatDayName = (day: string) => day.charAt(0).toUpperCase() + day.slice(1);
+    const availableDaysFormatted = availableDays.map(formatDayName).join(', ');
+
     return (
       <div className="flex items-center justify-center p-8 border-2 border-dashed border-orange-200 rounded-lg bg-orange-50">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <AlertTriangle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-orange-800 mb-2">No Timetable Configuration Found</h3>
-          <p className="text-orange-700">
-            Please contact admin to set up the timetable configuration for this batch.
-          </p>
+          
+          {!isDayConfigured && availableDays.length > 0 ? (
+            <>
+              <h3 className="text-lg font-semibold text-orange-800 mb-2">
+                No Classes on {selectedDayOfWeek}
+              </h3>
+              <p className="text-orange-700 mb-3">
+                The selected date ({selectedDate}) falls on a {selectedDayOfWeek}, but there are no period configurations for this day.
+              </p>
+              <p className="text-orange-700">
+                <strong>Classes are configured for:</strong><br />
+                {availableDaysFormatted}
+              </p>
+            </>
+          ) : availableDays.length === 0 ? (
+            <>
+              <h3 className="text-lg font-semibold text-orange-800 mb-2">No Timetable Configuration Found</h3>
+              <p className="text-orange-700">
+                Please contact admin to set up the timetable configuration for this batch.
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-orange-800 mb-2">No Periods Found</h3>
+              <p className="text-orange-700">
+                No period configuration found for {selectedDayOfWeek}.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );

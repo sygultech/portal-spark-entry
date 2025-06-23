@@ -1,4 +1,3 @@
-
 export type AttendanceMode = 'daily' | 'period' | 'session';
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave';
@@ -6,6 +5,7 @@ export type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave';
 export interface AttendanceConfiguration {
   id: string;
   batch_id: string;
+  school_id: string;
   academic_year_id: string;
   attendance_mode: AttendanceMode;
   auto_absent_enabled: boolean;

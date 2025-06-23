@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AttendanceConfiguration, AttendanceMode } from '@/types/attendance';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +14,7 @@ interface AttendanceConfigurationDialogProps {
   onClose: () => void;
   configuration?: AttendanceConfiguration | null;
   batchId: string;
+  schoolId: string;
   onSubmit: (data: Partial<AttendanceConfiguration>) => void;
   isLoading: boolean;
 }
@@ -24,11 +24,13 @@ const AttendanceConfigurationDialog: React.FC<AttendanceConfigurationDialogProps
   onClose,
   configuration,
   batchId,
+  schoolId,
   onSubmit,
   isLoading
 }) => {
   const [formData, setFormData] = useState({
     batch_id: batchId,
+    school_id: schoolId,
     academic_year_id: configuration?.academic_year_id ?? '',
     attendance_mode: configuration?.attendance_mode ?? 'daily' as AttendanceMode,
     auto_absent_enabled: configuration?.auto_absent_enabled ?? false,
@@ -41,6 +43,7 @@ const AttendanceConfigurationDialog: React.FC<AttendanceConfigurationDialogProps
     if (configuration) {
       setFormData({
         batch_id: configuration.batch_id,
+        school_id: configuration.school_id,
         academic_year_id: configuration.academic_year_id,
         attendance_mode: configuration.attendance_mode,
         auto_absent_enabled: configuration.auto_absent_enabled,
@@ -51,6 +54,7 @@ const AttendanceConfigurationDialog: React.FC<AttendanceConfigurationDialogProps
     } else {
       setFormData({
         batch_id: batchId,
+        school_id: schoolId,
         academic_year_id: '',
         attendance_mode: 'daily',
         auto_absent_enabled: false,
@@ -59,7 +63,7 @@ const AttendanceConfigurationDialog: React.FC<AttendanceConfigurationDialogProps
         is_active: true,
       });
     }
-  }, [configuration, batchId]);
+  }, [configuration, batchId, schoolId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

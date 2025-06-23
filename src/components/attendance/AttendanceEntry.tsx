@@ -45,16 +45,38 @@ const AttendanceEntry = () => {
     enabled: !!selectedBatch
   });
 
+  // Fetch available days for the batch
+  const { data: availableDays } = useQuery({
+    queryKey: ['availableDays', selectedBatch],
+    queryFn: () => attendanceService.getAvailableDays(selectedBatch),
+    enabled: !!selectedBatch && configuration?.attendance_mode === 'period'
+  });
+
   // Fetch period grid for period-wise attendance
   const { data: periodSlots, isLoading: periodsLoading } = useQuery({
-    queryKey: ['periodGrid', selectedBatch],
-    queryFn: () => attendanceService.getPeriodGrid(selectedBatch),
-    enabled: !!selectedBatch && configuration?.attendance_mode === 'period'
+    queryKey: ['periodGrid', selectedBatch, selectedDate],
+    queryFn: () => attendanceService.getPeriodGrid(selectedBatch, selectedDate),
+    enabled: !!selectedBatch && !!selectedDate && configuration?.attendance_mode === 'period'
   });
 
   // Save attendance mutation
   const saveAttendanceMutation = useMutation({
-    mutationFn: (entries: AttendanceEntryType[]) => attendanceService.saveAttendance(entries),
+    mutationFn: (entries: AttendanceEntryType[]) => {
+      // Convert AttendanceEntry to AttendanceRecord format
+      const attendanceRecords = entries.map(entry => ({
+        id: crypto.randomUUID(),
+        batch_id: selectedBatch,
+        student_id: entry.student_id,
+        date: entry.date,
+        period_number: entry.period_number,
+        session: entry.session,
+        status: entry.status,
+        remarks: entry.remarks,
+        marked_by: '',
+        marked_at: new Date().toISOString()
+      }));
+      return attendanceService.saveAttendance(attendanceRecords);
+    },
     onSuccess: (result) => {
       toast({
         title: 'Attendance Saved',
@@ -374,6 +396,8 @@ const AttendanceEntry = () => {
                         attendanceEntries={attendanceEntries}
                         onAttendanceChange={handleAttendanceChange}
                         isLoadingPeriods={periodsLoading}
+                        selectedDate={selectedDate}
+                        availableDays={availableDays || []}
                       />
                     )}
                     

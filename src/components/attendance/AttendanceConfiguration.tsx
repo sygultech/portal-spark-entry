@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBatchManagement } from '@/hooks/useBatchManagement';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { attendanceService } from '@/services/attendanceService';
 import { AttendanceMode, AttendanceConfiguration as AttendanceConfigType } from '@/types/attendance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,11 +21,13 @@ const AttendanceConfiguration = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { activeBatches, isLoading: batchesLoading } = useBatchManagement();
+  const { academicYears, isLoading: academicYearsLoading } = useAcademicYears();
   const [selectedBatch, setSelectedBatch] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AttendanceConfigType | null>(null);
 
   const schoolId = profile?.school_id || '';
+  const currentAcademicYear = academicYears.find(year => year.is_current);
 
   // Fetch all configurations for the school
   const { data: configurations, isLoading: configLoading } = useQuery({
@@ -95,12 +97,25 @@ const AttendanceConfiguration = () => {
     setDialogOpen(true);
   };
 
-  if (batchesLoading || configLoading) {
+  if (batchesLoading || configLoading || academicYearsLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span className="ml-2">Loading configurations...</span>
       </div>
+    );
+  }
+
+  if (!currentAcademicYear) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>No Current Academic Year</CardTitle>
+          <CardDescription>
+            Please set a current academic year in the Academic section before configuring attendance.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
@@ -211,11 +226,17 @@ const AttendanceConfiguration = () => {
         }}
         configuration={editingConfig}
         batchId={selectedBatch}
+        schoolId={schoolId}
         onSubmit={(data) => {
+          if (!selectedBatch || !currentAcademicYear) return;
           updateConfigMutation.mutate({
-            batchId: editingConfig ? editingConfig.batch_id : selectedBatch,
-            mode: data.attendance_mode,
-            settings: data
+            batchId: selectedBatch,
+            mode: data.attendance_mode as AttendanceMode,
+            settings: {
+              ...data,
+              school_id: schoolId,
+              academic_year_id: currentAcademicYear.id
+            }
           });
         }}
         isLoading={updateConfigMutation.isPending}
