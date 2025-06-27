@@ -93,13 +93,14 @@ export const attendanceService = {
   // Student methods
   async getStudentsByBatch(batchId: string): Promise<Student[]> {
     const { data, error } = await supabase
-      .from('student_details')
+      .from('current_student_enrollments')
       .select(`
-        id,
+        student_id,
         admission_number,
         first_name,
         last_name,
-        batch_id
+        batch_id,
+        roll_number
       `)
       .eq('batch_id', batchId)
       .eq('status', 'active')
@@ -111,8 +112,12 @@ export const attendanceService = {
     }
 
     return (data || []).map(student => ({
-      ...student,
-      roll_number: student.admission_number, // Use admission_number as roll_number
+      id: student.student_id,
+      admission_number: student.admission_number,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      batch_id: student.batch_id,
+      roll_number: student.roll_number || student.admission_number,
       photo_url: undefined // Field doesn't exist in current schema
     }));
   },

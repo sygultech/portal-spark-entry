@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentList } from "@/components/students/StudentList";
 import { StudentProfile } from "@/components/students/StudentProfile";
+import { StudentFormDialog } from "@/components/students/StudentFormDialog";
 import { DocumentManager } from "@/components/students/DocumentManager";
 import { TransferManager } from "@/components/students/TransferManager";
 import { DisciplinaryManager } from "@/components/students/DisciplinaryManager";
@@ -34,11 +35,16 @@ export default function Students() {
   const { profile } = useAuth();
   const schoolId = profile?.school_id;
 
+  console.log('Students page - Profile:', profile);
+  console.log('Students page - School ID:', schoolId);
+
   const {
     students,
     isStudentsLoading,
+    studentsError,
     categories,
     isCategoriesLoading,
+    categoriesError,
     createStudent,
     updateStudent,
     isUpdatingStudent,
@@ -46,6 +52,9 @@ export default function Students() {
     addTransferRecord,
     generateCertificate
   } = useStudentManagement();
+
+  console.log('Students page - Students:', students);
+  console.log('Students page - Is loading:', isStudentsLoading);
 
   const queryClient = useQueryClient();
 
@@ -57,6 +66,7 @@ export default function Students() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [isAddStudentFormOpen, setIsAddStudentFormOpen] = useState(false);
+  const [isEditStudentFormOpen, setIsEditStudentFormOpen] = useState(false);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [disciplinaryRecords, setDisciplinaryRecords] = useState<DisciplinaryRecord[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
@@ -94,12 +104,22 @@ export default function Students() {
   };
 
   const handleUpdateStudent = async (studentData: any) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent || !schoolId) return;
     try {
       await updateStudent({ id: selectedStudent.id, data: studentData });
+      // Refresh the student details
+      const detailedStudent = await fetchStudentDetails(selectedStudent.id);
+      setSelectedStudent(detailedStudent);
+      setIsEditStudentFormOpen(false);
+      toast.success("Student updated successfully");
     } catch (error) {
       console.error('Error updating student:', error);
+      toast.error("Failed to update student. Please try again.");
     }
+  };
+
+  const handleEditStudent = () => {
+    setIsEditStudentFormOpen(true);
   };
 
   const handleBatchAction = (action: string, studentIds: string[]) => {
@@ -212,6 +232,16 @@ export default function Students() {
           </Button>
         </div>
         
+        {/* Debug Info - Remove in production */}
+        <div className="bg-gray-100 p-4 rounded-lg text-sm">
+          <p><strong>Debug Info:</strong></p>
+          <p>Profile: {profile ? `${profile.first_name} ${profile.last_name} (${profile.email})` : 'Not loaded'}</p>
+          <p>School ID: {schoolId || 'None'}</p>
+          <p>Students Loading: {isStudentsLoading ? 'Yes' : 'No'}</p>
+          <p>Students Count: {students.length}</p>
+          <p>Error: {studentsError ? studentsError.message : 'None'}</p>
+        </div>
+        
         <QuickActions
           onBulkImport={handleBulkImport}
           onExportData={handleExportData}
@@ -249,18 +279,55 @@ export default function Students() {
         </TabsList>
 
         <TabsContent value="list">
-          <StudentList
-            students={students}
-            onSelect={handleStudentSelect}
-            categories={categories}
-            onBatchAction={handleBatchAction}
-            onRefresh={handleRefreshStudents}
-          />
+          {isStudentsLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading students...</p>
+              </div>
+            </div>
+          ) : studentsError ? (
+            <div className="text-center p-8">
+              <p className="text-red-500">Error loading students: {studentsError.message}</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Please try refreshing the page or contact support if the issue persists.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshStudents}
+                className="mt-4"
+              >
+                Retry
+              </Button>
+            </div>
+          ) : !schoolId ? (
+            <div className="text-center p-8">
+              <p className="text-yellow-600">No school assigned to your account.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Please contact your administrator to assign a school to your account.
+              </p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="text-center p-8">
+              <p className="text-muted-foreground">No students found for this school.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Click "Add New Student" to get started.
+              </p>
+            </div>
+          ) : (
+            <StudentList
+              students={students}
+              onSelect={handleStudentSelect}
+              categories={categories}
+              onBatchAction={handleBatchAction}
+              onRefresh={handleRefreshStudents}
+            />
+          )}
         </TabsContent>
 
         {selectedStudent && (
-          <TabsContent value="profile">
-            <StudentProfile student={selectedStudent} onEdit={() => {}} />
+                  <TabsContent value="profile">
+          <StudentProfile student={selectedStudent} onEdit={handleEditStudent} />
           </TabsContent>
         )}
 
@@ -470,6 +537,15 @@ export default function Students() {
         onClose={() => setIsAddStudentFormOpen(false)}
         onSubmit={handleCreateStudent}
       />
+
+      {selectedStudent && (
+        <StudentFormDialog
+          open={isEditStudentFormOpen}
+          onClose={() => setIsEditStudentFormOpen(false)}
+          onSave={handleUpdateStudent}
+          student={selectedStudent}
+        />
+      )}
     </div>
   );
 }

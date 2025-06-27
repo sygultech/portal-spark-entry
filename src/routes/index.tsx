@@ -161,9 +161,9 @@ const AppRoutes = () => {
         } 
       />
       
-      {/* Finance Route */}
+      {/* Fees Route */}
       <Route 
-        path="/finance" 
+        path="/fees" 
         element={
           <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>

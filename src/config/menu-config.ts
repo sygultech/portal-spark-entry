@@ -60,7 +60,7 @@ export const menuConfig: MenuConfig = {
     { label: "Staff & HR", path: "/staff", icon: UserRound },
     { label: "Timetable", path: "/timetable", icon: CalendarDays },
     { label: "Attendance", path: "/attendance", icon: ClipboardCheck },
-    { label: "Finance", path: "/finance", icon: Landmark },
+    { label: "Fees", path: "/fees", icon: Landmark },
     { label: "Library", path: "/library", icon: BookOpen },
     { label: "Transport", path: "/transport", icon: Bus },
     { label: "Hostel", path: "/hostel", icon: Home },

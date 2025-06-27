@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -10,7 +9,8 @@ import {
   fetchBatchStudents,
   addStudentToBatch,
   removeStudentFromBatch,
-  ensureBatchStudentsTable
+  ensureBatchStudentsTable,
+  fetchBatchesWithStudentCount
 } from '@/services/batchService';
 import { Batch } from '@/types/academic';
 
@@ -110,5 +110,23 @@ export function useBatchStudents(batchId: string | undefined) {
     addStudent: addStudentMutation.mutate,
     removeStudent: removeStudentMutation.mutate,
     ensureTable: ensureTableMutation.mutate
+  };
+}
+
+export function useBatchesForFeeAssignment(academicYearId?: string, courseId?: string) {
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  const schoolId = profile?.school_id;
+  
+  const batchesQuery = useQuery({
+    queryKey: ['batches-with-student-count', schoolId, academicYearId, courseId],
+    queryFn: () => schoolId ? fetchBatchesWithStudentCount(schoolId, academicYearId, courseId) : Promise.resolve([]),
+    enabled: !!schoolId
+  });
+
+  return {
+    batches: batchesQuery.data || [],
+    isLoading: batchesQuery.isLoading,
+    error: batchesQuery.error
   };
 }

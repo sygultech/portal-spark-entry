@@ -28,7 +28,7 @@ export interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   roles: UserSchoolRole[];
-  primary_school_id: string | null;
+  school_id: string | null;
   avatar_url: string | null;
 }
 

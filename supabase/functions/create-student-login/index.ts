@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'http://localhost:8080',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, origin',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Max-Age': '86400',
@@ -120,15 +120,15 @@ serve(async (req) => {
 
       return createResponse({ 
         user_id: existingProfile.id, 
-        status: 'already_exists' 
+        status: 'linked' 
       })
     }
 
     let userId: string
     let isExistingAuthUser = false
 
-    // Try to create new user
-    console.log('Creating new user for:', email);
+    // Try to create new user first - if it fails due to existing user, we'll handle it
+    console.log('Attempting to create user for:', email);
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -143,19 +143,126 @@ serve(async (req) => {
     })
 
     if (createError) {
-      console.error('Error creating user:', createError)
-      return createResponse({ error: 'Failed to create user' }, 500)
-    }
+      console.log('User creation failed:', createError.message);
+      console.log('Error code:', createError.code);
+      console.log('Full error object:', JSON.stringify(createError, null, 2));
+      
+      // Check if the error is due to user already existing (cast a wider net for error detection)
+      const errorMessage = createError.message.toLowerCase();
+      const isUserExistsError = 
+        createError.message.includes('User already registered') || 
+        createError.code === 'email_exists' ||
+        errorMessage.includes('already') ||
+        errorMessage.includes('exists') ||
+        errorMessage.includes('duplicate') ||
+        errorMessage.includes('registered') ||
+        createError.code === 'user_already_exists';
+      
+      if (isUserExistsError) {
+        
+        console.log('User already exists, fetching user details');
+        
+        // Use the correct API method with email filter
+        const { data: users, error: userError } = await supabaseAdmin.auth.admin.listUsers({
+          filters: {
+            email: email // Use email filter for exact match
+          }
+        })
+        
+        if (userError) {
+          console.error('Error fetching existing user:', userError);
+          return createResponse({ 
+            error: 'Failed to get existing user details', 
+            details: userError.message || 'Unknown error retrieving user' 
+          }, 500)
+        }
 
-    if (!newUser?.user?.id) {
-      console.error('No user data returned from createUser')
-      return createResponse({ error: 'No user data returned from createUser' }, 500)
+        if (!users?.users?.[0]?.id) {
+          console.error('No user found with email match');
+          return createResponse({ 
+            error: 'No user found with email match', 
+            details: 'User exists but could not be retrieved' 
+          }, 404)
+        }
+        
+        const existingUser = users.users[0]
+        userId = existingUser.id
+        isExistingAuthUser = true
+        console.log('Found existing auth user:', userId);
+        
+        // Check if this user already has a profile before attempting to create one
+        console.log('Checking if existing user already has a profile');
+        const { data: existingUserProfile, error: profileCheckError } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .eq('school_id', schoolId)
+          .maybeSingle()
+
+        if (profileCheckError) {
+          console.log('Error checking existing user profile:', profileCheckError);
+          return createResponse({ error: profileCheckError.message }, 500)
+        }
+
+        if (existingUserProfile) {
+          console.log('Existing user already has profile, linking student');
+          
+          // Validate existing roles
+          if (!validateRoles(existingUserProfile.roles)) {
+            console.log('Invalid roles in existing user profile, updating to correct format');
+            const { error: roleUpdateError } = await supabaseAdmin
+              .from('profiles')
+              .update({ roles: ['student'] })
+              .eq('id', existingUserProfile.id);
+              
+            if (roleUpdateError) {
+              console.log('Error updating roles:', roleUpdateError);
+              return createResponse({ error: roleUpdateError.message }, 500)
+            }
+          }
+          
+          // Update student_details with the existing profile_id
+          const { error: updateError } = await supabaseAdmin
+            .from('student_details')
+            .update({ profile_id: existingUserProfile.id })
+            .eq('id', studentId)
+            .eq('school_id', schoolId)
+
+          if (updateError) {
+            console.log('Error updating student details with existing profile:', updateError);
+            return createResponse({ error: updateError.message }, 500)
+          }
+
+          return createResponse({ 
+            user_id: existingUserProfile.id, 
+            status: 'linked' 
+          })
+        }
+        
+        console.log('Existing user has no profile, will create one');
+        
+      } else {
+        // Different error - not related to existing user
+        console.error('Error creating user (not duplicate):', createError)
+        console.error('Create error details:', JSON.stringify(createError, null, 2))
+        return createResponse({ 
+          error: 'Failed to create user', 
+          details: createError.message || 'Unknown error during user creation' 
+        }, 500)
+      }
     } else {
+      // User creation succeeded
+      if (!newUser?.user?.id) {
+        console.error('No user data returned from createUser')
+        return createResponse({ error: 'No user data returned from createUser' }, 500)
+      }
+      
       userId = newUser.user.id
+      console.log('Successfully created new user:', userId);
     }
 
-    // Create profile with student role
-    console.log('Creating profile for user:', userId);
+    // Create profile with student role (works for both new and existing auth users)
+    console.log('Creating profile for user:', userId, isExistingAuthUser ? '(existing auth user)' : '(new auth user)');
     const { error: profileCreateError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -171,6 +278,7 @@ serve(async (req) => {
       console.error('Error creating profile:', profileCreateError)
       // If profile creation fails and we created a new auth user, clean it up
       if (!isExistingAuthUser) {
+        console.log('Cleaning up newly created auth user due to profile creation failure');
         await supabaseAdmin.auth.admin.deleteUser(userId)
       }
       return createResponse({ error: `Failed to create profile: ${profileCreateError.message}` }, 500)
@@ -212,10 +320,28 @@ serve(async (req) => {
       }
     }
 
-    console.log('Successfully created student login for:', email);
+    // Update student_details with the new profile_id
+    const { error: updateStudentError } = await supabaseAdmin
+      .from('student_details')
+      .update({ profile_id: userId })
+      .eq('id', studentId)
+      .eq('school_id', schoolId)
+
+    if (updateStudentError) {
+      console.error('Error updating student details with new user:', updateStudentError);
+      // Clean up everything we created
+      await supabaseAdmin.from('profiles').delete().eq('id', userId)
+      if (!isExistingAuthUser) {
+        await supabaseAdmin.auth.admin.deleteUser(userId)
+      }
+      return createResponse({ error: `Failed to link student: ${updateStudentError.message}` }, 500)
+    }
+
+    const statusMessage = isExistingAuthUser ? 'linked' : 'created';
+    console.log(`Successfully ${statusMessage} student login for:`, email);
     return createResponse({ 
       user_id: userId, 
-      status: 'created' 
+      status: statusMessage 
     })
 
   } catch (error) {

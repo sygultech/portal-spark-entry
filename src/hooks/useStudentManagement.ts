@@ -28,7 +28,8 @@ import {
   addTransferRecord,
   generateCertificate,
   importStudentsFromCSV,
-  bulkAssignBatch
+  bulkAssignBatch,
+  fetchStudents
 } from '@/services/studentService';
 
 export function useStudentManagement(filters?: StudentFilter) {
@@ -40,7 +41,12 @@ export function useStudentManagement(filters?: StudentFilter) {
   const studentsQuery = useQuery({
     queryKey: ['students', schoolId, filters],
     queryFn: async () => {
-      if (!schoolId) return [];
+      console.log('useStudentManagement - queryFn called with schoolId:', schoolId);
+      if (!schoolId) {
+        console.log('useStudentManagement - No schoolId, returning empty array');
+        return [];
+      }
+      console.log('useStudentManagement - Calling fetchStudentsFromDetails with schoolId:', schoolId);
       const students = await fetchStudentsFromDetails(schoolId);
       
       // Apply filters if provided
@@ -75,6 +81,14 @@ export function useStudentManagement(filters?: StudentFilter) {
       return students;
     },
     enabled: !!schoolId
+  });
+
+  console.log('useStudentManagement hook state:', {
+    schoolId,
+    enabled: !!schoolId,
+    studentsData: studentsQuery.data?.length || 0,
+    isLoading: studentsQuery.isLoading,
+    error: studentsQuery.error
   });
 
   // Fetch student details query
@@ -408,3 +422,23 @@ export function useStudentManagement(filters?: StudentFilter) {
     isAssigningBatch: bulkAssignBatchMutation.isPending,
   };
 }
+
+export const useStudentsWithBatchInfo = () => {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
+  
+  const studentsQuery = useQuery({
+    queryKey: ['students-with-batch', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return [];
+      return await fetchStudents(schoolId);
+    },
+    enabled: !!schoolId
+  });
+
+  return {
+    students: studentsQuery.data || [],
+    isLoading: studentsQuery.isLoading,
+    error: studentsQuery.error
+  };
+};

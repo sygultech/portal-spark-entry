@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +20,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     name: "",
-    academicYear: "2024-25",
-    assignedBatches: [] as string[]
+    academicYear: "2024-25"
   });
 
   const [components, setComponents] = useState<FeeComponent[]>([
@@ -39,8 +37,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
     if (initialData) {
       setFormData({
         name: initialData.name,
-        academicYear: initialData.academicYear,
-        assignedBatches: initialData.assignedBatches
+        academicYear: initialData.academicYear
       });
       setComponents(initialData.components);
     }
@@ -72,6 +69,8 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const calculateTotal = () => {
     return components.reduce((total, comp) => total + (comp.amount || 0), 0);
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +143,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         </CardHeader>
         <CardContent className="space-y-4">
           {components.map((component, index) => (
-            <div key={component.id} className="grid grid-cols-12 gap-4 items-end p-4 border rounded-lg">
+            <div key={component.id} className="grid grid-cols-9 gap-4 items-end p-4 border rounded-lg">
               <div className="col-span-3">
                 <Label>Component Name *</Label>
                 <Input
@@ -173,22 +172,6 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
                   required
                 />
               </div>
-              <div className="col-span-3">
-                <Label>Recurring</Label>
-                <Select
-                  value={component.recurring}
-                  onValueChange={(value) => updateComponent(component.id, 'recurring', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="one-time">One Time</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="col-span-1">
                 {components.length > 1 && (
                   <Button
@@ -212,6 +195,8 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           </div>
         </CardContent>
       </Card>
+
+
 
       {/* Form Actions */}
       <div className="flex justify-end space-x-4">

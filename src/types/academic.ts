@@ -1,4 +1,3 @@
-
 import { Json } from "@/integrations/supabase/types";
 
 // Basic types for academic features
@@ -83,6 +82,12 @@ export interface BatchStudent {
   batch_id: string;
   student_id: string;
   roll_number?: string;
+  enrollment_date: string;
+  end_date?: string;
+  enrollment_type: 'new_admission' | 'promoted' | 'transferred' | 'repeated';
+  academic_year_id?: string;
+  is_current: boolean;
+  status: 'active' | 'inactive' | 'graduated' | 'transferred';
   created_at: string;
   updated_at: string;
 }

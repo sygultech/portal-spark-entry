@@ -1,4 +1,4 @@
-
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Student, Guardian, StudentDocument, StudentCategory, PreviousSchoolInfo } from "@/types/student";
-import { useState } from "react";
 import { ImageUploader } from "../common/ImageUploader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
@@ -28,6 +27,12 @@ import {
   bloodGroupOptions,
   categoryOptions,
 } from "@/data/student-form-options";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useCourses } from "@/hooks/useCourses";
+import { useBatches } from "@/hooks/useBatches";
+import { useAuth } from "@/contexts/AuthContext";
+import { addStudentToBatch, removeStudentFromBatch } from "@/services/studentService";
+import { toast } from "sonner";
 
 interface StudentFormDialogProps {
   open: boolean;
@@ -37,7 +42,11 @@ interface StudentFormDialogProps {
 }
 
 export function StudentFormDialog({ open, onClose, onSave, student }: StudentFormDialogProps) {
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState("basic");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(student?.academic_year || "");
+  const [selectedCourse, setSelectedCourse] = useState<string>("");
+  
   const [formData, setFormData] = useState<Student>(student || {
     id: "",
     admission_number: "",
@@ -56,6 +65,12 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
+  // Fetch academic data
+  const { academicYears } = useAcademicYears();
+  const currentAcademicYear = academicYears.find(year => year.is_current);
+  const { courses } = useCourses(selectedAcademicYear || currentAcademicYear?.id);
+  const { batches } = useBatches(selectedAcademicYear || currentAcademicYear?.id, selectedCourse);
+
   // Add state for managing options
   const [customNationalities, setCustomNationalities] = useState<string[]>([]);
   const [customMotherTongues, setCustomMotherTongues] = useState<string[]>([]);
@@ -63,8 +78,43 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
   const [customCastes, setCustomCastes] = useState<string[]>([]);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
 
+  // Initialize course and academic year selection when editing a student
+  useEffect(() => {
+    if (student && open) {
+      // Set academic year if available
+      if (student.academic_year && academicYears.length > 0) {
+        const academicYear = academicYears.find(year => year.name === student.academic_year);
+        if (academicYear && academicYear.id !== selectedAcademicYear) {
+          setSelectedAcademicYear(academicYear.id);
+        }
+      }
+      
+      // Find the course for the student's current batch
+      if (batches.length > 0 && courses.length > 0 && student.batch_id) {
+        const studentBatch = batches.find(batch => batch.id === student.batch_id);
+        if (studentBatch && studentBatch.course_id !== selectedCourse) {
+          setSelectedCourse(studentBatch.course_id);
+        }
+      }
+    }
+  }, [student, open, academicYears.length, batches.length, courses.length]);
+
   const handleInputChange = (field: keyof Student, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+      
+      // When batch changes, update related academic information
+      if (field === 'batch_id' && value) {
+        const selectedBatch = batches.find(batch => batch.id === value);
+        if (selectedBatch) {
+          updated.batch_name = selectedBatch.name;
+          updated.academic_year = academicYears.find(year => year.id === (selectedAcademicYear || currentAcademicYear?.id))?.name;
+          updated.course_name = courses.find(course => course.id === selectedCourse)?.name;
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const handleGuardianChange = (index: number, field: keyof Guardian, value: any) => {
@@ -100,9 +150,33 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
     handleInputChange('guardians', newGuardians);
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    onClose();
+  const handleSave = async () => {
+    try {
+      // Check if batch assignment has changed for existing students
+      const batchChanged = student && student.batch_id !== formData.batch_id;
+      
+      // Save the student data first
+      onSave(formData);
+      
+      // Handle batch assignment changes if this is an existing student
+      if (student && batchChanged) {
+        // Remove from old batch if there was one
+        if (student.batch_id) {
+          await removeStudentFromBatch(student.id, student.batch_id);
+        }
+        
+        // Add to new batch if selected
+        if (formData.batch_id) {
+          await addStudentToBatch(student.id, formData.batch_id);
+          toast.success("Student batch assignment updated successfully");
+        }
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error('Error updating student batch assignment:', error);
+      toast.error("Failed to update batch assignment. Student data was saved but batch assignment failed.");
+    }
   };
 
   return (
@@ -289,6 +363,89 @@ export function StudentFormDialog({ open, onClose, onSave, student }: StudentFor
             </TabsContent>
 
             <TabsContent value="academic" className="space-y-4 p-2 md:p-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Current Academic Assignment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Academic Year</Label>
+                      <Select
+                        value={selectedAcademicYear || currentAcademicYear?.id || ""}
+                        onValueChange={(value) => {
+                          setSelectedAcademicYear(value);
+                          setSelectedCourse(""); // Reset course selection
+                          handleInputChange("batch_id", ""); // Reset batch selection
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select academic year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {academicYears.map((year) => (
+                            <SelectItem key={year.id} value={year.id}>
+                              {year.name} {year.is_current && "(Current)"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Course</Label>
+                      <Select
+                        value={selectedCourse}
+                        onValueChange={(value) => {
+                          setSelectedCourse(value);
+                          handleInputChange("batch_id", ""); // Reset batch selection
+                        }}
+                        disabled={!selectedAcademicYear && !currentAcademicYear?.id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courses.map((course) => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Batch/Section</Label>
+                      <Select
+                        value={formData.batch_id || ""}
+                        onValueChange={(value) => handleInputChange("batch_id", value)}
+                        disabled={!selectedCourse}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select batch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {batches.map((batch) => (
+                            <SelectItem key={batch.id} value={batch.id}>
+                              {batch.name} {batch.code && `(${batch.code})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {formData.batch_id && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-sm text-blue-800">
+                        <strong>Selected Assignment:</strong> {" "}
+                        {batches.find(b => b.id === formData.batch_id)?.name} - {" "}
+                        {courses.find(c => c.id === selectedCourse)?.name} - {" "}
+                        {academicYears.find(y => y.id === (selectedAcademicYear || currentAcademicYear?.id))?.name}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Previous School Information</CardTitle>

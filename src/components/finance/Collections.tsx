@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,75 +16,76 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus, Search, Filter, Download } from "lucide-react";
 import { PaymentRecord } from "@/types/finance";
-import PaymentRecordForm from "./PaymentRecordForm";
+import StudentPaymentDashboard from "./StudentPaymentDashboard";
+import { useAuth } from "@/hooks/useAuth";
+import { EnhancedPaymentService } from "@/services/enhancedPaymentService";
 
 const Collections = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PaymentRecord | null>(null);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { profile } = useAuth();
 
-  // Mock data
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([
-    {
-      id: "1",
-      studentId: "student1",
-      studentName: "John Doe",
-      admissionNumber: "2024001",
-      batchName: "Grade 1A",
-      structureId: "1",
-      structureName: "Grade 1-5 Fee Structure",
-      amountDue: 18500,
-      amountPaid: 15000,
-      paymentDate: "2024-03-20",
-      paymentMode: "upi",
-      receiptNumber: "RCP001",
-      status: "partial",
-      remarks: "Partial payment - balance pending"
-    },
-    {
-      id: "2",
-      studentId: "student2",
-      studentName: "Jane Smith",
-      admissionNumber: "2024002",
-      batchName: "Grade 1A",
-      structureId: "1",
-      structureName: "Grade 1-5 Fee Structure",
-      amountDue: 18500,
-      amountPaid: 18500,
-      paymentDate: "2024-03-15",
-      paymentMode: "bank_transfer",
-      receiptNumber: "RCP002",
-      status: "paid"
-    },
-    {
-      id: "3",
-      studentId: "student3",
-      studentName: "Mike Johnson",
-      admissionNumber: "2024003",
-      batchName: "Grade 2B",
-      structureId: "1",
-      structureName: "Grade 1-5 Fee Structure",
-      amountDue: 18500,
-      amountPaid: 0,
-      paymentDate: "",
-      paymentMode: "cash",
-      receiptNumber: "",
-      status: "overdue"
+  const paymentService = new EnhancedPaymentService();
+
+  useEffect(() => {
+    loadPaymentCollections();
+  }, [profile?.school_id]);
+
+  const loadPaymentCollections = async () => {
+    console.log('Profile:', profile);
+    if (!profile?.school_id) {
+      console.log('No school_id in profile, not loading collections');
+      setLoading(false);
+      return;
     }
-  ]);
+    
+    console.log('Loading collections for school:', profile.school_id);
+    setLoading(true);
+    try {
+      const collections = await paymentService.getPaymentCollections(profile.school_id);
+      console.log('Collections result:', collections);
+      
+      // Transform the data to match PaymentRecord interface
+      const records: PaymentRecord[] = collections.map(collection => ({
+        id: collection.id,
+        studentId: collection.studentId,
+        studentName: collection.studentName,
+        admissionNumber: collection.admissionNumber,
+        batchName: collection.batchName,
+        structureId: collection.structureId,
+        structureName: collection.structureName,
+        amountDue: collection.amountDue,
+        amountPaid: collection.amountPaid,
+        paymentDate: collection.lastPaymentDate || "",
+        paymentMode: (collection.lastPaymentMode as any) || "cash",
+        receiptNumber: collection.lastReceiptNumber || "",
+        status: collection.status
+      }));
+      
+      setPaymentRecords(records);
+    } catch (error) {
+      console.error('Error loading payment collections:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredRecords = paymentRecords.filter(record => {
     const matchesSearch = 
-      record.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.admissionNumber.includes(searchTerm) ||
-      record.batchName.toLowerCase().includes(searchTerm.toLowerCase());
+      record.studentName?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+      record.admissionNumber?.includes(searchTerm) ||
+      record.batchName?.toLowerCase()?.includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || record.status === statusFilter;
     
@@ -92,25 +93,8 @@ const Collections = () => {
   });
 
   const handlePaymentRecord = (paymentData: Partial<PaymentRecord>) => {
-    if (selectedRecord) {
-      // Update existing record
-      setPaymentRecords(paymentRecords.map(record =>
-        record.id === selectedRecord.id
-          ? { ...record, ...paymentData, status: getPaymentStatus(paymentData.amountPaid || 0, record.amountDue) }
-          : record
-      ));
-    } else {
-      // Create new record (this would typically be handled differently)
-      const newRecord: PaymentRecord = {
-        id: Date.now().toString(),
-        receiptNumber: `RCP${Date.now().toString().slice(-6)}`,
-        paymentDate: new Date().toISOString(),
-        status: getPaymentStatus(paymentData.amountPaid || 0, paymentData.amountDue || 0),
-        ...paymentData as PaymentRecord
-      };
-      setPaymentRecords([...paymentRecords, newRecord]);
-    }
-    
+    // Refresh the data after payment is recorded
+    loadPaymentCollections();
     setIsPaymentModalOpen(false);
     setSelectedRecord(null);
   };
@@ -175,15 +159,24 @@ const Collections = () => {
                   Record Payment
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {selectedRecord ? "Update Payment" : "Record New Payment"}
                   </DialogTitle>
+                  <DialogDescription>
+                    {selectedRecord 
+                      ? "Update the payment information for the selected student's fee record." 
+                      : "Select a student and enter payment details to record a new fee payment."}
+                  </DialogDescription>
                 </DialogHeader>
-                <PaymentRecordForm
-                  initialData={selectedRecord || undefined}
-                  onSubmit={handlePaymentRecord}
+                <StudentPaymentDashboard
+                  studentId={selectedRecord?.studentId}
+                  onPaymentComplete={(result) => {
+                    handlePaymentRecord(result);
+                    setIsPaymentModalOpen(false);
+                    setSelectedRecord(null);
+                  }}
                   onCancel={() => {
                     setIsPaymentModalOpen(false);
                     setSelectedRecord(null);
@@ -280,47 +273,61 @@ const Collections = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRecords.map((record) => (
-              <TableRow key={record.id}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{record.studentName}</p>
-                    <p className="text-sm text-muted-foreground">{record.admissionNumber}</p>
-                  </div>
-                </TableCell>
-                <TableCell>{record.batchName}</TableCell>
-                <TableCell>{record.structureName}</TableCell>
-                <TableCell>₹{record.amountDue.toLocaleString()}</TableCell>
-                <TableCell>₹{record.amountPaid.toLocaleString()}</TableCell>
-                <TableCell>₹{(record.amountDue - record.amountPaid).toLocaleString()}</TableCell>
-                <TableCell>
-                  {record.paymentDate ? new Date(record.paymentDate).toLocaleDateString() : '-'}
-                </TableCell>
-                <TableCell>
-                  {record.paymentMode ? getPaymentModeLabel(record.paymentMode) : '-'}
-                </TableCell>
-                <TableCell>{getStatusBadge(record.status)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRecord(record);
-                        setIsPaymentModalOpen(true);
-                      }}
-                    >
-                      Update
-                    </Button>
-                    {record.receiptNumber && (
-                      <Button variant="ghost" size="sm">
-                        Receipt
-                      </Button>
-                    )}
-                  </div>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-4">
+                  Loading payment records...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : filteredRecords.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-4">
+                  No payment records found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredRecords.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{record.studentName}</p>
+                      <p className="text-sm text-muted-foreground">{record.admissionNumber}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>{record.batchName}</TableCell>
+                  <TableCell>{record.structureName}</TableCell>
+                  <TableCell>₹{record.amountDue.toLocaleString()}</TableCell>
+                  <TableCell>₹{record.amountPaid.toLocaleString()}</TableCell>
+                  <TableCell>₹{(record.amountDue - record.amountPaid).toLocaleString()}</TableCell>
+                  <TableCell>
+                    {record.paymentDate ? new Date(record.paymentDate).toLocaleDateString() : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {record.paymentMode ? getPaymentModeLabel(record.paymentMode) : '-'}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(record.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRecord(record);
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        Update
+                      </Button>
+                      {record.receiptNumber && (
+                        <Button variant="ghost" size="sm">
+                          Receipt
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,77 +19,50 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Search, Users, Loader2 } from "lucide-react";
 import { FeeAssignment as FeeAssignmentType } from "@/types/finance";
 import FeeAssignmentWizard from "./FeeAssignmentWizard";
+import { feeAssignmentService, AssignmentResult } from "@/services/feeAssignmentService";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 const FeeAssignment = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data
-  const [assignments, setAssignments] = useState<FeeAssignmentType[]>([
-    {
-      id: "1",
-      structureId: "1",
-      structureName: "Grade 1-5 Fee Structure",
-      assignmentType: "batch",
-      batchId: "batch1",
-      batchName: "Grade 1A",
-      assignedDate: "2024-03-15",
-      totalAmount: 18500,
-      paidAmount: 15000,
-      balance: 3500
-    },
-    {
-      id: "2",
-      structureId: "1",
-      structureName: "Grade 1-5 Fee Structure",
-      assignmentType: "batch",
-      batchId: "batch2",
-      batchName: "Grade 2B",
-      assignedDate: "2024-03-15",
-      totalAmount: 18500,
-      paidAmount: 18500,
-      balance: 0
-    },
-    {
-      id: "3",
-      structureId: "2",
-      structureName: "Grade 6-10 Fee Structure",
-      assignmentType: "student",
-      studentIds: ["student1", "student2", "student3"],
-      assignedDate: "2024-03-20",
-      totalAmount: 76500, // 3 students × 25500
-      paidAmount: 51000,
-      balance: 25500
+  useEffect(() => {
+    loadAssignments();
+  }, []);
+
+  const loadAssignments = async () => {
+    try {
+      setLoading(true);
+      const data = await feeAssignmentService.getFeeAssignments();
+      setAssignments(data);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load assignments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load assignments');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const filteredAssignments = assignments.filter(assignment =>
-    assignment.structureName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assignment.batchName?.toLowerCase().includes(searchTerm.toLowerCase())
+    assignment.feeStructureName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateAssignment = (newAssignment: Omit<FeeAssignmentType, 'id'>) => {
-    const assignment: FeeAssignmentType = {
-      ...newAssignment,
-      id: Date.now().toString()
-    };
-    setAssignments([...assignments, assignment]);
+  const handleCreateAssignment = (result: AssignmentResult) => {
+    // Reload assignments after successful creation
+    loadAssignments();
     setIsWizardOpen(false);
   };
 
-  const getStatusBadge = (paidAmount: number, totalAmount: number) => {
-    const percentage = (paidAmount / totalAmount) * 100;
-    if (percentage === 100) {
-      return <Badge variant="success">Fully Paid</Badge>;
-    } else if (percentage > 0) {
-      return <Badge variant="secondary">Partially Paid</Badge>;
-    } else {
-      return <Badge variant="destructive">Unpaid</Badge>;
-    }
-  };
+
 
   return (
     <Card>
@@ -139,8 +112,17 @@ const FeeAssignment = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-2xl font-bold">{assignments.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Assignments</p>
+                  {loading ? (
+                    <>
+                      <Skeleton className="h-6 w-8 mb-1" />
+                      <Skeleton className="h-3 w-20" />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold">{assignments.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Assignments</p>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -151,10 +133,19 @@ const FeeAssignment = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-2xl font-bold">
-                    {assignments.filter(a => a.assignmentType === 'batch').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Batch Assignments</p>
+                  {loading ? (
+                    <>
+                      <Skeleton className="h-6 w-8 mb-1" />
+                      <Skeleton className="h-3 w-20" />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold">
+                        {assignments.filter(a => a.assignmentType === 'batch').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Batch Assignments</p>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -165,10 +156,19 @@ const FeeAssignment = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-2xl font-bold">
-                    {assignments.filter(a => a.assignmentType === 'student').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Student Assignments</p>
+                  {loading ? (
+                    <>
+                      <Skeleton className="h-6 w-8 mb-1" />
+                      <Skeleton className="h-3 w-20" />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold">
+                        {assignments.filter(a => a.assignmentType === 'individual').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Individual Assignments</p>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -176,45 +176,69 @@ const FeeAssignment = () => {
         </div>
 
         {/* Table */}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Structure Name</TableHead>
-              <TableHead>Assignment Type</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead>Assigned Date</TableHead>
-              <TableHead>Total Amount</TableHead>
-              <TableHead>Paid Amount</TableHead>
-              <TableHead>Balance</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAssignments.map((assignment) => (
-              <TableRow key={assignment.id}>
-                <TableCell className="font-medium">{assignment.structureName}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {assignment.assignmentType === 'batch' ? 'Batch' : 'Individual'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {assignment.assignmentType === 'batch' 
-                    ? assignment.batchName 
-                    : `${assignment.studentIds?.length} students`
-                  }
-                </TableCell>
-                <TableCell>{new Date(assignment.assignedDate).toLocaleDateString()}</TableCell>
-                <TableCell>₹{assignment.totalAmount.toLocaleString()}</TableCell>
-                <TableCell>₹{assignment.paidAmount.toLocaleString()}</TableCell>
-                <TableCell>₹{assignment.balance.toLocaleString()}</TableCell>
-                <TableCell>
-                  {getStatusBadge(assignment.paidAmount, assignment.totalAmount)}
-                </TableCell>
-              </TableRow>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Structure Name</TableHead>
+                <TableHead>Assignment Type</TableHead>
+                <TableHead>Students Count</TableHead>
+                <TableHead>Assigned Date</TableHead>
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Assigned By</TableHead>
+                <TableHead>Notes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAssignments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <p className="text-muted-foreground">No fee assignments found.</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Create your first assignment using the wizard above.
+                    </p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAssignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell className="font-medium">{assignment.feeStructureName}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {assignment.assignmentType === 'batch' ? 'Batch' : 'Individual'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{assignment.studentsCount} students</TableCell>
+                    <TableCell>{new Date(assignment.assignmentDate).toLocaleDateString()}</TableCell>
+                    <TableCell>₹{assignment.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {assignment.assignedByName}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-32 truncate">
+                      {assignment.notes || '-'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

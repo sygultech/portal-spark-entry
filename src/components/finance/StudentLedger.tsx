@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,121 +13,67 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Download, FileText, User } from "lucide-react";
+import { Search, Download, FileText, User, Loader2, ArrowLeft } from "lucide-react";
 import { StudentFinancialRecord, StudentTransaction } from "@/types/finance";
+import { studentLedgerService } from "@/services/studentLedgerService";
+import { useAuth } from "@/hooks/useAuth";
 
 const StudentLedger = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentFinancialRecord | null>(null);
+  const [students, setStudents] = useState<StudentFinancialRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const { profile } = useAuth();
 
-  // Mock students data
-  const students = [
-    {
-      studentId: "student1",
-      studentName: "John Doe",
-      admissionNumber: "2024001",
-      batchName: "Grade 1A",
-      appliedStructures: ["Grade 1-5 Fee Structure"],
-      totalFees: 18500,
-      paidAmount: 15000,
-      balance: 3500,
-      lastPaymentDate: "2024-03-20",
-      transactions: [
-        {
-          id: "1",
-          date: "2024-03-01",
-          description: "Fee Structure Assignment - Grade 1-5",
-          debit: 18500,
-          credit: 0,
-          balance: 18500,
-          paymentMode: "",
-          receiptNumber: ""
-        },
-        {
-          id: "2",
-          date: "2024-03-15",
-          description: "Payment - Tuition Fee (Partial)",
-          debit: 0,
-          credit: 10000,
-          balance: 8500,
-          paymentMode: "UPI",
-          receiptNumber: "RCP001"
-        },
-        {
-          id: "3",
-          date: "2024-03-20",
-          description: "Payment - Library Fee",
-          debit: 0,
-          credit: 5000,
-          balance: 3500,
-          paymentMode: "Bank Transfer",
-          receiptNumber: "RCP002"
-        }
-      ]
-    },
-    {
-      studentId: "student2",
-      studentName: "Jane Smith",
-      admissionNumber: "2024002",
-      batchName: "Grade 1A",
-      appliedStructures: ["Grade 1-5 Fee Structure"],
-      totalFees: 18500,
-      paidAmount: 18500,
-      balance: 0,
-      lastPaymentDate: "2024-03-15",
-      transactions: [
-        {
-          id: "4",
-          date: "2024-03-01",
-          description: "Fee Structure Assignment - Grade 1-5",
-          debit: 18500,
-          credit: 0,
-          balance: 18500,
-          paymentMode: "",
-          receiptNumber: ""
-        },
-        {
-          id: "5",
-          date: "2024-03-15",
-          description: "Payment - Full Fee Payment",
-          debit: 0,
-          credit: 18500,
-          balance: 0,
-          paymentMode: "Bank Transfer",
-          receiptNumber: "RCP003"
-        }
-      ]
-    },
-    {
-      studentId: "student3",
-      studentName: "Mike Johnson",
-      admissionNumber: "2024003",
-      batchName: "Grade 2B",
-      appliedStructures: ["Grade 1-5 Fee Structure"],
-      totalFees: 18500,
-      paidAmount: 0,
-      balance: 18500,
-      lastPaymentDate: undefined,
-      transactions: [
-        {
-          id: "6",
-          date: "2024-03-01",
-          description: "Fee Structure Assignment - Grade 1-5",
-          debit: 18500,
-          credit: 0,
-          balance: 18500,
-          paymentMode: "",
-          receiptNumber: ""
-        }
-      ]
+  useEffect(() => {
+    loadStudentFinancialRecords();
+  }, [profile?.school_id]);
+
+  const loadStudentFinancialRecords = async () => {
+    if (!profile?.school_id) {
+      console.log('No school_id in profile');
+      setLoading(false);
+      return;
     }
-  ];
+
+    console.log('Loading student financial records for school:', profile.school_id);
+    setLoading(true);
+    try {
+      const records = await studentLedgerService.getStudentFinancialRecords(profile.school_id);
+      console.log('Loaded student records:', records);
+      setStudents(records);
+    } catch (error) {
+      console.error('Error loading student records:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredStudents = students.filter(student =>
     student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.admissionNumber.includes(searchTerm) ||
     student.batchName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleSelectStudent = async (student: StudentFinancialRecord) => {
+    setLoadingDetails(true);
+    try {
+      console.log('Loading detailed record for student:', student.studentId);
+      const detailedRecord = await studentLedgerService.getStudentFinancialRecord(student.studentId);
+      if (detailedRecord) {
+        setSelectedStudent(detailedRecord);
+      } else {
+        console.error('Failed to load detailed record');
+        setSelectedStudent(student); // Fallback to basic record
+      }
+    } catch (error) {
+      console.error('Error loading student details:', error);
+      setSelectedStudent(student); // Fallback to basic record
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   const getStatusBadge = (balance: number) => {
     if (balance === 0) {
@@ -138,9 +84,27 @@ const StudentLedger = () => {
     return <Badge variant="secondary">N/A</Badge>;
   };
 
-  const handleDownloadStatement = (student: StudentFinancialRecord) => {
-    // This would typically generate and download a PDF statement
-    console.log("Downloading statement for:", student.studentName);
+  const handleDownloadStatement = async (student: StudentFinancialRecord) => {
+    try {
+      console.log("Downloading statement for:", student.studentName);
+      const pdfBlob = await studentLedgerService.generateStatementPDF(student.studentId);
+      if (pdfBlob) {
+        // Create download link
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${student.studentName}_Statement.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('PDF generation is not available yet');
+      }
+    } catch (error) {
+      console.error('Error downloading statement:', error);
+      alert('Failed to download statement');
+    }
   };
 
   return (
@@ -171,13 +135,23 @@ const StudentLedger = () => {
             </div>
 
             {/* Students List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredStudents.map((student) => (
-                <Card 
-                  key={student.studentId} 
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setSelectedStudent(student)}
-                >
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Loading students...</span>
+              </div>
+            ) : filteredStudents.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No students found</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredStudents.map((student) => (
+                  <Card 
+                    key={student.studentId} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleSelectStudent(student)}
+                  >
                   <CardContent className="pt-6">
                     <div className="flex items-center space-x-4">
                       <Avatar>
@@ -212,8 +186,9 @@ const StudentLedger = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                              ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -224,8 +199,10 @@ const StudentLedger = () => {
             <Button 
               variant="outline" 
               onClick={() => setSelectedStudent(null)}
+              disabled={loadingDetails}
             >
-              ← Back to Students
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Students
             </Button>
             <div className="flex space-x-2">
               <Button 
@@ -297,7 +274,13 @@ const StudentLedger = () => {
               <CardTitle>Transaction History</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              {loadingDetails ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading transaction history...</span>
+                </div>
+              ) : (
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
@@ -345,6 +328,7 @@ const StudentLedger = () => {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         </div>
