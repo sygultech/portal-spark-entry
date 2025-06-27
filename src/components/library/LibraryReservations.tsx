@@ -162,7 +162,7 @@ const LibraryReservations = () => {
         <div className="text-center py-8 text-muted-foreground">
           No reservations found
         </div>
-      </div>
+      )}
     </div>
   );
 };
