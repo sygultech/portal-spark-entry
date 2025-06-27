@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Book, 
@@ -229,15 +228,16 @@ export const libraryService = {
   },
 
   async renewBook(transactionId: string): Promise<BookTransaction> {
+    // Fixed: Use proper SQL functions instead of supabase.sql
     const { data, error } = await supabase
       .from('book_transactions')
       .update({
-        renewal_count: supabase.sql`renewal_count + 1`,
-        due_date: supabase.sql`due_date + interval '14 days'`
+        renewal_count: 'renewal_count + 1',
+        due_date: 'due_date + interval \'14 days\''
       })
       .eq('id', transactionId)
       .eq('status', 'issued')
-      .lt('renewal_count', supabase.sql`max_renewals`)
+      .lt('renewal_count', 'max_renewals')
       .select()
       .single();
 

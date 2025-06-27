@@ -58,14 +58,14 @@ export const useAuth = () => {
   };
 
   const getCurrentSchoolRoles = async (): Promise<UserRole[]> => {
-    if (!user?.id || !user.primary_school_id) return [];
-    return getUserRolesInSchool(user.id, user.primary_school_id);
+    if (!user?.id || !user.school_id) return []; // Use school_id instead of primary_school_id
+    return getUserRolesInSchool(user.id, user.school_id);
   };
 
   const hasRole = (role: UserRole, schoolId?: string): boolean => {
     if (!user) return false;
     
-    const targetSchoolId = schoolId || user.primary_school_id;
+    const targetSchoolId = schoolId || user.school_id; // Use school_id instead of primary_school_id
     if (!targetSchoolId) return false;
 
     return user.roles?.some(r => 
