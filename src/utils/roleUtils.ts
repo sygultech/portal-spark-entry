@@ -5,7 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const hasRole = (profile: UserProfile | null, role: UserRole): boolean => {
   if (!profile?.roles) return false;
-  return profile.roles.includes(role);
+  
+  // Handle both single role array and UserSchoolRole array formats
+  if (Array.isArray(profile.roles)) {
+    // If it's a simple array of roles
+    if (typeof profile.roles[0] === 'string') {
+      return (profile.roles as UserRole[]).includes(role);
+    }
+    // If it's an array of UserSchoolRole objects
+    return profile.roles.some((r: any) => 
+      r.roles && Array.isArray(r.roles) && r.roles.includes(role)
+    );
+  }
+  
+  return false;
 };
 
 export const canAccessRoute = (userRoles: UserRole[] | string[] | undefined, requiredRoles: string[] | UserRole[]): boolean => {
@@ -20,7 +33,19 @@ export const canAccessRoute = (userRoles: UserRole[] | string[] | undefined, req
 
 export const getPrimaryRole = (profile: UserProfile | null): UserRole | null => {
   if (!profile?.roles || profile.roles.length === 0) return null;
-  return profile.roles[0];
+  
+  // Handle both single role array and UserSchoolRole array formats
+  if (Array.isArray(profile.roles)) {
+    // If it's a simple array of roles
+    if (typeof profile.roles[0] === 'string') {
+      return profile.roles[0] as UserRole;
+    }
+    // If it's an array of UserSchoolRole objects
+    const firstSchoolRole = profile.roles[0] as any;
+    return firstSchoolRole?.roles?.[0] || null;
+  }
+  
+  return null;
 };
 
 export const getRoleBasedRoute = (roles: UserRole[] | string[] | undefined): string => {
@@ -47,7 +72,7 @@ export const getRoleBasedRoute = (roles: UserRole[] | string[] | undefined): str
 export const getRoleNavigation = (profile: UserProfile | null) => {
   if (!profile?.roles) return [];
   
-  const role = profile.roles[0];
+  const role = getPrimaryRole(profile);
   
   switch (role) {
     case "super_admin":

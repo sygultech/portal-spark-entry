@@ -1,19 +1,25 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Users, BookOpen } from 'lucide-react';
+import { Search, Plus, Users, BookOpen, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLibraryMembers, useLibraryMutations } from '@/hooks/useLibrary';
-import { useStudents } from '@/hooks/useStudents';
 
 const LibraryMembers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [memberTypeFilter, setMemberTypeFilter] = useState<string>('');
+  const { profile } = useAuth();
 
-  const { data: members, isLoading } = useLibraryMembers(memberTypeFilter);
-  const { students, isLoading: studentsLoading } = useStudents();
+  const { data: members, isLoading, error } = useLibraryMembers(memberTypeFilter);
   const { createLibraryMember } = useLibraryMutations();
+
+  console.log('LibraryMembers - Profile:', profile);
+  console.log('LibraryMembers - Members data:', members);
+  console.log('LibraryMembers - Loading:', isLoading);
+  console.log('LibraryMembers - Error:', error);
 
   const filteredMembers = members?.filter(member =>
     member.member_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,7 +41,26 @@ const LibraryMembers = () => {
   };
 
   if (isLoading) {
-    return <div>Loading members...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading members...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">Error loading library members</p>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
+      </div>
+    );
   }
 
   return (

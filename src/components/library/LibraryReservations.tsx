@@ -3,14 +3,18 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useBookReservations, useLibraryMutations } from '@/hooks/useLibrary';
 
 const LibraryReservations = () => {
   const [statusFilter, setStatusFilter] = useState<string>('');
 
-  const { data: reservations, isLoading } = useBookReservations(statusFilter);
+  const { data: reservations, isLoading, error } = useBookReservations(statusFilter);
   const { updateReservationStatus } = useLibraryMutations();
+
+  console.log('LibraryReservations - Reservations data:', reservations);
+  console.log('LibraryReservations - Loading:', isLoading);
+  console.log('LibraryReservations - Error:', error);
 
   const handleStatusUpdate = async (reservationId: string, newStatus: string) => {
     try {
@@ -35,7 +39,26 @@ const LibraryReservations = () => {
   };
 
   if (isLoading) {
-    return <div>Loading reservations...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading reservations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">Error loading reservations</p>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -139,7 +162,7 @@ const LibraryReservations = () => {
         <div className="text-center py-8 text-muted-foreground">
           No reservations found
         </div>
-      )}
+      </div>
     </div>
   );
 };
