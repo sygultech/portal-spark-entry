@@ -1,29 +1,11 @@
+
 import { supabase } from '../integrations/supabase/client';
-import { FeeComponent as FinanceFeeComponent } from '../types/finance';
-
-// Use the finance types instead of redefining them
-export interface FeeComponent {
-  id: string;
-  name: string;
-  amount: number;
-  dueDate: string;
-  recurring: 'one-time' | 'monthly' | 'quarterly' | 'annually';
-}
-
-export interface FeeStructure {
-  id: string;
-  name: string;
-  academicYear: string;
-  totalAmount: number;
-  components: FeeComponent[];
-  createdAt: string;
-  updatedAt: string;
-}
+import { FeeComponent, FeeStructure } from '../types/finance';
 
 export interface CreateFeeStructureData {
   name: string;
   academicYear: string;
-  components: Omit<FeeComponent, 'id'>[];
+  components: Omit<FeeComponent, 'id' | 'fee_structure_id' | 'created_at' | 'updated_at'>[];
 }
 
 export interface UpdateFeeStructureData {
@@ -133,7 +115,7 @@ class FeeStructureService {
             fee_structure_id: feeStructure.id,
             name: comp.name,
             amount: comp.amount,
-            due_date: comp.dueDate || null,
+            due_date: comp.dueDate || comp.due_date || null,
             recurring: comp.recurring
           }))
         );
@@ -196,7 +178,7 @@ class FeeStructureService {
               fee_structure_id: id,
               name: comp.name,
               amount: comp.amount,
-              due_date: comp.dueDate || null,
+              due_date: comp.dueDate || comp.due_date || null,
               recurring: comp.recurring
             }))
           );
@@ -267,10 +249,14 @@ class FeeStructureService {
       totalAmount: dbStructure.total_amount,
       components: (dbStructure.fee_components || []).map((comp: any) => ({
         id: comp.id,
+        fee_structure_id: dbStructure.id,
         name: comp.name,
         amount: comp.amount,
-        dueDate: comp.due_date,
-        recurring: comp.recurring
+        due_date: comp.due_date,
+        dueDate: comp.due_date, // Keep both for compatibility
+        recurring: comp.recurring,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })),
       createdAt: dbStructure.created_at,
       updatedAt: dbStructure.updated_at

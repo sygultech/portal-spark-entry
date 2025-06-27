@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,9 +31,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Search, RefreshCw } from "lucide-react";
-import { FeeStructure as OriginalFeeStructure } from "@/types/finance";
+import { FeeStructure } from "@/types/finance";
 import { useFeeStructures } from "@/hooks/useFeeStructures";
-import { FeeStructure } from "@/services/feeStructureService";
 import FeeStructureForm from "./FeeStructureForm";
 
 const FeeStructures = () => {
@@ -63,7 +61,7 @@ const FeeStructures = () => {
         components: newStructure.components.map(comp => ({
           name: comp.name,
           amount: comp.amount,
-          dueDate: comp.dueDate,
+          dueDate: comp.dueDate || comp.due_date,
           recurring: comp.recurring
         }))
       });
@@ -199,7 +197,7 @@ const FeeStructures = () => {
                 </TableRow>
               ) : (
                 feeStructures.map((structure) => (
-                                <TableRow key={structure.id}>
+                  <TableRow key={structure.id}>
                     <TableCell className="font-medium">{structure.name}</TableCell>
                     <TableCell>{structure.academicYear}</TableCell>
                     <TableCell>₹{structure.totalAmount.toLocaleString()}</TableCell>

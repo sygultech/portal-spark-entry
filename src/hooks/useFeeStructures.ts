@@ -1,11 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { 
   feeStructureService, 
-  FeeStructure, 
   CreateFeeStructureData, 
   UpdateFeeStructureData 
 } from '../services/feeStructureService';
+import { FeeStructure } from '../types/finance';
 
 export interface UseFeeStructuresReturn {
   feeStructures: FeeStructure[];
@@ -49,8 +50,6 @@ export function useFeeStructures(): UseFeeStructuresReturn {
       setLoading(false);
     }
   };
-
-
 
   const createFeeStructure = async (data: CreateFeeStructureData) => {
     try {
@@ -141,4 +140,4 @@ export function useFeeStructures(): UseFeeStructuresReturn {
     clearSearch,
     searchQuery
   };
-} 
+}
