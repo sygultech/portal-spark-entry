@@ -1,9 +1,11 @@
+
 export interface FeeComponent {
   id: string;
   fee_structure_id: string;
   name: string;
   amount: number;
-  due_date?: string;
+  due_date?: string; // Keep consistent with database
+  dueDate?: string; // Add for form compatibility
   recurring: 'monthly' | 'quarterly' | 'one-time' | 'annually';
   created_at: string;
   updated_at: string;

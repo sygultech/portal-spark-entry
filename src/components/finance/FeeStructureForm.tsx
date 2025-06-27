@@ -26,10 +26,14 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const [components, setComponents] = useState<FeeComponent[]>([
     {
       id: Date.now().toString(),
+      fee_structure_id: '',
       name: "",
       amount: 0,
-      dueDate: "",
-      recurring: "one-time" as const
+      due_date: "",
+      dueDate: "", // Keep both for compatibility
+      recurring: "one-time" as const,
+      created_at: '',
+      updated_at: ''
     }
   ]);
 
@@ -46,10 +50,14 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const addComponent = () => {
     const newComponent: FeeComponent = {
       id: Date.now().toString(),
+      fee_structure_id: '',
       name: "",
       amount: 0,
+      due_date: "",
       dueDate: "",
-      recurring: "one-time"
+      recurring: "one-time",
+      created_at: '',
+      updated_at: ''
     };
     setComponents([...components, newComponent]);
   };
@@ -61,16 +69,24 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   };
 
   const updateComponent = (id: string, field: keyof FeeComponent, value: any) => {
-    setComponents(components.map(comp =>
-      comp.id === id ? { ...comp, [field]: value } : comp
-    ));
+    setComponents(components.map(comp => {
+      if (comp.id === id) {
+        const updated = { ...comp, [field]: value };
+        // Keep both due_date and dueDate in sync
+        if (field === 'due_date') {
+          updated.dueDate = value;
+        } else if (field === 'dueDate') {
+          updated.due_date = value;
+        }
+        return updated;
+      }
+      return comp;
+    }));
   };
 
   const calculateTotal = () => {
     return components.reduce((total, comp) => total + (comp.amount || 0), 0);
   };
-
-
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,8 +183,8 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
                 <Label>Due Date *</Label>
                 <Input
                   type="date"
-                  value={component.dueDate}
-                  onChange={(e) => updateComponent(component.id, 'dueDate', e.target.value)}
+                  value={component.due_date || component.dueDate || ''}
+                  onChange={(e) => updateComponent(component.id, 'due_date', e.target.value)}
                   required
                 />
               </div>
@@ -195,8 +211,6 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           </div>
         </CardContent>
       </Card>
-
-
 
       {/* Form Actions */}
       <div className="flex justify-end space-x-4">

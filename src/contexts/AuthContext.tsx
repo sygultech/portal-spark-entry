@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthContextType, Profile } from "./types";
+import { AuthContextType, UserProfile } from "./types";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
 import { fetchUserProfile } from "@/utils/authUtils";
 
@@ -11,7 +11,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const { isLoading, setIsLoading, signIn, signUp, signOut } = useAuthOperations();
 
   useEffect(() => {
@@ -52,14 +52,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [setIsLoading]);
 
+  const switchSchool = async (schoolId: string) => {
+    // Implementation for switching schools
+    return Promise.resolve();
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      const userProfile = await fetchUserProfile(user.id);
+      if (userProfile) {
+        setProfile(userProfile);
+      }
+    }
+  };
+
   const value = {
-    session,
     user,
     profile,
+    loading: isLoading,
     isLoading,
     signIn,
     signUp,
     signOut,
+    switchSchool,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

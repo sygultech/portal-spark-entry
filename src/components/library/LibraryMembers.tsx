@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ const LibraryMembers = () => {
   const [memberTypeFilter, setMemberTypeFilter] = useState<string>('');
 
   const { data: members, isLoading } = useLibraryMembers(memberTypeFilter);
-  const { data: students } = useStudents();
+  const { students, isLoading: studentsLoading } = useStudents();
   const { createLibraryMember } = useLibraryMutations();
 
   const filteredMembers = members?.filter(member =>
