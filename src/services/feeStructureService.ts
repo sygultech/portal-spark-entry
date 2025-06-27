@@ -1,5 +1,7 @@
 import { supabase } from '../integrations/supabase/client';
+import { FeeComponent as FinanceFeeComponent } from '../types/finance';
 
+// Use the finance types instead of redefining them
 export interface FeeComponent {
   id: string;
   name: string;
@@ -143,8 +145,6 @@ class FeeStructureService {
       }
     }
 
-
-
     // Return the created fee structure with all related data
     const createdStructure = await this.getFeeStructureById(feeStructure.id);
     if (!createdStructure) {
@@ -207,8 +207,6 @@ class FeeStructureService {
       }
     }
 
-
-
     // Return the updated fee structure
     const updatedStructure = await this.getFeeStructureById(id);
     if (!updatedStructure) {
@@ -231,8 +229,6 @@ class FeeStructureService {
       throw new Error(`Failed to delete fee structure: ${error.message}`);
     }
   }
-
-
 
   /**
    * Search fee structures by name
@@ -282,4 +278,4 @@ class FeeStructureService {
   }
 }
 
-export const feeStructureService = new FeeStructureService(); 
+export const feeStructureService = new FeeStructureService();

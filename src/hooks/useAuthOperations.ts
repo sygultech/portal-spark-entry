@@ -217,7 +217,7 @@ export const useAuthOperations = () => {
       }
       
       // Redirect based on role - handle both single role and array
-      const roleBasedRoute = getRoleBasedRoute(userProfile?.roles?.[0]);
+      const roleBasedRoute = getRoleBasedRoute(userProfile?.roles || []);
       
       console.log("Redirecting to:", roleBasedRoute);
       if (navigate) {

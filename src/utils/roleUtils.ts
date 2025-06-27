@@ -1,6 +1,7 @@
 
 import { UserRole } from "@/types/common";
 import { UserProfile } from "@/contexts/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export const hasRole = (profile: UserProfile | null, role: UserRole): boolean => {
   if (!profile?.roles) return false;
@@ -86,5 +87,24 @@ export const formatRole = (roles: UserRole[] | string[] | undefined): string => 
       return "Parent";
     default:
       return String(role);
+  }
+};
+
+// Function to refresh user roles in the cache
+export const refreshUserRoles = async (userId: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.rpc('refresh_user_role_cache', { 
+      p_user_id: userId 
+    });
+    
+    if (error) {
+      console.error('Error refreshing user roles:', error);
+      return false;
+    }
+    
+    return data || false;
+  } catch (error) {
+    console.error('Error in refreshUserRoles:', error);
+    return false;
   }
 };
