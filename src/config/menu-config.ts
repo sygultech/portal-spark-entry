@@ -77,6 +77,7 @@ export const menuConfig: MenuConfig = {
     { label: "Subjects", path: "/subjects", icon: BookOpen },
     { label: "Assignments", path: "/assignments", icon: FileEdit, badge: 2 },
     { label: "Examinations", path: "/examinations", icon: FileSpreadsheet },
+    { label: "Library", path: "/library", icon: BookOpen },
     { label: "Messaging", path: "/messaging", icon: MessageSquare, badge: 3 },
     { label: "Settings", path: "/settings", icon: Settings },
   ],
@@ -90,7 +91,7 @@ export const menuConfig: MenuConfig = {
     { label: "Examinations", path: "/examinations", icon: FileSpreadsheet },
     { label: "Fees", path: "/fees", icon: Receipt },
     { label: "Messaging", path: "/messaging", icon: MessageSquare },
-    { label: "Certificates", path: "/certificates", icon: Award }, // Changed Certificate to Award
+    { label: "Certificates", path: "/certificates", icon: Award },
     { label: "Settings", path: "/settings", icon: Settings },
   ],
   

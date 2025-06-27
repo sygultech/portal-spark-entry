@@ -1,4 +1,3 @@
-
 import {
   Routes as RouterRoutes,
   Route,
@@ -24,6 +23,7 @@ import StaffManagement from "@/pages/StaffManagement";
 import Timetable from "@/pages/Timetable";
 import Attendance from "@/pages/Attendance";
 import Finance from "@/pages/Finance";
+import Library from "@/pages/Library";
 
 const AppRoutes = () => {
   return (
@@ -168,6 +168,18 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRoles={["school_admin"]}>
             <AppLayout>
               <Finance />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Library Route */}
+      <Route 
+        path="/library" 
+        element={
+          <ProtectedRoute requiredRoles={["school_admin", "librarian", "teacher"]}>
+            <AppLayout>
+              <Library />
             </AppLayout>
           </ProtectedRoute>
         } 
