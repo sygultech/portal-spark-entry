@@ -3556,6 +3556,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      decrement_book_copies: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
       enroll_student_in_batch: {
         Args: {
           p_student_id: string
@@ -3705,6 +3709,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_book_copies: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
       is_email_confirmed: {
         Args: { email_address: string }
         Returns: boolean
@@ -3814,6 +3822,10 @@ export type Database = {
               p_app_metadata?: Json
             }
         Returns: Json
+      }
+      update_overdue_transactions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       update_school_details: {
         Args: {

@@ -186,6 +186,18 @@ export function useLibraryMutations() {
     }
   });
 
+  const updateReservationStatus = useMutation({
+    mutationFn: ({ reservationId, status }: { reservationId: string; status: string }) =>
+      libraryService.updateReservationStatus(reservationId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['book-reservations'] });
+      toast.success('Reservation updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update reservation: ${error.message}`);
+    }
+  });
+
   return {
     createBook,
     updateBook,
@@ -194,6 +206,7 @@ export function useLibraryMutations() {
     issueBook,
     returnBook,
     renewBook,
-    updateLibrarySettings
+    updateLibrarySettings,
+    updateReservationStatus
   };
 }

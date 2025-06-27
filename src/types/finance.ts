@@ -1,9 +1,12 @@
 export interface FeeComponent {
   id: string;
+  fee_structure_id: string;
   name: string;
   amount: number;
-  dueDate: string;
-  recurring: 'monthly' | 'quarterly' | 'one-time';
+  due_date?: string;
+  recurring: 'monthly' | 'quarterly' | 'one-time' | 'annually';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FeeStructure {

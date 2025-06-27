@@ -5,28 +5,25 @@ import {
   LibraryMember, 
   BookTransaction, 
   BookReservation, 
-  LibrarySettings, 
-  BookInventoryLog, 
-  LibraryStats,
+  LibrarySettings,
   CreateBookData,
   CreateLibraryMemberData,
   IssueBookData,
   ReturnBookData
 } from '@/types/library';
 
-class LibraryService {
-  // Books management
+export const libraryService = {
+  // Books
   async getBooks(schoolId: string, filters?: {
     search?: string;
     genre?: string;
     availability?: 'all' | 'available' | 'issued';
-  }) {
+  }): Promise<Book[]> {
     let query = supabase
       .from('books')
       .select('*')
       .eq('school_id', schoolId)
-      .eq('is_active', true)
-      .order('title');
+      .eq('is_active', true);
 
     if (filters?.search) {
       query = query.or(`title.ilike.%${filters.search}%,author.ilike.%${filters.search}%,isbn.ilike.%${filters.search}%`);
@@ -42,28 +39,28 @@ class LibraryService {
       query = query.eq('available_copies', 0);
     }
 
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    return data as Book[];
-  }
+    const { data, error } = await query.order('title');
 
-  async createBook(schoolId: string, bookData: CreateBookData) {
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createBook(schoolId: string, bookData: CreateBookData): Promise<Book> {
     const { data, error } = await supabase
       .from('books')
       .insert({
         ...bookData,
         school_id: schoolId,
-        available_copies: bookData.total_copies,
-        language: bookData.language || 'English'
+        available_copies: bookData.total_copies
       })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
-    return data as Book;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  async updateBook(bookId: string, updates: Partial<CreateBookData>) {
+  async updateBook(bookId: string, updates: Partial<Book>): Promise<Book> {
     const { data, error } = await supabase
       .from('books')
       .update(updates)
@@ -71,35 +68,27 @@ class LibraryService {
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
-    return data as Book;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  async deleteBook(bookId: string) {
+  async deleteBook(bookId: string): Promise<void> {
     const { error } = await supabase
       .from('books')
       .update({ is_active: false })
       .eq('id', bookId);
 
-    if (error) throw new Error(error.message);
-  }
+    if (error) throw error;
+  },
 
-  // Library members management
-  async getLibraryMembers(schoolId: string, memberType?: string) {
+  // Library Members
+  async getLibraryMembers(schoolId: string, memberType?: string): Promise<LibraryMember[]> {
     let query = supabase
       .from('library_members')
       .select(`
         *,
-        student_details:student_id (
-          first_name,
-          last_name,
-          admission_number
-        ),
-        staff_details:staff_id (
-          first_name,
-          last_name,
-          employee_id
-        )
+        student_details!inner(first_name, last_name),
+        staff_details!inner(first_name, last_name)
       `)
       .eq('school_id', schoolId)
       .eq('is_active', true);
@@ -108,85 +97,50 @@ class LibraryService {
       query = query.eq('member_type', memberType);
     }
 
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
+    const { data, error } = await query.order('member_id');
 
-    return (data as any[]).map(member => ({
+    if (error) throw error;
+
+    // Transform data to include member names
+    return (data || []).map(member => ({
       ...member,
-      student_name: member.student_details 
-        ? `${member.student_details.first_name} ${member.student_details.last_name} (${member.student_details.admission_number})`
-        : undefined,
-      staff_name: member.staff_details
-        ? `${member.staff_details.first_name} ${member.staff_details.last_name} (${member.staff_details.employee_id})`
-        : undefined
-    })) as LibraryMember[];
-  }
+      student_name: member.student_details ? 
+        `${member.student_details.first_name} ${member.student_details.last_name}` : undefined,
+      staff_name: member.staff_details ? 
+        `${member.staff_details.first_name} ${member.staff_details.last_name}` : undefined,
+    }));
+  },
 
-  async createLibraryMember(schoolId: string, memberData: CreateLibraryMemberData) {
-    // Get default borrowing limit from settings
-    const settings = await this.getLibrarySettings(schoolId);
-    let defaultLimit = 3;
-    
-    if (settings) {
-      switch (memberData.member_type) {
-        case 'student':
-          defaultLimit = settings.student_borrowing_limit;
-          break;
-        case 'teacher':
-          defaultLimit = settings.teacher_borrowing_limit;
-          break;
-        case 'staff':
-          defaultLimit = settings.staff_borrowing_limit;
-          break;
-      }
-    }
-
+  async createLibraryMember(schoolId: string, memberData: CreateLibraryMemberData): Promise<LibraryMember> {
     const { data, error } = await supabase
       .from('library_members')
       .insert({
         ...memberData,
-        school_id: schoolId,
-        borrowing_limit: memberData.borrowing_limit || defaultLimit
+        school_id: schoolId
       })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
-    return data as LibraryMember;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  async updateLibraryMember(memberId: string, updates: Partial<LibraryMember>) {
-    const { data, error } = await supabase
-      .from('library_members')
-      .update(updates)
-      .eq('id', memberId)
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-    return data as LibraryMember;
-  }
-
-  // Book transactions
+  // Book Transactions
   async getBookTransactions(schoolId: string, filters?: {
     status?: string;
     member_id?: string;
     book_id?: string;
-  }) {
+  }): Promise<BookTransaction[]> {
     let query = supabase
       .from('book_transactions')
       .select(`
         *,
-        books!inner (title),
-        library_members!inner (
-          member_id,
-          student_details:student_id (first_name, last_name),
-          staff_details:staff_id (first_name, last_name)
-        ),
-        profiles:issued_by (first_name, last_name)
+        books!inner(title),
+        library_members!inner(member_id),
+        issued_by_profile:profiles!book_transactions_issued_by_fkey(first_name, last_name),
+        returned_by_profile:profiles!book_transactions_returned_by_fkey(first_name, last_name)
       `)
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false });
+      .eq('school_id', schoolId);
 
     if (filters?.status) {
       query = query.eq('status', filters.status);
@@ -200,146 +154,165 @@ class LibraryService {
       query = query.eq('book_id', filters.book_id);
     }
 
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
+    const { data, error } = await query.order('created_at', { ascending: false });
 
-    return (data as any[]).map(transaction => ({
+    if (error) throw error;
+
+    // Transform data to include related information
+    return (data || []).map(transaction => ({
       ...transaction,
       book_title: transaction.books?.title,
-      member_name: transaction.library_members?.student_details
-        ? `${transaction.library_members.student_details.first_name} ${transaction.library_members.student_details.last_name}`
-        : transaction.library_members?.staff_details
-        ? `${transaction.library_members.staff_details.first_name} ${transaction.library_members.staff_details.last_name}`
-        : transaction.library_members?.member_id,
-      issued_by_name: transaction.profiles
-        ? `${transaction.profiles.first_name} ${transaction.profiles.last_name}`
-        : undefined
-    })) as BookTransaction[];
-  }
+      member_name: transaction.library_members?.member_id,
+      issued_by_name: transaction.issued_by_profile ? 
+        `${transaction.issued_by_profile.first_name} ${transaction.issued_by_profile.last_name}` : undefined,
+      returned_by_name: transaction.returned_by_profile ? 
+        `${transaction.returned_by_profile.first_name} ${transaction.returned_by_profile.last_name}` : undefined,
+    }));
+  },
 
-  async issueBook(schoolId: string, issueData: IssueBookData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+  async issueBook(schoolId: string, issueData: IssueBookData): Promise<BookTransaction> {
+    // First, check if book is available
+    const { data: book, error: bookError } = await supabase
+      .from('books')
+      .select('available_copies')
+      .eq('id', issueData.book_id)
+      .single();
 
-    // Start transaction
+    if (bookError) throw bookError;
+    if (book.available_copies <= 0) {
+      throw new Error('Book is not available for issue');
+    }
+
+    // Create transaction
     const { data, error } = await supabase
       .from('book_transactions')
       .insert({
         ...issueData,
         school_id: schoolId,
+        issued_by: (await supabase.auth.getUser()).data.user?.id,
         transaction_type: 'issue',
         issue_date: new Date().toISOString().split('T')[0],
-        issued_by: user.id,
-        status: 'issued',
-        renewal_count: 0,
-        max_renewals: 2
+        status: 'issued'
       })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw error;
 
-    // Update book available copies
-    await supabase.rpc('decrement_book_copies', {
-      book_id: issueData.book_id
-    });
+    // Decrement available copies
+    await supabase.rpc('decrement_book_copies', { book_id: issueData.book_id });
 
-    return data as BookTransaction;
-  }
+    return data;
+  },
 
-  async returnBook(schoolId: string, returnData: ReturnBookData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-
+  async returnBook(schoolId: string, returnData: ReturnBookData): Promise<BookTransaction> {
     const { data, error } = await supabase
       .from('book_transactions')
       .update({
         return_date: returnData.return_date,
+        returned_by: (await supabase.auth.getUser()).data.user?.id,
         status: 'returned',
-        returned_by: user.id,
         fine_amount: returnData.fine_amount || 0,
         notes: returnData.notes
       })
       .eq('id', returnData.transaction_id)
+      .eq('school_id', schoolId)
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw error;
 
-    // Get book_id from transaction to increment available copies
-    const transaction = data as BookTransaction;
-    await supabase.rpc('increment_book_copies', {
-      book_id: transaction.book_id
-    });
+    // Increment available copies
+    await supabase.rpc('increment_book_copies', { book_id: data.book_id });
 
-    return transaction;
-  }
+    return data;
+  },
 
-  async renewBook(transactionId: string) {
-    const { data: transaction, error: fetchError } = await supabase
-      .from('book_transactions')
-      .select('*, library_members!inner(member_type)')
-      .eq('id', transactionId)
-      .single();
-
-    if (fetchError) throw new Error(fetchError.message);
-
-    if (transaction.renewal_count >= transaction.max_renewals) {
-      throw new Error('Maximum renewals exceeded');
-    }
-
-    // Get renewal period from settings
-    const settings = await this.getLibrarySettings(transaction.school_id);
-    let renewalDays = 14; // default
-    
-    if (settings) {
-      const memberType = (transaction as any).library_members.member_type;
-      switch (memberType) {
-        case 'student':
-          renewalDays = settings.student_borrowing_days;
-          break;
-        case 'teacher':
-          renewalDays = settings.teacher_borrowing_days;
-          break;
-        case 'staff':
-          renewalDays = settings.staff_borrowing_days;
-          break;
-      }
-    }
-
-    const newDueDate = new Date();
-    newDueDate.setDate(newDueDate.getDate() + renewalDays);
-
+  async renewBook(transactionId: string): Promise<BookTransaction> {
     const { data, error } = await supabase
       .from('book_transactions')
       .update({
-        due_date: newDueDate.toISOString().split('T')[0],
-        renewal_count: transaction.renewal_count + 1
+        renewal_count: supabase.sql`renewal_count + 1`,
+        due_date: supabase.sql`due_date + interval '14 days'`
       })
       .eq('id', transactionId)
+      .eq('status', 'issued')
+      .lt('renewal_count', supabase.sql`max_renewals`)
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
-    return data as BookTransaction;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  // Library settings
-  async getLibrarySettings(schoolId: string) {
+  // Book Reservations
+  async getBookReservations(schoolId: string, status?: string): Promise<BookReservation[]> {
+    let query = supabase
+      .from('book_reservations')
+      .select(`
+        *,
+        books!inner(title),
+        library_members!inner(member_id)
+      `)
+      .eq('school_id', schoolId);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query.order('reservation_date', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(reservation => ({
+      ...reservation,
+      book_title: reservation.books?.title,
+      member_name: reservation.library_members?.member_id
+    }));
+  },
+
+  async createReservation(schoolId: string, bookId: string, memberId: string): Promise<BookReservation> {
+    const { data, error } = await supabase
+      .from('book_reservations')
+      .insert({
+        book_id: bookId,
+        member_id: memberId,
+        school_id: schoolId,
+        reservation_date: new Date().toISOString().split('T')[0],
+        expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateReservationStatus(reservationId: string, status: string): Promise<BookReservation> {
+    const { data, error } = await supabase
+      .from('book_reservations')
+      .update({ status })
+      .eq('id', reservationId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Library Settings
+  async getLibrarySettings(schoolId: string): Promise<LibrarySettings | null> {
     const { data, error } = await supabase
       .from('library_settings')
       .select('*')
       .eq('school_id', schoolId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(error.message);
-    }
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
 
-    return data as LibrarySettings | null;
-  }
-
-  async updateLibrarySettings(schoolId: string, settings: Partial<LibrarySettings>) {
+  async updateLibrarySettings(schoolId: string, settings: Partial<LibrarySettings>): Promise<LibrarySettings> {
     const { data, error } = await supabase
       .from('library_settings')
       .upsert({
@@ -349,94 +322,44 @@ class LibraryService {
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
-    return data as LibrarySettings;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  // Statistics
-  async getLibraryStats(schoolId: string): Promise<LibraryStats> {
-    const [booksResult, membersResult, issuedResult, overdueResult, finesResult, reservationsResult] = await Promise.all([
+  // Library Stats
+  async getLibraryStats(schoolId: string) {
+    const [booksResult, membersResult, transactionsResult, reservationsResult] = await Promise.all([
       supabase.from('books').select('id', { count: 'exact' }).eq('school_id', schoolId).eq('is_active', true),
       supabase.from('library_members').select('id', { count: 'exact' }).eq('school_id', schoolId).eq('is_active', true),
       supabase.from('book_transactions').select('id', { count: 'exact' }).eq('school_id', schoolId).eq('status', 'issued'),
-      supabase.from('book_transactions').select('id', { count: 'exact' }).eq('school_id', schoolId).eq('status', 'overdue'),
-      supabase.from('book_transactions').select('fine_amount').eq('school_id', schoolId).eq('fine_paid', false),
       supabase.from('book_reservations').select('id', { count: 'exact' }).eq('school_id', schoolId).eq('status', 'pending')
     ]);
 
-    const totalFines = finesResult.data?.reduce((sum, record) => sum + (record.fine_amount || 0), 0) || 0;
+    // Get overdue transactions
+    const overdueResult = await supabase
+      .from('book_transactions')
+      .select('id', { count: 'exact' })
+      .eq('school_id', schoolId)
+      .eq('status', 'issued')
+      .lt('due_date', new Date().toISOString().split('T')[0]);
+
+    // Get total fines
+    const finesResult = await supabase
+      .from('book_transactions')
+      .select('fine_amount')
+      .eq('school_id', schoolId)
+      .eq('fine_paid', false)
+      .gt('fine_amount', 0);
+
+    const totalFines = finesResult.data?.reduce((sum, transaction) => sum + Number(transaction.fine_amount), 0) || 0;
 
     return {
       total_books: booksResult.count || 0,
       total_members: membersResult.count || 0,
-      books_issued: issuedResult.count || 0,
+      books_issued: transactionsResult.count || 0,
       overdue_books: overdueResult.count || 0,
       total_fines: totalFines,
       pending_reservations: reservationsResult.count || 0
     };
   }
-
-  // Book reservations
-  async getBookReservations(schoolId: string, status?: string) {
-    let query = supabase
-      .from('book_reservations')
-      .select(`
-        *,
-        books!inner (title),
-        library_members!inner (
-          member_id,
-          student_details:student_id (first_name, last_name),
-          staff_details:staff_id (first_name, last_name)
-        )
-      `)
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false });
-
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-
-    return (data as any[]).map(reservation => ({
-      ...reservation,
-      book_title: reservation.books?.title,
-      member_name: reservation.library_members?.student_details
-        ? `${reservation.library_members.student_details.first_name} ${reservation.library_members.student_details.last_name}`
-        : reservation.library_members?.staff_details
-        ? `${reservation.library_members.staff_details.first_name} ${reservation.library_members.staff_details.last_name}`
-        : reservation.library_members?.member_id
-    })) as BookReservation[];
-  }
-
-  async createReservation(schoolId: string, bookId: string, memberId: string) {
-    const { data, error } = await supabase
-      .from('book_reservations')
-      .insert({
-        book_id: bookId,
-        member_id: memberId,
-        school_id: schoolId,
-        reservation_date: new Date().toISOString().split('T')[0]
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-    return data as BookReservation;
-  }
-
-  async updateReservationStatus(reservationId: string, status: string) {
-    const { data, error } = await supabase
-      .from('book_reservations')
-      .update({ status })
-      .eq('id', reservationId)
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-    return data as BookReservation;
-  }
-}
-
-export const libraryService = new LibraryService();
+};

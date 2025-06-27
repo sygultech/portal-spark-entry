@@ -1,15 +1,21 @@
 
-import { Session, User } from "@supabase/supabase-js";
-import { UserRole, Profile } from "@/types/common";
-
-export type { UserRole, Profile };
+export interface UserProfile {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  roles?: string[];
+  school_id?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  profile: Profile | null;
-  isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  user: any;
+  profile: UserProfile | null;
+  loading: boolean;
   signOut: () => Promise<void>;
+  switchSchool: (schoolId: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
