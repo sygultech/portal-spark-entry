@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -52,7 +51,8 @@ const VehicleAssignmentFormDialog: React.FC<VehicleAssignmentFormDialogProps> = 
       const assignmentData = {
         ...data,
         school_id: profile?.school_id,
-        end_date: data.end_date || null,
+        attendant_id: data.attendant_id && data.attendant_id.trim() !== '' ? data.attendant_id : null,
+        end_date: data.end_date && data.end_date.trim() !== '' ? data.end_date : null,
         is_active: true,
       };
 
@@ -164,6 +164,28 @@ const VehicleAssignmentFormDialog: React.FC<VehicleAssignmentFormDialogProps> = 
             {errors.driver_id && (
               <span className="text-sm text-destructive">{errors.driver_id.message}</span>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="attendant_id">Attendant (Optional)</Label>
+            <Controller
+              name="attendant_id"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an attendant (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.driver_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
