@@ -1,13 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useVehicleRouteAssignments } from '@/hooks/useTransport';
 import { Car, Route, User, Plus } from 'lucide-react';
+import VehicleAssignmentFormDialog from './VehicleAssignmentFormDialog';
 
 const VehicleAssignments = () => {
-  const { data: assignments = [], isLoading, error } = useVehicleRouteAssignments();
+  const { data: assignments = [], isLoading, error, refetch } = useVehicleRouteAssignments();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleAssignmentSuccess = () => {
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -35,7 +41,7 @@ const VehicleAssignments = () => {
           <h2 className="text-2xl font-bold">Vehicle Route Assignments</h2>
           <p className="text-muted-foreground">Assign vehicles and drivers to routes</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New Assignment
         </Button>
@@ -96,12 +102,18 @@ const VehicleAssignments = () => {
           <p className="text-muted-foreground mb-4">
             Start by assigning vehicles to routes with drivers.
           </p>
-          <Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Create Assignment
           </Button>
         </div>
       )}
+
+      <VehicleAssignmentFormDialog 
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={handleAssignmentSuccess}
+      />
     </div>
   );
 };
