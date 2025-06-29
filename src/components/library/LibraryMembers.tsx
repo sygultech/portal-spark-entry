@@ -4,17 +4,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Users, BookOpen, AlertCircle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Search, Plus, Users, BookOpen, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLibraryMembers, useLibraryMutations } from '@/hooks/useLibrary';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import AddLibraryMemberDialog from './AddLibraryMemberDialog';
+import BulkAddMembersDialog from './BulkAddMembersDialog';
+import EditLibraryMemberDialog from './EditLibraryMemberDialog';
 
 const LibraryMembers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [memberTypeFilter, setMemberTypeFilter] = useState<string>('');
+  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
+  const [bulkAddDialogOpen, setBulkAddDialogOpen] = useState(false);
+  const [editMemberDialogOpen, setEditMemberDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
   const { profile } = useAuth();
 
-  const { data: members, isLoading, error } = useLibraryMembers(memberTypeFilter);
+  const { data: members, isLoading, error, refetch } = useLibraryMembers(memberTypeFilter);
   const { createLibraryMember } = useLibraryMutations();
+
+  const handleDeactivateMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase.from('library_members')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast.success('Member deactivated successfully');
+      refetch();
+    } catch (error) {
+      console.error('Error deactivating member:', error);
+      toast.error('Failed to deactivate member');
+    }
+  };
 
   console.log('LibraryMembers - Profile:', profile);
   console.log('LibraryMembers - Members data:', members);
@@ -27,18 +53,7 @@ const LibraryMembers = () => {
     member.staff_name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleAddMember = async (studentId: string) => {
-    try {
-      await createLibraryMember.mutateAsync({
-        member_id: `LIB${Date.now()}`,
-        member_type: 'student',
-        student_id: studentId,
-        borrowing_limit: 3
-      });
-    } catch (error) {
-      console.error('Error adding library member:', error);
-    }
-  };
+
 
   if (isLoading) {
     return (
@@ -70,10 +85,16 @@ const LibraryMembers = () => {
           <h2 className="text-2xl font-bold">Library Members</h2>
           <p className="text-muted-foreground">Manage library membership</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Member
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setAddMemberDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Member
+          </Button>
+          <Button variant="outline" onClick={() => setBulkAddDialogOpen(true)}>
+            <Users className="h-4 w-4 mr-2" />
+            Bulk Add
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-4">
@@ -136,12 +157,44 @@ const LibraryMembers = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMember(member);
+                      setEditMemberDialogOpen(true);
+                    }}
+                  >
                     Edit
                   </Button>
                   <Button variant="outline" size="sm">
                     View History
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Deactivate Member</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to deactivate this library member? 
+                          They will no longer be able to borrow books.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleDeactivateMember(member.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Deactivate
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
               {member.suspended_until && (
@@ -160,6 +213,35 @@ const LibraryMembers = () => {
           No library members found
         </div>
       )}
+
+      <AddLibraryMemberDialog
+        open={addMemberDialogOpen}
+        onOpenChange={setAddMemberDialogOpen}
+        onSuccess={() => {
+          refetch();
+          setAddMemberDialogOpen(false);
+        }}
+      />
+
+      <BulkAddMembersDialog
+        open={bulkAddDialogOpen}
+        onOpenChange={setBulkAddDialogOpen}
+        onSuccess={() => {
+          refetch();
+          setBulkAddDialogOpen(false);
+        }}
+      />
+
+      <EditLibraryMemberDialog
+        open={editMemberDialogOpen}
+        onOpenChange={setEditMemberDialogOpen}
+        member={selectedMember}
+        onSuccess={() => {
+          refetch();
+          setEditMemberDialogOpen(false);
+          setSelectedMember(null);
+        }}
+      />
     </div>
   );
 };

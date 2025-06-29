@@ -16,14 +16,14 @@ import { toast } from 'sonner';
 
 const LibraryBooks = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [genreFilter, setGenreFilter] = useState('');
+  const [genreFilter, setGenreFilter] = useState('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'issued'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<any>(null);
 
   const { data: books = [], isLoading } = useBooks({
     search: searchTerm,
-    genre: genreFilter || undefined,
+    genre: genreFilter && genreFilter !== 'all' ? genreFilter : undefined,
     availability: availabilityFilter
   });
 
@@ -256,7 +256,7 @@ const LibraryBooks = () => {
                 <SelectValue placeholder="All Genres" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Genres</SelectItem>
+                <SelectItem value="all">All Genres</SelectItem>
                 {genres.map(genre => (
                   <SelectItem key={genre} value={genre}>{genre}</SelectItem>
                 ))}
@@ -285,9 +285,9 @@ const LibraryBooks = () => {
             <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No books found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchTerm || genreFilter ? 'Try adjusting your filters' : 'Add your first book to get started'}
+              {searchTerm || (genreFilter && genreFilter !== 'all') ? 'Try adjusting your filters' : 'Add your first book to get started'}
             </p>
-            {!searchTerm && !genreFilter && (
+            {!searchTerm && (!genreFilter || genreFilter === 'all') && (
               <Button onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add First Book

@@ -16,14 +16,14 @@ import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 
 const BookTransactions = () => {
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
   const { data: transactions = [], isLoading } = useBookTransactions({
-    status: statusFilter || undefined
+    status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined
   });
   const { data: books = [] } = useBooks({ availability: 'available' });
   const { data: members = [] } = useLibraryMembers();
@@ -278,7 +278,7 @@ const BookTransactions = () => {
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="issued">Issued</SelectItem>
                 <SelectItem value="returned">Returned</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>

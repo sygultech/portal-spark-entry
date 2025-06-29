@@ -86,8 +86,8 @@ export const libraryService = {
       .from('library_members')
       .select(`
         *,
-        student_details!inner(first_name, last_name),
-        staff_details!inner(first_name, last_name)
+        student_details(first_name, last_name),
+        staff_details(first_name, last_name)
       `)
       .eq('school_id', schoolId)
       .eq('is_active', true);
