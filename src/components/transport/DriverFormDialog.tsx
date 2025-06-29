@@ -37,7 +37,7 @@ const DriverFormDialog: React.FC<DriverFormDialogProps> = ({
       date_of_birth: '',
       blood_group: '',
       joining_date: new Date().toISOString().split('T')[0],
-      status: 'active',
+      status: 'active' as const,
       verification_status: false,
     },
   });
@@ -169,7 +169,7 @@ const DriverFormDialog: React.FC<DriverFormDialogProps> = ({
             <div>
               <Label htmlFor="blood_group">Blood Group</Label>
               <Select
-                value={watch('blood_group')}
+                value={watch('blood_group') || ''}
                 onValueChange={(value) => setValue('blood_group', value)}
               >
                 <SelectTrigger>
@@ -203,7 +203,7 @@ const DriverFormDialog: React.FC<DriverFormDialogProps> = ({
               <Label htmlFor="status">Status</Label>
               <Select
                 value={watch('status')}
-                onValueChange={(value) => setValue('status', value)}
+                onValueChange={(value: 'active' | 'inactive' | 'on_leave' | 'suspended') => setValue('status', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -220,8 +220,8 @@ const DriverFormDialog: React.FC<DriverFormDialogProps> = ({
             <div className="flex items-center space-x-2 pt-6">
               <Checkbox
                 id="verification_status"
-                checked={watch('verification_status')}
-                onCheckedChange={(checked) => setValue('verification_status', checked)}
+                checked={Boolean(watch('verification_status'))}
+                onCheckedChange={(checked) => setValue('verification_status', Boolean(checked))}
               />
               <Label htmlFor="verification_status">Verified Driver</Label>
             </div>

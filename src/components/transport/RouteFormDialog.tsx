@@ -29,12 +29,12 @@ const RouteFormDialog: React.FC<RouteFormDialogProps> = ({
       route_code: '',
       starting_point: '',
       ending_point: '',
-      trip_type: 'round_trip',
-      distance_km: '',
-      estimated_duration_minutes: '',
+      trip_type: 'round_trip' as const,
+      distance_km: undefined,
+      estimated_duration_minutes: undefined,
       morning_start_time: '',
       evening_start_time: '',
-      status: 'active',
+      status: 'active' as const,
     },
   });
 
@@ -116,7 +116,7 @@ const RouteFormDialog: React.FC<RouteFormDialogProps> = ({
               <Label htmlFor="trip_type">Trip Type *</Label>
               <Select
                 value={watch('trip_type')}
-                onValueChange={(value) => setValue('trip_type', value)}
+                onValueChange={(value: 'one_way' | 'round_trip' | 'morning_only' | 'evening_only') => setValue('trip_type', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select trip type" />
@@ -134,7 +134,7 @@ const RouteFormDialog: React.FC<RouteFormDialogProps> = ({
               <Label htmlFor="status">Status</Label>
               <Select
                 value={watch('status')}
-                onValueChange={(value) => setValue('status', value)}
+                onValueChange={(value: 'active' | 'inactive' | 'suspended') => setValue('status', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />

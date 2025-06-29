@@ -27,7 +27,7 @@ const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
     defaultValues: vehicle || {
       vehicle_number: '',
       registration_number: '',
-      vehicle_type: 'bus',
+      vehicle_type: 'bus' as const,
       model: '',
       capacity: 0,
       insurance_number: '',
@@ -35,7 +35,7 @@ const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
       fuel_type: 'diesel',
       purchase_date: '',
       notes: '',
-      status: 'active',
+      status: 'active' as const,
     },
   });
 
@@ -97,7 +97,7 @@ const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
               <Label htmlFor="vehicle_type">Vehicle Type *</Label>
               <Select
                 value={watch('vehicle_type')}
-                onValueChange={(value) => setValue('vehicle_type', value)}
+                onValueChange={(value: 'bus' | 'van' | 'mini_bus' | 'car') => setValue('vehicle_type', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select vehicle type" />
@@ -141,7 +141,7 @@ const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
             <div>
               <Label htmlFor="fuel_type">Fuel Type</Label>
               <Select
-                value={watch('fuel_type')}
+                value={watch('fuel_type') || 'diesel'}
                 onValueChange={(value) => setValue('fuel_type', value)}
               >
                 <SelectTrigger>
@@ -191,7 +191,7 @@ const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
               <Label htmlFor="status">Status</Label>
               <Select
                 value={watch('status')}
-                onValueChange={(value) => setValue('status', value)}
+                onValueChange={(value: 'active' | 'inactive' | 'maintenance' | 'repair') => setValue('status', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
