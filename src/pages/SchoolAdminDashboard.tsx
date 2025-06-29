@@ -54,6 +54,13 @@ const SchoolAdminDashboard = () => {
       color: "bg-orange-500",
     },
     {
+      title: "Transport",
+      description: "Manage school transport and routes",
+      icon: Users,
+      href: "/transport",
+      color: "bg-indigo-500",
+    },
+    {
       title: "Reports & Analytics",
       description: "View performance reports and analytics",
       icon: BarChart3,
