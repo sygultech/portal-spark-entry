@@ -254,7 +254,7 @@ export const useVehicleRouteAssignments = () => {
           *,
           vehicles!inner(vehicle_number, registration_number),
           transport_routes!inner(route_name),
-          transport_drivers!inner(driver_name)
+          transport_drivers!vehicle_route_assignments_driver_id_fkey(driver_name)
         `)
         .eq('school_id', profile.school_id)
         .eq('is_active', true)
