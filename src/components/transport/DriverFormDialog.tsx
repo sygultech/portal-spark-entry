@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,21 @@ const DriverFormDialog: React.FC<DriverFormDialogProps> = ({
 
   const onSubmit = async (data: any) => {
     try {
-      await createDriver.mutateAsync(data);
+      // Convert empty date strings to null
+      const processedData = {
+        ...data,
+        license_expiry: data.license_expiry || null,
+        date_of_birth: data.date_of_birth || null,
+        joining_date: data.joining_date || null,
+        // Convert empty strings to null for other optional fields
+        email: data.email || null,
+        emergency_contact_name: data.emergency_contact_name || null,
+        emergency_contact_phone: data.emergency_contact_phone || null,
+        address: data.address || null,
+        blood_group: data.blood_group || null,
+      };
+      
+      await createDriver.mutateAsync(processedData);
       onSuccess();
     } catch (error) {
       console.error('Error saving driver:', error);
